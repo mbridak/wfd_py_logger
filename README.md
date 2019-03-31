@@ -30,16 +30,16 @@ information needed by the command.
 After the command is entered press the TAB key to execute it.
 
 ## Features
-### Super Check Partial
+###### Super Check Partial
 If you type more than two characters in the callsign field the program will filter the input through a
 "Super Check Partial" routine and show you possible matches to known contesting call signs. Is this useful? Doubt it.
 
-### DUP checking
+###### DUP checking
 Once you type a complete callsign and press TAB to advance to the next field. The callsign is checked
 against previous callsigns in your log. It will list any prior contact made with the band and mode of
 the contact. If the band and mode are the same as the one you are currently using, the listing will be
 highlighted to alert you that this is a DUP.
 
-### Autofill
+###### Autofill
 If you have worked this person before on another band/mode the program will load the class and section
 used previously for this call so you will not have to enter this info again.
