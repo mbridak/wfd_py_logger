@@ -4,7 +4,7 @@ The logger is written in Python 3, and uses the curses lib. This means it will w
 maybe Mac, but not Windows. You windows guys have enough loggers already. The log is stored in an
 sqlite3 database.
 
-##Caveats
+## Caveats
 This is a simple logger ment for one person. It's not usable for clubs. It's
 ment for A guy/girl setting up for Winter Field Day in in their backyard wanting
 a simple logger.
