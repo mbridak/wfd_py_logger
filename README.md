@@ -8,8 +8,7 @@ sqlite3 database.
 This is a simple logger ment for one person. It's not usable for clubs. It's
 ment for A guy/girl setting up for Winter Field Day in in their backyard wanting
 a simple logger.
-It currently does not export to Cabrillo, working on that now. So if you see
-this message don't use this.
+It currently generates a rudimentary Cabrillo log.
 
 ## Commands:
 Commands start with a period character in the callsign field and are immediately followed by any
@@ -25,6 +24,7 @@ information needed by the command.
 .MCW .MPH .MDI Sets the mode. CW Morse, PH Phone, DI Digital.
 .B# sets the band, .B40 for 40 meters.
 .D# Deletes log entry. .D26 will delete the log line starting with 026.
+.L Generate Cabrillo
 ```
 
 After the command is entered press the TAB key to execute it.

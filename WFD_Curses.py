@@ -48,7 +48,6 @@ hissection = ""
 hisclass = ""
 
 database = "WFD_Curses.db"
-preferencedb = "preference.db"
 conn = ""
 wrkdsections = []
 scp = []
@@ -205,6 +204,41 @@ def stats():
 	stdscr.addstr(5,79-len(lasthour),lasthour)
 	stdscr.addstr(6,79-len(last15),last15)
 	stdscr.move(y,x)
+
+def cabrillo():
+    conn = sqlite3.connect(database)
+    c = conn.cursor()
+    c.execute("select * from contacts order by date_time ASC")
+    log = c.fetchall()
+    conn.close()
+    print("START-OF-LOG: 3.0", end='\n',file=open("WFDLOG.txt", "w"))
+    print("CREATED-BY: K6GTE Winter Field Day Logger", end='\n',file=open("WFDLOG.txt", "a"))
+    print("CONTEST: WFD", end='\n',file=open("WFDLOG.txt", "a"))
+    print("LOCATION:",mysection, end='\n',file=open("WFDLOG.txt", "a"))
+    print("CALLSIGN:",mycall, end='\n',file=open("WFDLOG.txt", "a"))
+    print("CATEGORY:",myclass, end='\n',file=open("WFDLOG.txt", "a"))
+    print("CATEGORY-ASSISTED: NON-ASSISTED", end='\n',file=open("WFDLOG.txt", "a"))
+    print("CATEGORY-BAND: ALL", end='\n',file=open("WFDLOG.txt", "a"))
+    print("CATEGORY-MODE: MIXED", end='\n',file=open("WFDLOG.txt", "a"))
+    print("CATEGORY-OPERATOR: SINGLE-OP", end='\n',file=open("WFDLOG.txt", "a"))
+    print("CATEGORY-POWER: QRP", end='\n',file=open("WFDLOG.txt", "a"))
+    print("CATEGORY-STATION: PORTABLE", end='\n',file=open("WFDLOG.txt", "a"))
+    print("CATEGORY-TRANSMITTER: ONE", end='\n',file=open("WFDLOG.txt", "a"))
+    print("SOAPBOX:", end='\n',file=open("WFDLOG.txt", "a"))
+    print("CLAIMED-SCORE: ", end='\n',file=open("WFDLOG.txt", "a"))
+    print("OPERATORS:",mycall, end='\n',file=open("WFDLOG.txt", "a"))
+    print("CLUB: none", end='\n',file=open("WFDLOG.txt", "a"))
+    print("NAME: ", end='\n',file=open("WFDLOG.txt", "a"))
+    print("ADDRESS: ", end='\n',file=open("WFDLOG.txt", "a"))
+    print("EMAIL: ", end='\n',file=open("WFDLOG.txt", "a"))
+    counter=0
+    for x in log:
+        logid, hiscall, hisclass, hissection, datetime, band, mode, power = x
+        loggeddate = datetime[:10]
+        loggedtime = datetime[11:13]+datetime[14:16]
+        #print(value1, ..., sep=' ', end='\n', file=sys.stdout, flush=False)
+        print("QSO:",band+"M",mode,loggeddate,loggedtime,mycall,myclass,mysection,hiscall,hisclass,hissection,sep=' ', end='\n',file=open("WFDLOG.txt", "a"))
+    print("END-OF-LOG:", end='\n',file=open("WFDLOG.txt", "a"))
 
 def logwindow():
 	callfiller = "          "
@@ -472,7 +506,7 @@ def setsection(s):
 
 def displayHelp():
 	wy, wx = stdscr.getyx()
-	help = [".H this message",
+	help = [".H this message |.L Generate Log",
 		".Q quit program",
 		".B## change bands",
 		".M[CW,PH,DI] change mode",
@@ -556,6 +590,9 @@ def processcommand(cmd):
 		return
 	if cmd[:1] == "S":
 		setsection(cmd[1:])
+		return
+	if cmd[:1] == "L":
+		cabrillo()
 		return
 	curses.flash()
 	curses.beep()
