@@ -24,12 +24,12 @@ QuestionMark = 63
 EnterKey = 10
 Space= 32
 
-bands = ('160','80','40','20','15','10','6','off')
+bands = ('160','80','40','20','15','10','6')
 modes = ('PH','CW','DI')
 
-mycall = "K6GTE"
-myclass = "1O"
-mysection = "ORG"
+mycall = "YOURCALL"
+myclass = "CLASS"
+mysection = "SECT"
 power = "5"
 band = "40"
 mode = "CW"
@@ -48,6 +48,7 @@ hissection = ""
 hisclass = ""
 
 database = "WFD_Curses.db"
+preferencedb = "preference.db"
 conn = ""
 wrkdsections = []
 scp = []
@@ -57,22 +58,55 @@ secName = {}
 #stdscr = curses.initscr()
 
 def create_DB():
-	""" create a database and table if it dows not exist """
+	""" create a database and table if it does not exist """
 	global conn
 	try:
 		conn = sqlite3.connect(database)
-		sql_table = """ CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY, callsign text NOT NULL, class text NOT NULL, section text NOT NULL, date_time text NOT NULL, band text NOT NULL, mode text NOT NULL, power text NOT NULL); """
 		c = conn.cursor()
+		sql_table = """ CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY, callsign text NOT NULL, class text NOT NULL, section text NOT NULL, date_time text NOT NULL, band text NOT NULL, mode text NOT NULL, power text NOT NULL); """
+		c.execute(sql_table)
+		sql_table = """ CREATE TABLE IF NOT EXISTS preferences (id INTEGER, mycallsign TEXT DEFAULT 'YOURCALL', myclass TEXT DEFAULT 'YOURCLASS', mysection TEXT DEFAULT 'YOURSECTION'); """
 		c.execute(sql_table)
 		conn.commit()
 		conn.close()
 	except Error as e:
 		print(e)
 
+def readpreferences():
+	global mycall, myclass, mysection
+	try:
+		conn = sqlite3.connect(database)
+		c = conn.cursor()
+		c.execute("select * from preferences where id = 1")
+		pref = c.fetchall()
+		if len(pref) > 0 :
+			for x in pref:
+				_, mycall, myclass, mysection = x
+		else:
+			sql = "INSERT INTO preferences(id, mycallsign, myclass, mysection) VALUES(1,'"+mycall+"','"+myclass+"','"+mysection+"')"
+			c.execute(sql)
+			conn.commit()
+		conn.close()
+	except Error as e:
+		print(e)
+
+def writepreferences():
+	try:
+		conn = sqlite3.connect(database)
+		sql = "UPDATE preferences SET mycallsign = '"+mycall+"', myclass = '"+myclass+"', mysection = '"+mysection+"' WHERE id = 1"
+		cur = conn.cursor()
+		cur.execute(sql)
+		conn.commit()
+		conn.close()
+	except Error as e:
+		pass
+		# print(e)
+
 def log_contact(logme):
 	try:
 		conn = sqlite3.connect(database)
 		sql = "INSERT INTO contacts(callsign, class, section, date_time, band, mode, power) VALUES(?,?,?,datetime('now'),?,?,?)"
+		displplayinfo(sql)
 		cur = conn.cursor()
 		cur.execute(sql, logme)
 		conn.commit()
@@ -367,13 +401,6 @@ def sections():
 	sectionsCol5()
 	stdscr.refresh()
 
-def QSO_count():
-	conn = sqlite3.connect(database)
-	c = conn.cursor()
-	c.execute("SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-6 Minutes')")
-	last15 = str(c.fetchone()[0])
-	pass
-
 def entry():
 	rectangle(stdscr, 8,0,10,18)
 	stdscr.addstr(8,1,"CALL")
@@ -406,6 +433,7 @@ def statusline():
 	stdscr.addstr(23,1,"Band:        Mode:")
 	stdscr.addstr(23,7,"  "+band+"  ", curses.A_REVERSE)
 	stdscr.addstr(23,20,"  "+mode+"  ", curses.A_REVERSE)
+	stdscr.addstr(23,27, "                                  ")
 	stdscr.addstr(23,27, " "+mycall+"|"+myclass+"|"+mysection+"|"+power+"w ", curses.A_REVERSE)
 	stdscr.move(y,x)
 
@@ -424,6 +452,24 @@ def setmode(m):
 	mode = m
 	statusline()
 
+def setcallsign(c):
+	global mycall
+	mycall = str(c)
+	writepreferences()
+	statusline()
+
+def setclass(c):
+	global myclass
+	myclass = str(c)
+	writepreferences()
+	statusline()
+
+def setsection(s):
+	global mysection
+	mysection = str(s)
+	writepreferences()
+	statusline()
+
 def displayHelp():
 	wy, wx = stdscr.getyx()
 	help = [".H this message",
@@ -431,7 +477,10 @@ def displayHelp():
 		".B## change bands",
 		".M[CW,PH,DI] change mode",
 		".P## change power",
-		".D### delete a contact"]
+		".D### delete a contact",
+		".Kyourcall",
+		".Cyourclass",
+		".Syoursection"]
 	stdscr.move(12,1)
 	count = 0
 	for x in help:
@@ -498,6 +547,15 @@ def processcommand(cmd):
 		return
 	if cmd[:1] == "H":
 		displayHelp()
+		return
+	if cmd[:1] == "K":
+		setcallsign(cmd[1:])
+		return
+	if cmd[:1] == "C":
+		setclass(cmd[1:])
+		return
+	if cmd[:1] == "S":
+		setsection(cmd[1:])
 		return
 	curses.flash()
 	curses.beep()
@@ -578,6 +636,7 @@ def main(s):
 	stats()
 	entry()
 	logwindow()
+	readpreferences()
 	rectangle(stdscr, 11,0, 21, 34)
 	displayHelp()
 	stdscr.refresh()
