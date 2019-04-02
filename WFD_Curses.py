@@ -33,7 +33,7 @@ mysection = "SECT"
 power = "5"
 band = "40"
 mode = "CW"
-
+qrp = False
 cwcontacts = "0"
 phonecontacts = "0"
 digitalcontacts = "0"
@@ -62,7 +62,7 @@ def create_DB():
 	try:
 		conn = sqlite3.connect(database)
 		c = conn.cursor()
-		sql_table = """ CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY, callsign text NOT NULL, class text NOT NULL, section text NOT NULL, date_time text NOT NULL, band text NOT NULL, mode text NOT NULL, power text NOT NULL); """
+		sql_table = """ CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY, callsign text NOT NULL, class text NOT NULL, section text NOT NULL, date_time text NOT NULL, band text NOT NULL, mode text NOT NULL, power INTEGER NOT NULL); """
 		c.execute(sql_table)
 		sql_table = """ CREATE TABLE IF NOT EXISTS preferences (id INTEGER, mycallsign TEXT DEFAULT 'YOURCALL', myclass TEXT DEFAULT 'YOURCLASS', mysection TEXT DEFAULT 'YOURSECTION'); """
 		c.execute(sql_table)
@@ -105,7 +105,7 @@ def log_contact(logme):
 	try:
 		conn = sqlite3.connect(database)
 		sql = "INSERT INTO contacts(callsign, class, section, date_time, band, mode, power) VALUES(?,?,?,datetime('now'),?,?,?)"
-		displplayinfo(sql)
+		#displayinfo(sql)
 		cur = conn.cursor()
 		cur.execute(sql, logme)
 		conn.commit()
@@ -183,11 +183,15 @@ def stats():
 	phonecontacts = str(c.fetchone()[0])
 	c.execute("select count(*) from contacts where mode = 'DI'")
 	digitalcontacts = str(c.fetchone()[0])
+
 	c.execute("SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-15 Minutes')")
 	last15 = str(c.fetchone()[0])
 	c.execute("SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-1 Hours')")
 	lasthour = str(c.fetchone()[0])
-
+	conn.close()
+	qrpcheck()
+	score = (int(cwcontacts) * 2) + int(phonecontacts) + (int(digitalcontacts) * 2)
+	if qrp: score = score * 4
 	rectangle(stdscr, 0,57, 7, 79)
 	statslabel = "Score Stats"
 	statslabeloffset = (25/2) - len(statslabel) / 2
@@ -195,15 +199,48 @@ def stats():
 	stdscr.addstr(1, 58, "Total CW:")
 	stdscr.addstr(2, 58, "Total PHONE:")
 	stdscr.addstr(3, 58, "Total DIGITAL:")
-	stdscr.addstr(4, 58, "QSO POINTS:")
+	stdscr.addstr(4, 58, "QSO POINTS:          ")
 	stdscr.addstr(5, 58, "QSO PER HOUR:")
 	stdscr.addstr(6, 58, "QPH Last 15min:")
 	stdscr.addstr(1,79-len(cwcontacts),cwcontacts)
 	stdscr.addstr(2,79-len(phonecontacts),phonecontacts)
 	stdscr.addstr(3,79-len(digitalcontacts),digitalcontacts)
+	stdscr.addstr(4,79-len(str(score)),str(score))
 	stdscr.addstr(5,79-len(lasthour),lasthour)
 	stdscr.addstr(6,79-len(last15),last15)
 	stdscr.move(y,x)
+
+def score():
+    conn = sqlite3.connect(database)
+    c = conn.cursor()
+    c.execute("select count(*) as cw from contacts where mode = 'CW'")
+    log = c.fetchall()
+    cw = list(log[0])[0]
+    c.execute("select count(*) as ph from contacts where mode = 'PH'")
+    log = c.fetchall()
+    ph = list(log[0])[0]
+    c.execute("select count(*) as di from contacts where mode = 'DI'")
+    log = c.fetchall()
+    di = list(log[0])[0]
+    conn.close()
+    score = (cw*2)+ph+(di*2)
+    return score*(qrp*4)
+
+def qrpcheck():
+    global qrp
+    conn = sqlite3.connect(database)
+    c = conn.cursor()
+    c.execute("select count(*) as qrpc from contacts where mode = 'CW' and power > 5")
+    log = c.fetchall()
+    qrpc = list(log[0])[0]
+    c.execute("select count(*) as qrpp from contacts where mode = 'PH' and power > 10")
+    log = c.fetchall()
+    qrpp = list(log[0])[0]
+    c.execute("select count(*) as qrpd from contacts where mode = 'DI' and power > 10")
+    log = c.fetchall()
+    qrpd = list(log[0])[0]
+    conn.close()
+    qrp=not(qrpc+qrpp+qrpd)
 
 def cabrillo():
     conn = sqlite3.connect(database)
@@ -262,7 +299,7 @@ def logwindow():
 		hissection = hissection + sectfiller[:-len(hissection)]
 		band = band + sectfiller[:-len(band)]
 		mode = mode + modefiller[:-len(mode)]
-		logline = logid+" "+hiscall+" "+hisclass+" "+hissection+" "+datetime+" "+band+" "+mode+" "+power
+		logline = logid+" "+hiscall+" "+hisclass+" "+hissection+" "+datetime+" "+band+" "+mode+" "+str(power)
 		contacts.addstr(counter,0,logline)
 		counter = counter +1
 	stdscr.refresh()
@@ -641,7 +678,7 @@ def proc_key(key):
 		if hiscall == "" or hisclass == "" or hissection == "":
 			return
 		utcnow=datetime.utcnow().isoformat(' ')[:16]
-		contact = (hiscall, hisclass, hissection, band, mode, power)
+		contact = (hiscall, hisclass, hissection, band, mode, int(power))
 		log_contact(contact)
 		clearentry()
 		return
