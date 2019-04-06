@@ -9,6 +9,9 @@ COLOR_RED	Red
 COLOR_WHITE	White
 COLOR_YELLOW	Yellow
 """
+
+# select distinct band, mode from contacts order by band; to get band modem multiplier
+
 import curses, sys, time, re, string, sqlite3
 from curses.textpad import Textbox, rectangle
 from curses import wrapper
@@ -34,6 +37,7 @@ power = "0"
 band = "40"
 mode = "CW"
 qrp = False
+bandmodemult = 0
 cwcontacts = "0"
 phonecontacts = "0"
 digitalcontacts = "0"
@@ -173,6 +177,7 @@ def contacts():
 	stdscr.addstr(0,int(contactslabeloffset) ,contactslabel)
 
 def stats():
+	global bandmodemult
 	y, x = stdscr.getyx()
 	conn = sqlite3.connect(database)
 	#conn.row_factory = sqlite3.Row
@@ -183,6 +188,8 @@ def stats():
 	phonecontacts = str(c.fetchone()[0])
 	c.execute("select count(*) from contacts where mode = 'DI'")
 	digitalcontacts = str(c.fetchone()[0])
+	c.execute("select distinct band, mode from contacts")
+	bandmodemult = len(c.fetchall())
 
 	c.execute("SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-15 Minutes')")
 	last15 = str(c.fetchone()[0])
@@ -192,6 +199,7 @@ def stats():
 	qrpcheck()
 	score = (int(cwcontacts) * 2) + int(phonecontacts) + (int(digitalcontacts) * 2)
 	if qrp: score = score * 4
+	score = score * bandmodemult
 	rectangle(stdscr, 0,57, 7, 79)
 	statslabel = "Score Stats"
 	statslabeloffset = (25/2) - len(statslabel) / 2
@@ -211,20 +219,20 @@ def stats():
 	stdscr.move(y,x)
 
 def score():
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select count(*) as cw from contacts where mode = 'CW'")
-    log = c.fetchall()
-    cw = list(log[0])[0]
-    c.execute("select count(*) as ph from contacts where mode = 'PH'")
-    log = c.fetchall()
-    ph = list(log[0])[0]
-    c.execute("select count(*) as di from contacts where mode = 'DI'")
-    log = c.fetchall()
-    di = list(log[0])[0]
-    conn.close()
-    score = (cw*2)+ph+(di*2)
-    return score*(qrp*4)
+	qrpcheck()
+	conn = sqlite3.connect(database)
+	c = conn.cursor()
+	c.execute("select count(*) as cw from contacts where mode = 'CW'")
+	cw = str(c.fetchone()[0])
+	c.execute("select count(*) as ph from contacts where mode = 'PH'")
+	ph = str(c.fetchone()[0])
+	c.execute("select count(*) as di from contacts where mode = 'DI'")
+	di = str(c.fetchone()[0])
+	conn.close()
+	score = (int(cw)*2)+int(ph)+(int(di)*2)
+	if qrp: score = score * 4
+	score = score * bandmodemult
+	return score
 
 def qrpcheck():
     global qrp
@@ -262,7 +270,7 @@ def cabrillo():
     print("CATEGORY-STATION: PORTABLE", end='\n',file=open("WFDLOG.txt", "a"))
     print("CATEGORY-TRANSMITTER: ONE", end='\n',file=open("WFDLOG.txt", "a"))
     print("SOAPBOX:", end='\n',file=open("WFDLOG.txt", "a"))
-    print("CLAIMED-SCORE: ", end='\n',file=open("WFDLOG.txt", "a"))
+    print("CLAIMED-SCORE: "+str(score()), end='\n',file=open("WFDLOG.txt", "a"))
     print("OPERATORS:",mycall, end='\n',file=open("WFDLOG.txt", "a"))
     print("CLUB: none", end='\n',file=open("WFDLOG.txt", "a"))
     print("NAME: ", end='\n',file=open("WFDLOG.txt", "a"))
