@@ -321,14 +321,17 @@ def dupCheck(acall):
 
 	conn = sqlite3.connect(database)
 	c = conn.cursor()
-	c.execute("select callsign, class, section, band, mode from contacts where callsign like '"+acall+"'")
+	c.execute("select callsign, class, section, band, mode from contacts where callsign like '"+acall+"' order by band")
 	log = c.fetchall()
 	conn.close()
 	counter=0
 	for x in log:
 		decorate = ""
 		hiscall, hisclass, hissection, hisband, hismode = x
-		if hisband == band and hismode == mode: decorate = curses.A_BOLD
+		if hisband == band and hismode == mode:
+			decorate = curses.A_BOLD
+			curses.flash()
+			curses.beep()
 		else: decorate = curses.A_NORMAL
 		scpwindow.addstr(counter, 0,hiscall+": "+hisband+" "+hismode, decorate)
 		counter = counter + 1
