@@ -30,7 +30,7 @@ modes = ('PH','CW','DI')
 mycall = "YOURCALL"
 myclass = "CLASS"
 mysection = "SECT"
-power = "5"
+power = "0"
 band = "40"
 mode = "CW"
 qrp = False
@@ -64,7 +64,7 @@ def create_DB():
 		c = conn.cursor()
 		sql_table = """ CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY, callsign text NOT NULL, class text NOT NULL, section text NOT NULL, date_time text NOT NULL, band text NOT NULL, mode text NOT NULL, power INTEGER NOT NULL); """
 		c.execute(sql_table)
-		sql_table = """ CREATE TABLE IF NOT EXISTS preferences (id INTEGER, mycallsign TEXT DEFAULT 'YOURCALL', myclass TEXT DEFAULT 'YOURCLASS', mysection TEXT DEFAULT 'YOURSECTION'); """
+		sql_table = """ CREATE TABLE IF NOT EXISTS preferences (id INTEGER, mycallsign TEXT DEFAULT 'YOURCALL', myclass TEXT DEFAULT 'YOURCLASS', mysection TEXT DEFAULT 'YOURSECTION', power TEXT DEFAULT '0'); """
 		c.execute(sql_table)
 		conn.commit()
 		conn.close()
@@ -72,7 +72,7 @@ def create_DB():
 		print(e)
 
 def readpreferences():
-	global mycall, myclass, mysection
+	global mycall, myclass, mysection, power
 	try:
 		conn = sqlite3.connect(database)
 		c = conn.cursor()
@@ -80,9 +80,9 @@ def readpreferences():
 		pref = c.fetchall()
 		if len(pref) > 0 :
 			for x in pref:
-				_, mycall, myclass, mysection = x
+				_, mycall, myclass, mysection, power = x
 		else:
-			sql = "INSERT INTO preferences(id, mycallsign, myclass, mysection) VALUES(1,'"+mycall+"','"+myclass+"','"+mysection+"')"
+			sql = "INSERT INTO preferences(id, mycallsign, myclass, mysection, power) VALUES(1,'"+mycall+"','"+myclass+"','"+mysection+"','"+power+"')"
 			c.execute(sql)
 			conn.commit()
 		conn.close()
@@ -92,7 +92,7 @@ def readpreferences():
 def writepreferences():
 	try:
 		conn = sqlite3.connect(database)
-		sql = "UPDATE preferences SET mycallsign = '"+mycall+"', myclass = '"+myclass+"', mysection = '"+mysection+"' WHERE id = 1"
+		sql = "UPDATE preferences SET mycallsign = '"+mycall+"', myclass = '"+myclass+"', mysection = '"+mysection+"', power = '"+power+"' WHERE id = 1"
 		cur = conn.cursor()
 		cur.execute(sql)
 		conn.commit()
@@ -511,6 +511,7 @@ def statusline():
 def setpower(p):
 	global power
 	power = p
+	writepreferences()
 	statusline()
 
 def setband(b):
