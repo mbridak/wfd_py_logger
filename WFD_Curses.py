@@ -38,6 +38,10 @@ band = "40"
 mode = "CW"
 qrp = False
 bandmodemult = 0
+altpower = False
+outdoors = False
+notathome = False
+satellite = False
 cwcontacts = "0"
 phonecontacts = "0"
 digitalcontacts = "0"
@@ -196,10 +200,6 @@ def stats():
 	c.execute("SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-1 Hours')")
 	lasthour = str(c.fetchone()[0])
 	conn.close()
-	qrpcheck()
-	score = (int(cwcontacts) * 2) + int(phonecontacts) + (int(digitalcontacts) * 2)
-	if qrp: score = score * 4
-	score = score * bandmodemult
 	rectangle(stdscr, 0,57, 7, 79)
 	statslabel = "Score Stats"
 	statslabeloffset = (25/2) - len(statslabel) / 2
@@ -213,12 +213,13 @@ def stats():
 	stdscr.addstr(1,79-len(cwcontacts),cwcontacts)
 	stdscr.addstr(2,79-len(phonecontacts),phonecontacts)
 	stdscr.addstr(3,79-len(digitalcontacts),digitalcontacts)
-	stdscr.addstr(4,79-len(str(score)),str(score))
+	stdscr.addstr(4,79-len(str(score())),str(score()))
 	stdscr.addstr(5,79-len(lasthour),lasthour)
 	stdscr.addstr(6,79-len(last15),last15)
 	stdscr.move(y,x)
 
 def score():
+	global bandmodemult
 	qrpcheck()
 	conn = sqlite3.connect(database)
 	c = conn.cursor()
@@ -228,10 +229,13 @@ def score():
 	ph = str(c.fetchone()[0])
 	c.execute("select count(*) as di from contacts where mode = 'DI'")
 	di = str(c.fetchone()[0])
+	c.execute("select distinct band, mode from contacts")
+	bandmodemult = len(c.fetchall())
 	conn.close()
 	score = (int(cw)*2)+int(ph)+(int(di)*2)
 	if qrp: score = score * 4
 	score = score * bandmodemult
+	score = score + (1500 * altpower) + (1500 * outdoors) + (1500 * notathome) + + (1500 * satellite)
 	return score
 
 def qrpcheck():
@@ -251,6 +255,7 @@ def qrpcheck():
     qrp=not(qrpc+qrpp+qrpd)
 
 def cabrillo():
+    bonuses = 0
     conn = sqlite3.connect(database)
     c = conn.cursor()
     c.execute("select * from contacts order by date_time ASC")
@@ -269,7 +274,20 @@ def cabrillo():
     print("CATEGORY-POWER: QRP", end='\n',file=open("WFDLOG.txt", "a"))
     print("CATEGORY-STATION: PORTABLE", end='\n',file=open("WFDLOG.txt", "a"))
     print("CATEGORY-TRANSMITTER: ONE", end='\n',file=open("WFDLOG.txt", "a"))
-    print("SOAPBOX:", end='\n',file=open("WFDLOG.txt", "a"))
+    if altpower:
+        print("SOAPBOX: 1,500 points for not using commercial power", end='\n',file=open("WFDLOG.txt", "a"))
+        bonuses = bonuses + 1500
+    if outdoors:
+        print("SOAPBOX: 1,500 points for setting up outdoors", end='\n',file=open("WFDLOG.txt", "a"))
+        bonuses = bonuses + 1500
+    if notathome:
+        print("SOAPBOX: 1,500 points for setting up away from home", end='\n',file=open("WFDLOG.txt", "a"))
+        bonuses = bonuses + 1500
+    if satellite:
+        print("SOAPBOX: 1,500 points for working satellite", end='\n',file=open("WFDLOG.txt", "a"))
+        bonuses = bonuses + 1500
+    print("SOAPBOX: BONUS Total "+str(bonuses), end='\n',file=open("WFDLOG.txt", "a"))
+
     print("CLAIMED-SCORE: "+str(score()), end='\n',file=open("WFDLOG.txt", "a"))
     print("OPERATORS:",mycall, end='\n',file=open("WFDLOG.txt", "a"))
     print("CLUB: none", end='\n',file=open("WFDLOG.txt", "a"))
@@ -502,6 +520,10 @@ def clearentry():
 	displayInputField(1)
 	displayInputField(0)
 
+def highlightBonus(bonus):
+	if bonus: return curses.A_BOLD
+	else: return curses.A_DIM
+
 def statusline():
 	y, x = stdscr.getyx()
 	now=datetime.now().isoformat(' ')[11:19]
@@ -517,6 +539,15 @@ def statusline():
 	stdscr.addstr(23,20,"  "+mode+"  ", curses.A_REVERSE)
 	stdscr.addstr(23,27, "                                  ")
 	stdscr.addstr(23,27, " "+mycall+"|"+myclass+"|"+mysection+"|"+power+"w ", curses.A_REVERSE)
+	stdscr.addstr(22,1,"Bonuses:")
+	stdscr.addstr(22,10,"Alt Power",highlightBonus(altpower))
+	stdscr.addch(curses.ACS_VLINE)
+	stdscr.addstr("Outdoors",highlightBonus(outdoors))
+	stdscr.addch(curses.ACS_VLINE)
+	stdscr.addstr("Not At Home",highlightBonus(notathome))
+	stdscr.addch(curses.ACS_VLINE)
+	stdscr.addstr("Satellite",highlightBonus(satellite))
+
 	stdscr.move(y,x)
 
 def setpower(p):
@@ -553,17 +584,85 @@ def setsection(s):
 	writepreferences()
 	statusline()
 
+def claimAltPower():
+	global altpower
+	if altpower:
+		altpower = False
+	else:
+		altpower = True
+	oy, ox = stdscr.getyx()
+	window = curses.newpad(10,33)
+	rectangle(stdscr, 11,0, 21, 34)
+	window.addstr(0, 0,"Alt Power set to: "+str(altpower))
+	stdscr.refresh()
+	window.refresh(0,0,12,1,20,33)
+	stdscr.move(oy,ox)
+	writepreferences()
+	statusline()
+	stats()
+
+def claimOutdoors():
+	global outdoors
+	if outdoors:
+		outdoors = False
+	else:
+		outdoors = True
+	oy, ox = stdscr.getyx()
+	window = curses.newpad(10,33)
+	rectangle(stdscr, 11,0, 21, 34)
+	window.addstr(0, 0,"Outdoor bonus set to: "+str(outdoors))
+	stdscr.refresh()
+	window.refresh(0,0,12,1,20,33)
+	stdscr.move(oy,ox)
+	writepreferences()
+	statusline()
+	stats()
+
+def claimNotHome():
+	global notathome
+	if notathome:
+		notathome = False
+	else:
+		notathome = True
+	oy, ox = stdscr.getyx()
+	window = curses.newpad(10,33)
+	rectangle(stdscr, 11,0, 21, 34)
+	window.addstr(0, 0,"Away bonus set to: "+str(notathome))
+	stdscr.refresh()
+	window.refresh(0,0,12,1,20,33)
+	stdscr.move(oy,ox)
+	writepreferences()
+	statusline()
+	stats()
+
+def claimSatellite():
+	global satellite
+	if satellite:
+		satellite = False
+	else:
+		satellite = True
+	oy, ox = stdscr.getyx()
+	window = curses.newpad(10,33)
+	rectangle(stdscr, 11,0, 21, 34)
+	window.addstr(0, 0,"Satellite bonus set to: "+str(satellite))
+	stdscr.refresh()
+	window.refresh(0,0,12,1,20,33)
+	stdscr.move(oy,ox)
+	writepreferences()
+	statusline()
+	stats()
+
 def displayHelp():
 	wy, wx = stdscr.getyx()
-	help = [".H this message |.L Generate Log",
-		".Q quit program",
-		".B## change bands",
-		".M[CW,PH,DI] change mode",
-		".P## change power",
-		".D### delete a contact",
-		".Kyourcall",
-		".Cyourclass",
-		".Syoursection"]
+	help = [".H this message  |.L Generate Log",
+		".Q quit program  |.1 Alt Power",
+		".B## change bands|.2 Outdoors",
+		".M[CW,PH,DI] mode|.3 AwayFromHome",
+		".P## change power|.4 Satellite",
+		".D### delete QSO |",
+		".Kyourcall       |",
+		".Cyourclass      |",
+		".Syoursection    |"]
 	stdscr.move(12,1)
 	count = 0
 	for x in help:
@@ -610,38 +709,50 @@ def displayInputField(field):
 def processcommand(cmd):
 	global band, mode, power, quit
 	cmd=cmd[1:].upper()
-	if cmd=="Q":
+	if cmd=="Q": # Quit
 		quit= True
 		return
-	if cmd[:1] == "B":
+	if cmd[:1] == "B": # Change Band
 		setband(cmd[1:])
 		return
-	if cmd[:1] == "M":
+	if cmd[:1] == "M": # Change Mode
 		if cmd[1:] == "CW" or cmd[1:] == "PH" or cmd[1:] == "DI": setmode(cmd[1:])
 		else:
 			curses.flash()
 			curses.beep()
 		return
-	if cmd[:1] == "P":
+	if cmd[:1] == "P": # Change Power
 		setpower(cmd[1:])
 		return
-	if cmd[:1] == "D":
+	if cmd[:1] == "D": # Delete Contact
 		delete_contact(cmd[1:])
 		return
-	if cmd[:1] == "H":
+	if cmd[:1] == "H": # Print Help
 		displayHelp()
 		return
-	if cmd[:1] == "K":
+	if cmd[:1] == "K": # Set your Call Sign
 		setcallsign(cmd[1:])
 		return
-	if cmd[:1] == "C":
+	if cmd[:1] == "C": # Set your class
 		setclass(cmd[1:])
 		return
-	if cmd[:1] == "S":
+	if cmd[:1] == "S": # Set your section
 		setsection(cmd[1:])
 		return
-	if cmd[:1] == "L":
+	if cmd[:1] == "L": # Generate Cabrillo Log
 		cabrillo()
+		return
+	if cmd[:1] == "1": # Claim Alt Power Bonus
+		claimAltPower()
+		return
+	if cmd[:1] == "2": # Claim Outdoor Bonus
+		claimOutdoors()
+		return
+	if cmd[:1] == "3": # Claim Not Home Bonus
+		claimNotHome()
+		return
+	if cmd[:1] == "4": # Claim Satellite Bonus
+		claimSatellite()
 		return
 	curses.flash()
 	curses.beep()
@@ -733,7 +844,8 @@ def main(s):
 		ch=stdscr.getch()
 		#try:
 		if ch == curses.KEY_MOUSE:
-			_, x, y, _, bstate = curses.getmouse()
+			pass
+			# _, x, y, _, bstate = curses.getmouse()
 				#op=str(x)+", "+str(y)
 				#stdscr.addstr(op+"  ")
 				#stdscr.refresh()
