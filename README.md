@@ -24,7 +24,11 @@ information needed by the command.
 .MCW .MPH .MDI Sets the mode. CW Morse, PH Phone, DI Digital.
 .B# sets the band, .B40 for 40 meters.
 .D# Deletes log entry. .D26 will delete the log line starting with 026.
-.L Generate Cabrillo
+.L Generate Cabrillo log file for submission.
+.1 Claim Alt-Power Bonus
+.2 Claim Outdoors Bonus
+.3 Claim Away from Home Bonus
+.4 Claim Satellite Bonus
 ```
 
 After the command is entered press the TAB key to execute it.
