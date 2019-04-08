@@ -37,6 +37,7 @@ power = "0"
 band = "40"
 mode = "CW"
 qrp = False
+highpower = False
 bandmodemult = 0
 altpower = False
 outdoors = False
@@ -234,12 +235,13 @@ def score():
 	conn.close()
 	score = (int(cw)*2)+int(ph)+(int(di)*2)
 	if qrp: score = score * 4
+	elif not(highpower): score = score * 2
 	score = score * bandmodemult
-	score = score + (1500 * altpower) + (1500 * outdoors) + (1500 * notathome) + + (1500 * satellite)
+	score = score + (1500 * altpower) + (1500 * outdoors) + (1500 * notathome) + (1500 * satellite)
 	return score
 
 def qrpcheck():
-    global qrp
+    global qrp, highpower
     conn = sqlite3.connect(database)
     c = conn.cursor()
     c.execute("select count(*) as qrpc from contacts where mode = 'CW' and power > 5")
@@ -251,6 +253,9 @@ def qrpcheck():
     c.execute("select count(*) as qrpd from contacts where mode = 'DI' and power > 10")
     log = c.fetchall()
     qrpd = list(log[0])[0]
+    c.execute("select count(*) as highpower from contacts where power > 100")
+    log = c.fetchall()
+    highpower = bool(list(log[0])[0])
     conn.close()
     qrp=not(qrpc+qrpp+qrpd)
 
@@ -261,6 +266,10 @@ def cabrillo():
     c.execute("select * from contacts order by date_time ASC")
     log = c.fetchall()
     conn.close()
+    catpower = ""
+    if qrp: catpower = "QRP"
+    elif highpower: catpower = "HIGH"
+    else: catpower = "LOW"
     print("START-OF-LOG: 3.0", end='\n',file=open("WFDLOG.txt", "w"))
     print("CREATED-BY: K6GTE Winter Field Day Logger", end='\n',file=open("WFDLOG.txt", "a"))
     print("CONTEST: WFD", end='\n',file=open("WFDLOG.txt", "a"))
@@ -271,7 +280,7 @@ def cabrillo():
     print("CATEGORY-BAND: ALL", end='\n',file=open("WFDLOG.txt", "a"))
     print("CATEGORY-MODE: MIXED", end='\n',file=open("WFDLOG.txt", "a"))
     print("CATEGORY-OPERATOR: SINGLE-OP", end='\n',file=open("WFDLOG.txt", "a"))
-    print("CATEGORY-POWER: QRP", end='\n',file=open("WFDLOG.txt", "a"))
+    print("CATEGORY-POWER: " + catpower, end='\n',file=open("WFDLOG.txt", "a"))
     print("CATEGORY-STATION: PORTABLE", end='\n',file=open("WFDLOG.txt", "a"))
     print("CATEGORY-TRANSMITTER: ONE", end='\n',file=open("WFDLOG.txt", "a"))
     if altpower:
