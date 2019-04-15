@@ -479,7 +479,7 @@ def sectionsCol5():
 	rectangle(stdscr, 8,71, 21, 79)
 	stdscr.addstr(9,72,"   0   ", curses.A_REVERSE)
 	stdscr.addstr(10,72,"CO", workedSection("CO"))
-	stdscr.addstr(10,77,"MD", workedSection("MD"))
+	stdscr.addstr(10,77,"MO", workedSection("MO"))
 	stdscr.addstr(11,72,"IA", workedSection("IA"))
 	stdscr.addstr(11,77,"ND", workedSection("ND"))
 	stdscr.addstr(12,72,"KS", workedSection("KS"))
