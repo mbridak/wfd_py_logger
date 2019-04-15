@@ -47,3 +47,9 @@ highlighted to alert you that this is a DUP.
 ###### Autofill
 If you have worked this person before on another band/mode the program will load the class and section
 used previously for this call so you will not have to enter this info again.
+
+## TODO
+Edit an existing contact.
+Enter a contact at a specific time.
+
+Let me know if you think of something else.
