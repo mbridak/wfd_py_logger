@@ -668,7 +668,7 @@ def displayHelp():
 		".B## change bands|.2 Outdoors",
 		".M[CW,PH,DI] mode|.3 AwayFromHome",
 		".P## change power|.4 Satellite",
-		".D### delete QSO |",
+		".D### delete QSO |[esc] abort inp",
 		".Kyourcall       |",
 		".Cyourclass      |",
 		".Syoursection    |"]

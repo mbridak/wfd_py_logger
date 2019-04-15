@@ -29,6 +29,7 @@ information needed by the command.
 .2 Claim Outdoors Bonus
 .3 Claim Away from Home Bonus
 .4 Claim Satellite Bonus
+[esc] abort input, clear all fields.
 ```
 
 After the command is entered press the TAB key to execute it.
