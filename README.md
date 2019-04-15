@@ -1,8 +1,8 @@
 ## K6GTE Winter Field Day logger
 
-The logger is written in Python 3, and uses the curses lib. This means it will work with Linux,
-maybe Mac, but not Windows. You windows guys have enough loggers already. The log is stored in an
-sqlite3 database.
+The logger is written in Python 3, and uses the curses lib. This means it will work with Linux, maybe Mac, but not Windows. You windows guys have enough loggers already. The log is stored in an sqlite3 database.
+
+![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/logger.png)
 
 ## Caveats
 This is a simple logger ment for one person. It's not usable for clubs. It's
@@ -49,7 +49,7 @@ If you have worked this person before on another band/mode the program will load
 used previously for this call so you will not have to enter this info again.
 
 ## TODO
-Edit an existing contact.
-Enter a contact at a specific time.
+  * Edit an existing contact.
+  * Enter a contact at a specific time.
 
 Let me know if you think of something else.
