@@ -819,7 +819,7 @@ def proc_key(key):
 		return
 	elif key == Space:
 		return
-	else:
+	elif curses.ascii.isascii(key):
 		if len(kbuf) < maxFieldLength[inputFieldFocus]:
 			kbuf = kbuf.upper() + chr(key).upper()
 			if inputFieldFocus == 0 and len(kbuf) > 2: displaySCP(superCheck(kbuf))
