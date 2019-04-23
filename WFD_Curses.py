@@ -73,7 +73,7 @@ def create_DB():
 		c = conn.cursor()
 		sql_table = """ CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY, callsign text NOT NULL, class text NOT NULL, section text NOT NULL, date_time text NOT NULL, band text NOT NULL, mode text NOT NULL, power INTEGER NOT NULL); """
 		c.execute(sql_table)
-		sql_table = """ CREATE TABLE IF NOT EXISTS preferences (id INTEGER, mycallsign TEXT DEFAULT 'YOURCALL', myclass TEXT DEFAULT 'YOURCLASS', mysection TEXT DEFAULT 'YOURSECTION', power TEXT DEFAULT '0'); """
+		sql_table = """ CREATE TABLE IF NOT EXISTS preferences (id INTEGER, mycallsign TEXT DEFAULT 'YOURCALL', myclass TEXT DEFAULT 'YOURCLASS', mysection TEXT DEFAULT 'YOURSECTION', power TEXT DEFAULT '0', altpower INTEGER DEFAULT 0, outdoors INTEGER DEFAULT 0, notathome INTEGER DEFAULT 0, satellite INTEGER DEFAULT 0); """
 		c.execute(sql_table)
 		conn.commit()
 		conn.close()
@@ -81,7 +81,7 @@ def create_DB():
 		print(e)
 
 def readpreferences():
-	global mycall, myclass, mysection, power
+	global mycall, myclass, mysection, power, altpower, outdoors, notathome, satellite
 	try:
 		conn = sqlite3.connect(database)
 		c = conn.cursor()
@@ -89,9 +89,9 @@ def readpreferences():
 		pref = c.fetchall()
 		if len(pref) > 0 :
 			for x in pref:
-				_, mycall, myclass, mysection, power = x
+				_, mycall, myclass, mysection, power, altpower, outdoors, notathome, satellite = x
 		else:
-			sql = "INSERT INTO preferences(id, mycallsign, myclass, mysection, power) VALUES(1,'"+mycall+"','"+myclass+"','"+mysection+"','"+power+"')"
+			sql = "INSERT INTO preferences(id, mycallsign, myclass, mysection, power, altpower, outdoors, notathome, satellite) VALUES(1,'"+mycall+"','"+myclass+"','"+mysection+"','"+power+"',"+str(int(altpower))+","+str(int(outdoors))+","+str(int(notathome))+","+str(int(satellite))+")"
 			c.execute(sql)
 			conn.commit()
 		conn.close()
@@ -101,7 +101,7 @@ def readpreferences():
 def writepreferences():
 	try:
 		conn = sqlite3.connect(database)
-		sql = "UPDATE preferences SET mycallsign = '"+mycall+"', myclass = '"+myclass+"', mysection = '"+mysection+"', power = '"+power+"' WHERE id = 1"
+		sql = "UPDATE preferences SET mycallsign = '"+mycall+"', myclass = '"+myclass+"', mysection = '"+mysection+"', power = '"+power+"', altpower = "+str(int(altpower))+", outdoors = "+str(int(outdoors))+", notathome = "+str(int(notathome))+", satellite = "+str(int(satellite))+" WHERE id = 1"
 		cur = conn.cursor()
 		cur.execute(sql)
 		conn.commit()
