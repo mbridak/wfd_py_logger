@@ -164,6 +164,19 @@ def readSections():
 	except IOError as e:
 		print("read error during readSections", e)
 
+def sectionCheck(sec):
+	if sec == "": sec = "^"
+	seccheckwindow = curses.newpad(20,33)
+	rectangle(stdscr, 11,0, 21, 34)
+	x = list(secName.keys())
+	xx = list(filter(lambda y:y.startswith(sec),x))
+	count = 0
+	for xxx in xx:
+		seccheckwindow.addstr(count, 1, secName[xxx])
+		count += 1
+	stdscr.refresh()
+	seccheckwindow.refresh(0,0,12,1,20,33)
+
 readSections()
 
 def readSCP():
@@ -798,6 +811,7 @@ def proc_key(key):
 			kbuf = kbuf[0:-1]
 			if inputFieldFocus == 0 and len(kbuf) < 3: displaySCP(superCheck("^"))
 			if inputFieldFocus == 0 and len(kbuf) > 2: displaySCP(superCheck(kbuf))
+			if inputFieldFocus == 2: sectionCheck(kbuf)
 		displayInputField(inputFieldFocus)
 		return
 	elif key == EnterKey:
@@ -827,6 +841,7 @@ def proc_key(key):
 		if len(kbuf) < maxFieldLength[inputFieldFocus]:
 			kbuf = kbuf.upper() + chr(key).upper()
 			if inputFieldFocus == 0 and len(kbuf) > 2: displaySCP(superCheck(kbuf))
+			if inputFieldFocus == 2 and len(kbuf) > 0: sectionCheck(kbuf)
 	displayInputField(inputFieldFocus)
 
 def main(s):
