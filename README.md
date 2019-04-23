@@ -39,6 +39,9 @@ After the command is entered press the TAB key to execute it.
 If you type more than two characters in the callsign field the program will filter the input through a
 "Super Check Partial" routine and show you possible matches to known contesting call signs. Is this useful? Doubt it.
 
+###### Section partial check
+As you type the section abbreviation you are presented with a list of all possible sections that start with what you have typed.
+
 ###### DUP checking
 Once you type a complete callsign and press TAB to advance to the next field. The callsign is checked
 against previous callsigns in your log. It will list any prior contact made with the band and mode of
