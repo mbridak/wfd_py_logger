@@ -90,6 +90,10 @@ def readpreferences():
 		if len(pref) > 0 :
 			for x in pref:
 				_, mycall, myclass, mysection, power, altpower, outdoors, notathome, satellite = x
+				altpower = bool(altpower)
+				outdoors = bool(outdoors)
+				notathome = bool(notathome)
+				satellite = bool(satellite)
 		else:
 			sql = "INSERT INTO preferences(id, mycallsign, myclass, mysection, power, altpower, outdoors, notathome, satellite) VALUES(1,'"+mycall+"','"+myclass+"','"+mysection+"','"+power+"',"+str(int(altpower))+","+str(int(outdoors))+","+str(int(notathome))+","+str(int(satellite))+")"
 			c.execute(sql)
@@ -839,10 +843,10 @@ def main(s):
 	stdscr.clear()
 	contacts()
 	sections()
-	stats()
 	entry()
 	logwindow()
 	readpreferences()
+	stats()
 	rectangle(stdscr, 11,0, 21, 34)
 	displayHelp()
 	stdscr.refresh()
