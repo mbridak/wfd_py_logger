@@ -1,6 +1,10 @@
 ## K6GTE Winter Field Day logger
 
-The logger is written in Python 3, and uses the curses lib. This means it will work with Linux, maybe Mac, but not Windows. You windows guys have enough loggers already. The log is stored in an sqlite3 database.
+The logger is written in Python 3, and uses the curses lib. This means it will work with Linux, maybe Mac, but not Windows. You windows guys have enough loggers already.
+
+The log is stored in an sqlite3 database. The screen size expected by the program is an 80 x 24 character terminal. Nothing needs to be installed, compiled etc... Just make WFD_Curses.py executable and run it within the same folder.
+
+I decided to write this after the 2018 Winter Field Day when I couldn't find a simple Linux logger for the event. I didn't need multiuser logging or GPS disciplined time servers..
 
 ![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/logger.png)
 
@@ -35,20 +39,20 @@ information needed by the command.
 After the command is entered press the TAB key to execute it.
 
 ## Features
-###### Super Check Partial
+#### Super Check Partial
 If you type more than two characters in the callsign field the program will filter the input through a
 "Super Check Partial" routine and show you possible matches to known contesting call signs. Is this useful? Doubt it.
 
-###### Section partial check
+#### Section partial check
 As you type the section abbreviation you are presented with a list of all possible sections that start with what you have typed.
 
-###### DUP checking
+#### DUP checking
 Once you type a complete callsign and press TAB to advance to the next field. The callsign is checked
 against previous callsigns in your log. It will list any prior contact made with the band and mode of
 the contact. If the band and mode are the same as the one you are currently using, the listing will be
 highlighted to alert you that this is a DUP.
 
-###### Autofill
+#### Autofill
 If you have worked this person before on another band/mode the program will load the class and section
 used previously for this call so you will not have to enter this info again.
 
