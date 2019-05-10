@@ -46,8 +46,9 @@ satellite = False
 cwcontacts = "0"
 phonecontacts = "0"
 digitalcontacts = "0"
-
-LogNumber=0
+contacts = ""
+contactsOffset = 0
+logNumber=0
 kbuf = ""
 maxFieldLength = [17,5,7]
 
@@ -330,6 +331,8 @@ def cabrillo():
     print("END-OF-LOG:", end='\n',file=open("WFDLOG.txt", "a"))
 
 def logwindow():
+	global contacts, contactsOffset, logNumber
+	contactsOffset = 0 # clears scroll position
 	callfiller = "          "
 	classfiller = "   "
 	sectfiller = "   "
@@ -342,7 +345,7 @@ def logwindow():
 	c.execute("select * from contacts order by date_time desc")
 	log = c.fetchall()
 	conn.close()
-	counter=0
+	logNumber=0
 	for x in log:
 		logid, hiscall, hisclass, hissection, datetime, band, mode, power = x
 		logid = zerofiller[:-len(str(logid))]+str(logid)
@@ -352,10 +355,24 @@ def logwindow():
 		band = band + sectfiller[:-len(band)]
 		mode = mode + modefiller[:-len(mode)]
 		logline = logid+" "+hiscall+" "+hisclass+" "+hissection+" "+datetime+" "+band+" "+mode+" "+str(power)
-		contacts.addstr(counter,0,logline)
-		counter = counter +1
+		contacts.addstr(logNumber,0,logline)
+		logNumber += 1
 	stdscr.refresh()
 	contacts.refresh(0,0,1,1,6,54)
+
+def logup():
+	global contacts, contactsOffset, logNumber
+	contactsOffset += 1
+	if contactsOffset > (logNumber - 6): contactsOffset = (logNumber - 6)
+	contacts.refresh(contactsOffset,0,1,1,6,54)
+	pass
+
+def logdown():
+	global contacts, contactsOffset
+	contactsOffset -= 1
+	if contactsOffset < 0: contactsOffset = 0
+	contacts.refresh(contactsOffset, 0, 1, 1, 6, 54)
+	pass
 
 def dupCheck(acall):
 	global hisclass, hissection
@@ -837,11 +854,18 @@ def proc_key(key):
 		return
 	elif key == Space:
 		return
+	elif key == 258:  # key down
+		logup()
+		pass
+	elif key == 259:  # key up
+		logdown()
+		pass
 	elif curses.ascii.isascii(key):
 		if len(kbuf) < maxFieldLength[inputFieldFocus]:
 			kbuf = kbuf.upper() + chr(key).upper()
 			if inputFieldFocus == 0 and len(kbuf) > 2: displaySCP(superCheck(kbuf))
 			if inputFieldFocus == 2 and len(kbuf) > 0: sectionCheck(kbuf)
+	# displayinfo(str(key))
 	displayInputField(inputFieldFocus)
 
 def main(s):
