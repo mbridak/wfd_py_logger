@@ -12,8 +12,11 @@ COLOR_YELLOW	Yellow
 
 # select distinct band, mode from contacts order by band; to get band modem multiplier
 
-import curses, sys, time, re, string, sqlite3
-from curses.textpad import Textbox, rectangle
+import curses
+import time
+import sqlite3
+
+from curses.textpad import rectangle
 from curses import wrapper
 from datetime import datetime
 from sqlite3 import Error
@@ -25,10 +28,10 @@ BackSpace = 263
 Escape = 27
 QuestionMark = 63
 EnterKey = 10
-Space= 32
+Space = 32
 
-bands = ('160','80','40','20','15','10','6')
-modes = ('PH','CW','DI')
+bands = ('160', '80', '40', '20', '15', '10', '6')
+modes = ('PH', 'CW', 'DI')
 
 mycall = "YOURCALL"
 myclass = "CLASS"
@@ -50,7 +53,7 @@ contacts = ""
 contactsOffset = 0
 logNumber=0
 kbuf = ""
-maxFieldLength = [17,5,7]
+maxFieldLength = [17, 5, 7]
 
 inputFieldFocus = 0
 hiscall = ""
@@ -64,7 +67,6 @@ scp = []
 secPartial = {}
 secName = {}
 
-#stdscr = curses.initscr()
 
 def create_DB():
 	""" create a database and table if it does not exist """
@@ -81,6 +83,7 @@ def create_DB():
 	except Error as e:
 		print(e)
 
+
 def readpreferences():
 	global mycall, myclass, mysection, power, altpower, outdoors, notathome, satellite
 	try:
@@ -88,7 +91,7 @@ def readpreferences():
 		c = conn.cursor()
 		c.execute("select * from preferences where id = 1")
 		pref = c.fetchall()
-		if len(pref) > 0 :
+		if len(pref) > 0:
 			for x in pref:
 				_, mycall, myclass, mysection, power, altpower, outdoors, notathome, satellite = x
 				altpower = bool(altpower)
@@ -96,30 +99,33 @@ def readpreferences():
 				notathome = bool(notathome)
 				satellite = bool(satellite)
 		else:
-			sql = "INSERT INTO preferences(id, mycallsign, myclass, mysection, power, altpower, outdoors, notathome, satellite) VALUES(1,'"+mycall+"','"+myclass+"','"+mysection+"','"+power+"',"+str(int(altpower))+","+str(int(outdoors))+","+str(int(notathome))+","+str(int(satellite))+")"
+			sql = "INSERT INTO preferences(id, mycallsign, myclass, mysection, power, altpower, outdoors, notathome, satellite) VALUES(1,'" + mycall + "','" + myclass + "','" + mysection + "','" + power + "'," + str(
+				int(altpower)) + "," + str(int(outdoors)) + "," + str(int(notathome)) + "," + str(int(satellite)) + ")"
 			c.execute(sql)
 			conn.commit()
 		conn.close()
 	except Error as e:
 		print(e)
 
+
 def writepreferences():
 	try:
 		conn = sqlite3.connect(database)
-		sql = "UPDATE preferences SET mycallsign = '"+mycall+"', myclass = '"+myclass+"', mysection = '"+mysection+"', power = '"+power+"', altpower = "+str(int(altpower))+", outdoors = "+str(int(outdoors))+", notathome = "+str(int(notathome))+", satellite = "+str(int(satellite))+" WHERE id = 1"
+		sql = "UPDATE preferences SET mycallsign = '" + mycall + "', myclass = '" + myclass + "', mysection = '" + mysection + "', power = '" + power + "', altpower = " + str(
+			int(altpower)) + ", outdoors = " + str(int(outdoors)) + ", notathome = " + str(
+			int(notathome)) + ", satellite = " + str(int(satellite)) + " WHERE id = 1"
 		cur = conn.cursor()
 		cur.execute(sql)
 		conn.commit()
 		conn.close()
 	except Error as e:
 		pass
-		# print(e)
+
 
 def log_contact(logme):
 	try:
 		conn = sqlite3.connect(database)
 		sql = "INSERT INTO contacts(callsign, class, section, date_time, band, mode, power) VALUES(?,?,?,datetime('now'),?,?,?)"
-		#displayinfo(sql)
 		cur = conn.cursor()
 		cur.execute(sql, logme)
 		conn.commit()
@@ -131,10 +137,11 @@ def log_contact(logme):
 	stats()
 	logwindow()
 
+
 def delete_contact(contact):
 	try:
 		conn = sqlite3.connect(database)
-		sql = "delete from contacts where id="+str(int(contact))
+		sql = "delete from contacts where id=" + str(int(contact))
 		cur = conn.cursor()
 		cur.execute(sql)
 		conn.commit()
@@ -146,64 +153,71 @@ def delete_contact(contact):
 	stats()
 	logwindow()
 
+
 def readSections():
 	try:
-		fd = open("arrl_sect.dat","r")  # read section data
+		fd = open("arrl_sect.dat", "r")  # read section data
 		while 1:
-			ln = fd.readline().strip()          # read a line and put in db
+			ln = fd.readline().strip()  # read a line and put in db
 			if not ln: break
 			if ln[0] == '#': continue
 			try:
-				sec,st,canum,abbrev,name = str.split(ln,None,4)
+				sec, st, canum, abbrev, name = str.split(ln, None, 4)
 				secName[abbrev] = abbrev + ' ' + name + ' ' + canum
-				for i in range(len(abbrev)-1):
-					p = abbrev[:-i-1]
+				for i in range(len(abbrev) - 1):
+					p = abbrev[:-i - 1]
 					secPartial[p] = 1
 			except ValueError as e:
-				print("rd arrl sec dat err, itm skpd: ",e)
+				print("rd arrl sec dat err, itm skpd: ", e)
 		fd.close()
 	except IOError as e:
 		print("read error during readSections", e)
 
+
 def sectionCheck(sec):
 	if sec == "": sec = "^"
-	seccheckwindow = curses.newpad(20,33)
-	rectangle(stdscr, 11,0, 21, 34)
+	seccheckwindow = curses.newpad(20, 33)
+	rectangle(stdscr, 11, 0, 21, 34)
 	x = list(secName.keys())
-	xx = list(filter(lambda y:y.startswith(sec),x))
+	xx = list(filter(lambda y: y.startswith(sec), x))
 	count = 0
 	for xxx in xx:
 		seccheckwindow.addstr(count, 1, secName[xxx])
 		count += 1
 	stdscr.refresh()
-	seccheckwindow.refresh(0,0,12,1,20,33)
+	seccheckwindow.refresh(0, 0, 12, 1, 20, 33)
+
 
 readSections()
+
 
 def readSCP():
 	global scp
 	f = open("MASTER.SCP")
 	scp = f.readlines()
 	f.close()
-	scp = list(map(lambda x:x.strip(),scp))
+	scp = list(map(lambda x: x.strip(), scp))
+
 
 readSCP()
 
+
 def superCheck(acall):
-	return list(filter(lambda x:x.startswith(acall),scp))
-	#return list(filter(lambda x:acall in x,scp))
+	return list(filter(lambda x: x.startswith(acall), scp))
+
 
 def contacts():
-	rectangle(stdscr, 0,0, 7, 55)
+	rectangle(stdscr, 0, 0, 7, 55)
 	contactslabel = "Recent Contacts"
-	contactslabeloffset = (49/2) - len(contactslabel) / 2
-	stdscr.addstr(0,int(contactslabeloffset) ,contactslabel)
+	contactslabeloffset = (49 / 2) - len(contactslabel) / 2
+	stdscr.addstr(0, int(contactslabeloffset), contactslabel)
+
 
 def stats():
 	global bandmodemult
 	y, x = stdscr.getyx()
 	conn = sqlite3.connect(database)
-	#conn.row_factory = sqlite3.Row
+	# conn.row_factory = sqlite3.Row
 	c = conn.cursor()
 	c.execute("select count(*) from contacts where mode = 'CW'")
 	cwcontacts = str(c.fetchone()[0])
@@ -213,29 +227,29 @@ def stats():
 	digitalcontacts = str(c.fetchone()[0])
 	c.execute("select distinct band, mode from contacts")
 	bandmodemult = len(c.fetchall())
-
 	c.execute("SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-15 Minutes')")
 	last15 = str(c.fetchone()[0])
 	c.execute("SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-1 Hours')")
 	lasthour = str(c.fetchone()[0])
 	conn.close()
-	rectangle(stdscr, 0,57, 7, 79)
+	rectangle(stdscr, 0, 57, 7, 79)
 	statslabel = "Score Stats"
-	statslabeloffset = (25/2) - len(statslabel) / 2
-	stdscr.addstr(0,57+int(statslabeloffset) ,statslabel)
+	statslabeloffset = (25 / 2) - len(statslabel) / 2
+	stdscr.addstr(0, 57 + int(statslabeloffset), statslabel)
 	stdscr.addstr(1, 58, "Total CW:")
 	stdscr.addstr(2, 58, "Total PHONE:")
 	stdscr.addstr(3, 58, "Total DIGITAL:")
 	stdscr.addstr(4, 58, "QSO POINTS:          ")
 	stdscr.addstr(5, 58, "QSO PER HOUR:")
 	stdscr.addstr(6, 58, "QPH Last 15min:")
-	stdscr.addstr(1,79-len(cwcontacts),cwcontacts)
-	stdscr.addstr(2,79-len(phonecontacts),phonecontacts)
-	stdscr.addstr(3,79-len(digitalcontacts),digitalcontacts)
-	stdscr.addstr(4,79-len(str(score())),str(score()))
-	stdscr.addstr(5,79-len(lasthour),lasthour)
-	stdscr.addstr(6,79-len(last15),last15)
-	stdscr.move(y,x)
+	stdscr.addstr(1, 79 - len(cwcontacts), cwcontacts)
+	stdscr.addstr(2, 79 - len(phonecontacts), phonecontacts)
+	stdscr.addstr(3, 79 - len(digitalcontacts), digitalcontacts)
+	stdscr.addstr(4, 79 - len(str(score())), str(score()))
+	stdscr.addstr(5, 79 - len(lasthour), lasthour)
+	stdscr.addstr(6, 79 - len(last15), last15)
+	stdscr.move(y, x)
+
 
 def score():
 	global bandmodemult
@@ -251,84 +265,93 @@ def score():
 	c.execute("select distinct band, mode from contacts")
 	bandmodemult = len(c.fetchall())
 	conn.close()
-	score = (int(cw)*2)+int(ph)+(int(di)*2)
-	if qrp: score = score * 4
-	elif not(highpower): score = score * 2
+	score = (int(cw) * 2) + int(ph) + (int(di) * 2)
+	if qrp:
+		score = score * 4
+	elif not (highpower):
+		score = score * 2
 	score = score * bandmodemult
 	score = score + (1500 * altpower) + (1500 * outdoors) + (1500 * notathome) + (1500 * satellite)
 	return score
 
+
 def qrpcheck():
-    global qrp, highpower
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select count(*) as qrpc from contacts where mode = 'CW' and power > 5")
-    log = c.fetchall()
-    qrpc = list(log[0])[0]
-    c.execute("select count(*) as qrpp from contacts where mode = 'PH' and power > 10")
-    log = c.fetchall()
-    qrpp = list(log[0])[0]
-    c.execute("select count(*) as qrpd from contacts where mode = 'DI' and power > 10")
-    log = c.fetchall()
-    qrpd = list(log[0])[0]
-    c.execute("select count(*) as highpower from contacts where power > 100")
-    log = c.fetchall()
-    highpower = bool(list(log[0])[0])
-    conn.close()
-    qrp=not(qrpc+qrpp+qrpd)
+	global qrp, highpower
+	conn = sqlite3.connect(database)
+	c = conn.cursor()
+	c.execute("select count(*) as qrpc from contacts where mode = 'CW' and power > 5")
+	log = c.fetchall()
+	qrpc = list(log[0])[0]
+	c.execute("select count(*) as qrpp from contacts where mode = 'PH' and power > 10")
+	log = c.fetchall()
+	qrpp = list(log[0])[0]
+	c.execute("select count(*) as qrpd from contacts where mode = 'DI' and power > 10")
+	log = c.fetchall()
+	qrpd = list(log[0])[0]
+	c.execute("select count(*) as highpower from contacts where power > 100")
+	log = c.fetchall()
+	highpower = bool(list(log[0])[0])
+	conn.close()
+	qrp = not (qrpc + qrpp + qrpd)
+
 
 def cabrillo():
-    bonuses = 0
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select * from contacts order by date_time ASC")
-    log = c.fetchall()
-    conn.close()
-    catpower = ""
-    if qrp: catpower = "QRP"
-    elif highpower: catpower = "HIGH"
-    else: catpower = "LOW"
-    print("START-OF-LOG: 3.0", end='\n',file=open("WFDLOG.txt", "w"))
-    print("CREATED-BY: K6GTE Winter Field Day Logger", end='\n',file=open("WFDLOG.txt", "a"))
-    print("CONTEST: WFD", end='\n',file=open("WFDLOG.txt", "a"))
-    print("LOCATION:",mysection, end='\n',file=open("WFDLOG.txt", "a"))
-    print("CALLSIGN:",mycall, end='\n',file=open("WFDLOG.txt", "a"))
-    print("CATEGORY:",myclass, end='\n',file=open("WFDLOG.txt", "a"))
-    print("CATEGORY-ASSISTED: NON-ASSISTED", end='\n',file=open("WFDLOG.txt", "a"))
-    print("CATEGORY-BAND: ALL", end='\n',file=open("WFDLOG.txt", "a"))
-    print("CATEGORY-MODE: MIXED", end='\n',file=open("WFDLOG.txt", "a"))
-    print("CATEGORY-OPERATOR: SINGLE-OP", end='\n',file=open("WFDLOG.txt", "a"))
-    print("CATEGORY-POWER: " + catpower, end='\n',file=open("WFDLOG.txt", "a"))
-    print("CATEGORY-STATION: PORTABLE", end='\n',file=open("WFDLOG.txt", "a"))
-    print("CATEGORY-TRANSMITTER: ONE", end='\n',file=open("WFDLOG.txt", "a"))
-    if altpower:
-        print("SOAPBOX: 1,500 points for not using commercial power", end='\n',file=open("WFDLOG.txt", "a"))
-        bonuses = bonuses + 1500
-    if outdoors:
-        print("SOAPBOX: 1,500 points for setting up outdoors", end='\n',file=open("WFDLOG.txt", "a"))
-        bonuses = bonuses + 1500
-    if notathome:
-        print("SOAPBOX: 1,500 points for setting up away from home", end='\n',file=open("WFDLOG.txt", "a"))
-        bonuses = bonuses + 1500
-    if satellite:
-        print("SOAPBOX: 1,500 points for working satellite", end='\n',file=open("WFDLOG.txt", "a"))
-        bonuses = bonuses + 1500
-    print("SOAPBOX: BONUS Total "+str(bonuses), end='\n',file=open("WFDLOG.txt", "a"))
+	bonuses = 0
+	conn = sqlite3.connect(database)
+	c = conn.cursor()
+	c.execute("select * from contacts order by date_time ASC")
+	log = c.fetchall()
+	conn.close()
+	catpower = ""
+	if qrp:
+		catpower = "QRP"
+	elif highpower:
+		catpower = "HIGH"
+	else:
+		catpower = "LOW"
+	print("START-OF-LOG: 3.0", end='\n', file=open("WFDLOG.txt", "w"))
+	print("CREATED-BY: K6GTE Winter Field Day Logger", end='\n', file=open("WFDLOG.txt", "a"))
+	print("CONTEST: WFD", end='\n', file=open("WFDLOG.txt", "a"))
+	print("LOCATION:", mysection, end='\n', file=open("WFDLOG.txt", "a"))
+	print("CALLSIGN:", mycall, end='\n', file=open("WFDLOG.txt", "a"))
+	print("CATEGORY:", myclass, end='\n', file=open("WFDLOG.txt", "a"))
+	print("CATEGORY-ASSISTED: NON-ASSISTED", end='\n', file=open("WFDLOG.txt", "a"))
+	print("CATEGORY-BAND: ALL", end='\n', file=open("WFDLOG.txt", "a"))
+	print("CATEGORY-MODE: MIXED", end='\n', file=open("WFDLOG.txt", "a"))
+	print("CATEGORY-OPERATOR: SINGLE-OP", end='\n', file=open("WFDLOG.txt", "a"))
+	print("CATEGORY-POWER: " + catpower, end='\n', file=open("WFDLOG.txt", "a"))
+	print("CATEGORY-STATION: PORTABLE", end='\n', file=open("WFDLOG.txt", "a"))
+	print("CATEGORY-TRANSMITTER: ONE", end='\n', file=open("WFDLOG.txt", "a"))
+	if altpower:
+		print("SOAPBOX: 1,500 points for not using commercial power", end='\n', file=open("WFDLOG.txt", "a"))
+		bonuses = bonuses + 1500
+	if outdoors:
+		print("SOAPBOX: 1,500 points for setting up outdoors", end='\n', file=open("WFDLOG.txt", "a"))
+		bonuses = bonuses + 1500
+	if notathome:
+		print("SOAPBOX: 1,500 points for setting up away from home", end='\n', file=open("WFDLOG.txt", "a"))
+		bonuses = bonuses + 1500
+	if satellite:
+		print("SOAPBOX: 1,500 points for working satellite", end='\n', file=open("WFDLOG.txt", "a"))
+		bonuses = bonuses + 1500
+	print("SOAPBOX: BONUS Total " + str(bonuses), end='\n', file=open("WFDLOG.txt", "a"))
 
-    print("CLAIMED-SCORE: "+str(score()), end='\n',file=open("WFDLOG.txt", "a"))
-    print("OPERATORS:",mycall, end='\n',file=open("WFDLOG.txt", "a"))
-    print("CLUB: none", end='\n',file=open("WFDLOG.txt", "a"))
-    print("NAME: ", end='\n',file=open("WFDLOG.txt", "a"))
-    print("ADDRESS: ", end='\n',file=open("WFDLOG.txt", "a"))
-    print("EMAIL: ", end='\n',file=open("WFDLOG.txt", "a"))
-    counter=0
-    for x in log:
-        logid, hiscall, hisclass, hissection, datetime, band, mode, power = x
-        loggeddate = datetime[:10]
-        loggedtime = datetime[11:13]+datetime[14:16]
-        #print(value1, ..., sep=' ', end='\n', file=sys.stdout, flush=False)
-        print("QSO:",band+"M",mode,loggeddate,loggedtime,mycall,myclass,mysection,hiscall,hisclass,hissection,sep=' ', end='\n',file=open("WFDLOG.txt", "a"))
-    print("END-OF-LOG:", end='\n',file=open("WFDLOG.txt", "a"))
+	print("CLAIMED-SCORE: " + str(score()), end='\n', file=open("WFDLOG.txt", "a"))
+	print("OPERATORS:", mycall, end='\n', file=open("WFDLOG.txt", "a"))
+	print("CLUB: none", end='\n', file=open("WFDLOG.txt", "a"))
+	print("NAME: ", end='\n', file=open("WFDLOG.txt", "a"))
+	print("ADDRESS: ", end='\n', file=open("WFDLOG.txt", "a"))
+	print("EMAIL: ", end='\n', file=open("WFDLOG.txt", "a"))
+	counter = 0
+	for x in log:
+		logid, hiscall, hisclass, hissection, datetime, band, mode, power = x
+		loggeddate = datetime[:10]
+		loggedtime = datetime[11:13] + datetime[14:16]
+		# print(value1, ..., sep=' ', end='\n', file=sys.stdout, flush=False)
+		print("QSO:", band + "M", mode, loggeddate, loggedtime, mycall, myclass, mysection, hiscall, hisclass,
+		      hissection, sep=' ', end='\n', file=open("WFDLOG.txt", "a"))
+	print("END-OF-LOG:", end='\n', file=open("WFDLOG.txt", "a"))
+
 
 def logwindow():
 	global contacts, contactsOffset, logNumber
@@ -336,10 +359,10 @@ def logwindow():
 	callfiller = "          "
 	classfiller = "   "
 	sectfiller = "   "
-	bandfiller= "   "
-	modefiller="  "
+	bandfiller = "   "
+	modefiller = "  "
 	zerofiller = "000"
-	contacts = curses.newpad(1000,80)
+	contacts = curses.newpad(1000, 80)
 	conn = sqlite3.connect(database)
 	c = conn.cursor()
 	c.execute("select * from contacts order by date_time desc")
@@ -348,7 +371,7 @@ def logwindow():
 	logNumber=0
 	for x in log:
 		logid, hiscall, hisclass, hissection, datetime, band, mode, power = x
-		logid = zerofiller[:-len(str(logid))]+str(logid)
+		logid = zerofiller[:-len(str(logid))] + str(logid)
 		hiscall = hiscall + callfiller[:-len(hiscall)]
 		hisclass = hisclass + classfiller[:-len(hisclass)]
 		hissection = hissection + sectfiller[:-len(hissection)]
@@ -358,7 +381,7 @@ def logwindow():
 		contacts.addstr(logNumber,0,logline)
 		logNumber += 1
 	stdscr.refresh()
-	contacts.refresh(0,0,1,1,6,54)
+	contacts.refresh(0, 0, 1, 1, 6, 54)
 
 def logup():
 	global contacts, contactsOffset, logNumber
@@ -377,15 +400,16 @@ def logdown():
 def dupCheck(acall):
 	global hisclass, hissection
 	oy, ox = stdscr.getyx()
-	scpwindow = curses.newpad(1000,33)
-	rectangle(stdscr, 11,0, 21, 34)
+	scpwindow = curses.newpad(1000, 33)
+	rectangle(stdscr, 11, 0, 21, 34)
 
 	conn = sqlite3.connect(database)
 	c = conn.cursor()
-	c.execute("select callsign, class, section, band, mode from contacts where callsign like '"+acall+"' order by band")
+	c.execute(
+		"select callsign, class, section, band, mode from contacts where callsign like '" + acall + "' order by band")
 	log = c.fetchall()
 	conn.close()
-	counter=0
+	counter = 0
 	for x in log:
 		decorate = ""
 		hiscall, hisclass, hissection, hisband, hismode = x
@@ -393,22 +417,25 @@ def dupCheck(acall):
 			decorate = curses.A_BOLD
 			curses.flash()
 			curses.beep()
-		else: decorate = curses.A_NORMAL
-		scpwindow.addstr(counter, 0,hiscall+": "+hisband+" "+hismode, decorate)
+		else:
+			decorate = curses.A_NORMAL
+		scpwindow.addstr(counter, 0, hiscall + ": " + hisband + " " + hismode, decorate)
 		counter = counter + 1
 	stdscr.refresh()
-	scpwindow.refresh(0,0,12,1,20,33)
-	stdscr.move(oy,ox)
+	scpwindow.refresh(0, 0, 12, 1, 20, 33)
+	stdscr.move(oy, ox)
+
 
 def displaySCP(matches):
-	scpwindow = curses.newpad(1000,33)
-	rectangle(stdscr, 11,0, 21, 34)
+	scpwindow = curses.newpad(1000, 33)
+	rectangle(stdscr, 11, 0, 21, 34)
 	for x in matches:
 		wy, wx = scpwindow.getyx()
-		if (33 - wx) < len(str(x)): scpwindow.move(wy+1,0)
-		scpwindow.addstr(str(x)+" ")
+		if (33 - wx) < len(str(x)): scpwindow.move(wy + 1, 0)
+		scpwindow.addstr(str(x) + " ")
 	stdscr.refresh()
-	scpwindow.refresh(0,0,12,1,20,33)
+	scpwindow.refresh(0, 0, 12, 1, 20, 33)
+
 
 def workedSections():
 	global wrkdsections
@@ -417,126 +444,134 @@ def workedSections():
 	c.execute("select distinct section from contacts")
 	all_rows = c.fetchall()
 	wrkdsections = str(all_rows)
-	wrkdsections = wrkdsections.replace("('","").replace("',), ",",").replace("',)]","").replace('[','').split(',')
+	wrkdsections = wrkdsections.replace("('", "").replace("',), ", ",").replace("',)]", "").replace('[', '').split(',')
+
 
 def workedSection(section):
-	if section in wrkdsections: return curses.A_BOLD
-	else: return curses.A_NORMAL
+	if section in wrkdsections:
+		return curses.A_BOLD
+	else:
+		return curses.A_NORMAL
+
 
 def sectionsCol1():
-	rectangle(stdscr, 8,35, 21, 43)
-	stdscr.addstr(9,36,"   DX  ", curses.A_REVERSE)
-	stdscr.addstr(10,36,"   DX  ", workedSection("DX"))
-	stdscr.addstr(11,36,"   1   ", curses.A_REVERSE)
-	stdscr.addstr(12,36,"CT", workedSection("CT"))
-	stdscr.addstr(12,41,"RI", workedSection("RI"))
-	stdscr.addstr(13,36,"EMA", workedSection("EMA"))
-	stdscr.addstr(13,41,"VT", workedSection("VT"))
-	stdscr.addstr(14,36,"ME", workedSection("ME"))
-	stdscr.addstr(14,40,"WMA", workedSection("WMA"))
-	stdscr.addstr(15,36,"NH", workedSection("NH"))
-	stdscr.addstr(16,36,"   2   ", curses.A_REVERSE)
-	stdscr.addstr(17,36,"ENY", workedSection("ENY"))
-	stdscr.addstr(17,40,"NNY", workedSection("NNY"))
-	stdscr.addstr(18,36,"NLI", workedSection("NLI"))
-	stdscr.addstr(18,40,"SNJ", workedSection("SNJ"))
-	stdscr.addstr(19,36,"NNJ", workedSection("NNJ"))
-	stdscr.addstr(19,40,"WNY", workedSection("WNY"))
+	rectangle(stdscr, 8, 35, 21, 43)
+	stdscr.addstr(9, 36, "   DX  ", curses.A_REVERSE)
+	stdscr.addstr(10, 36, "   DX  ", workedSection("DX"))
+	stdscr.addstr(11, 36, "   1   ", curses.A_REVERSE)
+	stdscr.addstr(12, 36, "CT", workedSection("CT"))
+	stdscr.addstr(12, 41, "RI", workedSection("RI"))
+	stdscr.addstr(13, 36, "EMA", workedSection("EMA"))
+	stdscr.addstr(13, 41, "VT", workedSection("VT"))
+	stdscr.addstr(14, 36, "ME", workedSection("ME"))
+	stdscr.addstr(14, 40, "WMA", workedSection("WMA"))
+	stdscr.addstr(15, 36, "NH", workedSection("NH"))
+	stdscr.addstr(16, 36, "   2   ", curses.A_REVERSE)
+	stdscr.addstr(17, 36, "ENY", workedSection("ENY"))
+	stdscr.addstr(17, 40, "NNY", workedSection("NNY"))
+	stdscr.addstr(18, 36, "NLI", workedSection("NLI"))
+	stdscr.addstr(18, 40, "SNJ", workedSection("SNJ"))
+	stdscr.addstr(19, 36, "NNJ", workedSection("NNJ"))
+	stdscr.addstr(19, 40, "WNY", workedSection("WNY"))
+
 
 def sectionsCol2():
-	rectangle(stdscr, 8,44, 21, 52)
-	stdscr.addstr(9,45,"   3   ", curses.A_REVERSE)
-	stdscr.addstr(10,45,"DE", workedSection("DE"))
-	stdscr.addstr(10,49,"MDC", workedSection("MDC"))
-	stdscr.addstr(11,45,"EPA", workedSection("EPA"))
-	stdscr.addstr(11,49,"WPA", workedSection("WPA"))
-	stdscr.addstr(12,45,"   4   ", curses.A_REVERSE)
-	stdscr.addstr(13,45,"AL", workedSection("AL"))
-	stdscr.addstr(13,50,"SC", workedSection("SC"))
-	stdscr.addstr(14,45,"GA", workedSection("GA"))
-	stdscr.addstr(14,49,"SFL", workedSection("SFL"))
-	stdscr.addstr(15,45,"KY", workedSection("KY"))
-	stdscr.addstr(15,50,"TY", workedSection("TY"))
-	stdscr.addstr(16,45,"NC", workedSection("NC"))
-	stdscr.addstr(16,50,"VA", workedSection("VA"))
-	stdscr.addstr(17,45,"NFL", workedSection("NFL"))
-	stdscr.addstr(17,50,"VI", workedSection("VI"))
-	stdscr.addstr(18,45,"PR", workedSection("PR"))
-	stdscr.addstr(18,49,"WCF", workedSection("WCF"))
+	rectangle(stdscr, 8, 44, 21, 52)
+	stdscr.addstr(9, 45, "   3   ", curses.A_REVERSE)
+	stdscr.addstr(10, 45, "DE", workedSection("DE"))
+	stdscr.addstr(10, 49, "MDC", workedSection("MDC"))
+	stdscr.addstr(11, 45, "EPA", workedSection("EPA"))
+	stdscr.addstr(11, 49, "WPA", workedSection("WPA"))
+	stdscr.addstr(12, 45, "   4   ", curses.A_REVERSE)
+	stdscr.addstr(13, 45, "AL", workedSection("AL"))
+	stdscr.addstr(13, 50, "SC", workedSection("SC"))
+	stdscr.addstr(14, 45, "GA", workedSection("GA"))
+	stdscr.addstr(14, 49, "SFL", workedSection("SFL"))
+	stdscr.addstr(15, 45, "KY", workedSection("KY"))
+	stdscr.addstr(15, 50, "TY", workedSection("TY"))
+	stdscr.addstr(16, 45, "NC", workedSection("NC"))
+	stdscr.addstr(16, 50, "VA", workedSection("VA"))
+	stdscr.addstr(17, 45, "NFL", workedSection("NFL"))
+	stdscr.addstr(17, 50, "VI", workedSection("VI"))
+	stdscr.addstr(18, 45, "PR", workedSection("PR"))
+	stdscr.addstr(18, 49, "WCF", workedSection("WCF"))
+
 
 def sectionsCol3():
-	rectangle(stdscr, 8,53, 21, 61)
-	stdscr.addstr(9,54,"   5   ", curses.A_REVERSE)
-	stdscr.addstr(10,54,"AR", workedSection("AR"))
-	stdscr.addstr(10,58,"NTX", workedSection("NTX"))
-	stdscr.addstr(11,54,"LA", workedSection("LA"))
-	stdscr.addstr(11,59,"OK", workedSection("OK"))
-	stdscr.addstr(12,54,"MS", workedSection("MS"))
-	stdscr.addstr(12,58,"STX", workedSection("STX"))
-	stdscr.addstr(13,54,"NM", workedSection("NM"))
-	stdscr.addstr(13,58,"WTX", workedSection("WTX"))
-	stdscr.addstr(14,54,"   6   ", curses.A_REVERSE)
-	stdscr.addstr(15,54,"EB", workedSection("EB"))
-	stdscr.addstr(15,58,"SCV", workedSection("SCV"))
-	stdscr.addstr(16,54,"LAX", workedSection("LAX"))
-	stdscr.addstr(16,58,"SDG", workedSection("SDG"))
-	stdscr.addstr(17,54,"ORG", workedSection("ORG"))
-	stdscr.addstr(17,59,"SF", workedSection("SF"))
-	stdscr.addstr(18,54,"PAC", workedSection("PAC"))
-	stdscr.addstr(18,58,"SJV", workedSection("SJV"))
-	stdscr.addstr(19,54,"SB", workedSection("SB"))
-	stdscr.addstr(19,59,"SV", workedSection("SV"))
+	rectangle(stdscr, 8, 53, 21, 61)
+	stdscr.addstr(9, 54, "   5   ", curses.A_REVERSE)
+	stdscr.addstr(10, 54, "AR", workedSection("AR"))
+	stdscr.addstr(10, 58, "NTX", workedSection("NTX"))
+	stdscr.addstr(11, 54, "LA", workedSection("LA"))
+	stdscr.addstr(11, 59, "OK", workedSection("OK"))
+	stdscr.addstr(12, 54, "MS", workedSection("MS"))
+	stdscr.addstr(12, 58, "STX", workedSection("STX"))
+	stdscr.addstr(13, 54, "NM", workedSection("NM"))
+	stdscr.addstr(13, 58, "WTX", workedSection("WTX"))
+	stdscr.addstr(14, 54, "   6   ", curses.A_REVERSE)
+	stdscr.addstr(15, 54, "EB", workedSection("EB"))
+	stdscr.addstr(15, 58, "SCV", workedSection("SCV"))
+	stdscr.addstr(16, 54, "LAX", workedSection("LAX"))
+	stdscr.addstr(16, 58, "SDG", workedSection("SDG"))
+	stdscr.addstr(17, 54, "ORG", workedSection("ORG"))
+	stdscr.addstr(17, 59, "SF", workedSection("SF"))
+	stdscr.addstr(18, 54, "PAC", workedSection("PAC"))
+	stdscr.addstr(18, 58, "SJV", workedSection("SJV"))
+	stdscr.addstr(19, 54, "SB", workedSection("SB"))
+	stdscr.addstr(19, 59, "SV", workedSection("SV"))
+
 
 def sectionsCol4():
-	rectangle(stdscr, 8,62, 21, 70)
-	stdscr.addstr(9,63,"   7   ", curses.A_REVERSE)
-	stdscr.addstr(10,63,"AK", workedSection("AK"))
-	stdscr.addstr(10,68,"NV", workedSection("NV"))
-	stdscr.addstr(11,63,"AZ", workedSection("AZ"))
-	stdscr.addstr(11,68,"OR", workedSection("OR"))
-	stdscr.addstr(12,63,"EWA", workedSection("EWA"))
-	stdscr.addstr(12,68,"UT", workedSection("UT"))
-	stdscr.addstr(13,63,"ID", workedSection("ID"))
-	stdscr.addstr(13,67,"WWA", workedSection("WWA"))
-	stdscr.addstr(14,63,"MT", workedSection("MT"))
-	stdscr.addstr(14,68,"WY", workedSection("WY"))
-	stdscr.addstr(15,63,"   8   ", curses.A_REVERSE)
-	stdscr.addstr(16,63,"MI", workedSection("MI"))
-	stdscr.addstr(16,68,"WV", workedSection("WV"))
-	stdscr.addstr(17,63,"OH", workedSection("OH"))
-	stdscr.addstr(18,63,"   9   ", curses.A_REVERSE)
-	stdscr.addstr(19,63,"IL", workedSection("IL"))
-	stdscr.addstr(19,68,"WI", workedSection("WI"))
-	stdscr.addstr(20,63,"IN", workedSection("IN"))
+	rectangle(stdscr, 8, 62, 21, 70)
+	stdscr.addstr(9, 63, "   7   ", curses.A_REVERSE)
+	stdscr.addstr(10, 63, "AK", workedSection("AK"))
+	stdscr.addstr(10, 68, "NV", workedSection("NV"))
+	stdscr.addstr(11, 63, "AZ", workedSection("AZ"))
+	stdscr.addstr(11, 68, "OR", workedSection("OR"))
+	stdscr.addstr(12, 63, "EWA", workedSection("EWA"))
+	stdscr.addstr(12, 68, "UT", workedSection("UT"))
+	stdscr.addstr(13, 63, "ID", workedSection("ID"))
+	stdscr.addstr(13, 67, "WWA", workedSection("WWA"))
+	stdscr.addstr(14, 63, "MT", workedSection("MT"))
+	stdscr.addstr(14, 68, "WY", workedSection("WY"))
+	stdscr.addstr(15, 63, "   8   ", curses.A_REVERSE)
+	stdscr.addstr(16, 63, "MI", workedSection("MI"))
+	stdscr.addstr(16, 68, "WV", workedSection("WV"))
+	stdscr.addstr(17, 63, "OH", workedSection("OH"))
+	stdscr.addstr(18, 63, "   9   ", curses.A_REVERSE)
+	stdscr.addstr(19, 63, "IL", workedSection("IL"))
+	stdscr.addstr(19, 68, "WI", workedSection("WI"))
+	stdscr.addstr(20, 63, "IN", workedSection("IN"))
+
 
 def sectionsCol5():
-	rectangle(stdscr, 8,71, 21, 79)
-	stdscr.addstr(9,72,"   0   ", curses.A_REVERSE)
-	stdscr.addstr(10,72,"CO", workedSection("CO"))
-	stdscr.addstr(10,77,"MO", workedSection("MO"))
-	stdscr.addstr(11,72,"IA", workedSection("IA"))
-	stdscr.addstr(11,77,"ND", workedSection("ND"))
-	stdscr.addstr(12,72,"KS", workedSection("KS"))
-	stdscr.addstr(12,77,"NE", workedSection("NE"))
-	stdscr.addstr(13,72,"MN", workedSection("MN"))
-	stdscr.addstr(13,77,"SD", workedSection("SD"))
-	stdscr.addstr(14,72,"CANADA ", curses.A_REVERSE)
-	stdscr.addstr(15,72,"AB", workedSection("AB"))
-	stdscr.addstr(15,77,"NT", workedSection("NT"))
-	stdscr.addstr(16,72,"BC", workedSection("BC"))
-	stdscr.addstr(16,76,"ONE", workedSection("ONE"))
-	stdscr.addstr(17,72,"GTA", workedSection("GTA"))
-	stdscr.addstr(17,76,"ONN", workedSection("ONN"))
-	stdscr.addstr(18,72,"MAR", workedSection("MAR"))
-	stdscr.addstr(18,76,"ONS", workedSection("ONS"))
-	stdscr.addstr(19,72,"MB", workedSection("MB"))
-	stdscr.addstr(19,77,"QC", workedSection("QC"))
-	stdscr.addstr(20,72,"NL", workedSection("NL"))
-	stdscr.addstr(20,77,"SK", workedSection("SK"))
+	rectangle(stdscr, 8, 71, 21, 79)
+	stdscr.addstr(9, 72, "   0   ", curses.A_REVERSE)
+	stdscr.addstr(10, 72, "CO", workedSection("CO"))
+	stdscr.addstr(10, 77, "MO", workedSection("MO"))
+	stdscr.addstr(11, 72, "IA", workedSection("IA"))
+	stdscr.addstr(11, 77, "ND", workedSection("ND"))
+	stdscr.addstr(12, 72, "KS", workedSection("KS"))
+	stdscr.addstr(12, 77, "NE", workedSection("NE"))
+	stdscr.addstr(13, 72, "MN", workedSection("MN"))
+	stdscr.addstr(13, 77, "SD", workedSection("SD"))
+	stdscr.addstr(14, 72, "CANADA ", curses.A_REVERSE)
+	stdscr.addstr(15, 72, "AB", workedSection("AB"))
+	stdscr.addstr(15, 77, "NT", workedSection("NT"))
+	stdscr.addstr(16, 72, "BC", workedSection("BC"))
+	stdscr.addstr(16, 76, "ONE", workedSection("ONE"))
+	stdscr.addstr(17, 72, "GTA", workedSection("GTA"))
+	stdscr.addstr(17, 76, "ONN", workedSection("ONN"))
+	stdscr.addstr(18, 72, "MAR", workedSection("MAR"))
+	stdscr.addstr(18, 76, "ONS", workedSection("ONS"))
+	stdscr.addstr(19, 72, "MB", workedSection("MB"))
+	stdscr.addstr(19, 77, "QC", workedSection("QC"))
+	stdscr.addstr(20, 72, "NL", workedSection("NL"))
+	stdscr.addstr(20, 77, "SK", workedSection("SK"))
+
 
 def sections():
 	workedSections()
-	#rectangle(stdscr, 7,40, 21, 79)
 	sectionsCol1()
 	sectionsCol2()
 	sectionsCol3()
@@ -544,16 +579,18 @@ def sections():
 	sectionsCol5()
 	stdscr.refresh()
 
+
 def entry():
-	rectangle(stdscr, 8,0,10,18)
-	stdscr.addstr(8,1,"CALL")
-	rectangle(stdscr, 8,19,10,25)
-	stdscr.addstr(8,20,"class")
-	rectangle(stdscr, 8,26,10,34)
-	stdscr.addstr(8,27,"Section")
+	rectangle(stdscr, 8, 0, 10, 18)
+	stdscr.addstr(8, 1, "CALL")
+	rectangle(stdscr, 8, 19, 10, 25)
+	stdscr.addstr(8, 20, "class")
+	rectangle(stdscr, 8, 26, 10, 34)
+	stdscr.addstr(8, 27, "Section")
+
 
 def clearentry():
-	global inputFieldFocus,hiscall,hissection,hisclass,kbuf
+	global inputFieldFocus, hiscall, hissection, hisclass, kbuf
 	hiscall = ""
 	hissection = ""
 	hisclass = ""
@@ -563,35 +600,40 @@ def clearentry():
 	displayInputField(1)
 	displayInputField(0)
 
+
 def highlightBonus(bonus):
-	if bonus: return curses.A_BOLD
-	else: return curses.A_DIM
+	if bonus:
+		return curses.A_BOLD
+	else:
+		return curses.A_DIM
+
 
 def statusline():
 	y, x = stdscr.getyx()
-	now=datetime.now().isoformat(' ')[11:19]
-	utcnow=datetime.utcnow().isoformat(' ')[11:19]
+	now = datetime.now().isoformat(' ')[11:19]
+	utcnow = datetime.utcnow().isoformat(' ')[11:19]
 	try:
-		stdscr.addstr(22,60,"Local Time: " + now)
-		stdscr.addstr(23,62,"UTC Time: " + utcnow)
+		stdscr.addstr(22, 60, "Local Time: " + now)
+		stdscr.addstr(23, 62, "UTC Time: " + utcnow)
 	except curses.error as e:
 		pass
 
-	stdscr.addstr(23,1,"Band:        Mode:")
-	stdscr.addstr(23,7,"  "+band+"  ", curses.A_REVERSE)
-	stdscr.addstr(23,20,"  "+mode+"  ", curses.A_REVERSE)
-	stdscr.addstr(23,27, "                                  ")
-	stdscr.addstr(23,27, " "+mycall+"|"+myclass+"|"+mysection+"|"+power+"w ", curses.A_REVERSE)
-	stdscr.addstr(22,1,"Bonuses:")
-	stdscr.addstr(22,10,"Alt Power",highlightBonus(altpower))
+	stdscr.addstr(23, 1, "Band:        Mode:")
+	stdscr.addstr(23, 7, "  " + band + "  ", curses.A_REVERSE)
+	stdscr.addstr(23, 20, "  " + mode + "  ", curses.A_REVERSE)
+	stdscr.addstr(23, 27, "                                  ")
+	stdscr.addstr(23, 27, " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ", curses.A_REVERSE)
+	stdscr.addstr(22, 1, "Bonuses:")
+	stdscr.addstr(22, 10, "Alt Power", highlightBonus(altpower))
 	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("Outdoors",highlightBonus(outdoors))
+	stdscr.addstr("Outdoors", highlightBonus(outdoors))
 	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("Not At Home",highlightBonus(notathome))
+	stdscr.addstr("Not At Home", highlightBonus(notathome))
 	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("Satellite",highlightBonus(satellite))
+	stdscr.addstr("Satellite", highlightBonus(satellite))
 
-	stdscr.move(y,x)
+	stdscr.move(y, x)
+
 
 def setpower(p):
 	global power
@@ -599,15 +641,18 @@ def setpower(p):
 	writepreferences()
 	statusline()
 
+
 def setband(b):
 	global band
 	band = b
 	statusline()
 
+
 def setmode(m):
 	global mode
 	mode = m
 	statusline()
+
 
 def setcallsign(c):
 	global mycall
@@ -615,17 +660,20 @@ def setcallsign(c):
 	writepreferences()
 	statusline()
 
+
 def setclass(c):
 	global myclass
 	myclass = str(c)
 	writepreferences()
 	statusline()
 
+
 def setsection(s):
 	global mysection
 	mysection = str(s)
 	writepreferences()
 	statusline()
+
 
 def claimAltPower():
 	global altpower
@@ -634,15 +682,16 @@ def claimAltPower():
 	else:
 		altpower = True
 	oy, ox = stdscr.getyx()
-	window = curses.newpad(10,33)
-	rectangle(stdscr, 11,0, 21, 34)
-	window.addstr(0, 0,"Alt Power set to: "+str(altpower))
+	window = curses.newpad(10, 33)
+	rectangle(stdscr, 11, 0, 21, 34)
+	window.addstr(0, 0, "Alt Power set to: " + str(altpower))
 	stdscr.refresh()
-	window.refresh(0,0,12,1,20,33)
-	stdscr.move(oy,ox)
+	window.refresh(0, 0, 12, 1, 20, 33)
+	stdscr.move(oy, ox)
 	writepreferences()
 	statusline()
 	stats()
+
 
 def claimOutdoors():
 	global outdoors
@@ -651,15 +700,16 @@ def claimOutdoors():
 	else:
 		outdoors = True
 	oy, ox = stdscr.getyx()
-	window = curses.newpad(10,33)
-	rectangle(stdscr, 11,0, 21, 34)
-	window.addstr(0, 0,"Outdoor bonus set to: "+str(outdoors))
+	window = curses.newpad(10, 33)
+	rectangle(stdscr, 11, 0, 21, 34)
+	window.addstr(0, 0, "Outdoor bonus set to: " + str(outdoors))
 	stdscr.refresh()
-	window.refresh(0,0,12,1,20,33)
-	stdscr.move(oy,ox)
+	window.refresh(0, 0, 12, 1, 20, 33)
+	stdscr.move(oy, ox)
 	writepreferences()
 	statusline()
 	stats()
+
 
 def claimNotHome():
 	global notathome
@@ -668,15 +718,16 @@ def claimNotHome():
 	else:
 		notathome = True
 	oy, ox = stdscr.getyx()
-	window = curses.newpad(10,33)
-	rectangle(stdscr, 11,0, 21, 34)
-	window.addstr(0, 0,"Away bonus set to: "+str(notathome))
+	window = curses.newpad(10, 33)
+	rectangle(stdscr, 11, 0, 21, 34)
+	window.addstr(0, 0, "Away bonus set to: " + str(notathome))
 	stdscr.refresh()
-	window.refresh(0,0,12,1,20,33)
-	stdscr.move(oy,ox)
+	window.refresh(0, 0, 12, 1, 20, 33)
+	stdscr.move(oy, ox)
 	writepreferences()
 	statusline()
 	stats()
+
 
 def claimSatellite():
 	global satellite
@@ -685,49 +736,53 @@ def claimSatellite():
 	else:
 		satellite = True
 	oy, ox = stdscr.getyx()
-	window = curses.newpad(10,33)
-	rectangle(stdscr, 11,0, 21, 34)
-	window.addstr(0, 0,"Satellite bonus set to: "+str(satellite))
+	window = curses.newpad(10, 33)
+	rectangle(stdscr, 11, 0, 21, 34)
+	window.addstr(0, 0, "Satellite bonus set to: " + str(satellite))
 	stdscr.refresh()
-	window.refresh(0,0,12,1,20,33)
-	stdscr.move(oy,ox)
+	window.refresh(0, 0, 12, 1, 20, 33)
+	stdscr.move(oy, ox)
 	writepreferences()
 	statusline()
 	stats()
 
+
 def displayHelp():
 	wy, wx = stdscr.getyx()
 	help = [".H this message  |.L Generate Log",
-		".Q quit program  |.1 Alt Power",
-		".B## change bands|.2 Outdoors",
-		".M[CW,PH,DI] mode|.3 AwayFromHome",
-		".P## change power|.4 Satellite",
-		".D### delete QSO |[esc] abort inp",
-		".Kyourcall       |",
-		".Cyourclass      |",
-		".Syoursection    |"]
-	stdscr.move(12,1)
+	        ".Q quit program  |.1 Alt Power",
+	        ".B## change bands|.2 Outdoors",
+	        ".M[CW,PH,DI] mode|.3 AwayFromHome",
+	        ".P## change power|.4 Satellite",
+	        ".D### delete QSO |[esc] abort inp",
+	        ".Kyourcall       |",
+	        ".Cyourclass      |",
+	        ".Syoursection    |"]
+	stdscr.move(12, 1)
 	count = 0
 	for x in help:
-		stdscr.addstr(12+count, 1, x)
+		stdscr.addstr(12 + count, 1, x)
 		count = count + 1
-	stdscr.move(wy,wx)
+	stdscr.move(wy, wx)
 	stdscr.refresh()
+
 
 def displayinfo(info):
 	y, x = stdscr.getyx()
-	stdscr.move(20,1)
+	stdscr.move(20, 1)
 	stdscr.addstr(info)
-	stdscr.move(y,x)
+	stdscr.move(y, x)
 	stdscr.refresh()
+
 
 def displayLine():
 	filler = "                        "
 	line = kbuf + filler[:-len(kbuf)]
-	stdscr.move(9,1)
+	stdscr.move(9, 1)
 	stdscr.addstr(line)
-	stdscr.move(9,len(kbuf)+1)
+	stdscr.move(9, len(kbuf) + 1)
 	stdscr.refresh()
+
 
 def displayInputField(field):
 	filler = "                 "
@@ -740,91 +795,94 @@ def displayInputField(field):
 	elif field == 2:
 		filler = "       "
 		y = 27
-	stdscr.move(9,y)
+	stdscr.move(9, y)
 	if kbuf == "":
 		stdscr.addstr(filler)
 	else:
 		line = kbuf + filler[:-len(kbuf)]
 		stdscr.addstr(line.upper())
-	stdscr.move(9,len(kbuf)+y)
+	stdscr.move(9, len(kbuf) + y)
 	stdscr.refresh()
+
 
 def processcommand(cmd):
 	global band, mode, power, quit
-	cmd=cmd[1:].upper()
-	if cmd=="Q": # Quit
-		quit= True
+	cmd = cmd[1:].upper()
+	if cmd == "Q":  # Quit
+		quit = True
 		return
-	if cmd[:1] == "B": # Change Band
+	if cmd[:1] == "B":  # Change Band
 		setband(cmd[1:])
 		return
-	if cmd[:1] == "M": # Change Mode
-		if cmd[1:] == "CW" or cmd[1:] == "PH" or cmd[1:] == "DI": setmode(cmd[1:])
+	if cmd[:1] == "M":  # Change Mode
+		if cmd[1:] == "CW" or cmd[1:] == "PH" or cmd[1:] == "DI":
+			setmode(cmd[1:])
 		else:
 			curses.flash()
 			curses.beep()
 		return
-	if cmd[:1] == "P": # Change Power
+	if cmd[:1] == "P":  # Change Power
 		setpower(cmd[1:])
 		return
-	if cmd[:1] == "D": # Delete Contact
+	if cmd[:1] == "D":  # Delete Contact
 		delete_contact(cmd[1:])
 		return
-	if cmd[:1] == "H": # Print Help
+	if cmd[:1] == "H":  # Print Help
 		displayHelp()
 		return
-	if cmd[:1] == "K": # Set your Call Sign
+	if cmd[:1] == "K":  # Set your Call Sign
 		setcallsign(cmd[1:])
 		return
-	if cmd[:1] == "C": # Set your class
+	if cmd[:1] == "C":  # Set your class
 		setclass(cmd[1:])
 		return
-	if cmd[:1] == "S": # Set your section
+	if cmd[:1] == "S":  # Set your section
 		setsection(cmd[1:])
 		return
-	if cmd[:1] == "L": # Generate Cabrillo Log
+	if cmd[:1] == "L":  # Generate Cabrillo Log
 		cabrillo()
 		return
-	if cmd[:1] == "1": # Claim Alt Power Bonus
+	if cmd[:1] == "1":  # Claim Alt Power Bonus
 		claimAltPower()
 		return
-	if cmd[:1] == "2": # Claim Outdoor Bonus
+	if cmd[:1] == "2":  # Claim Outdoor Bonus
 		claimOutdoors()
 		return
-	if cmd[:1] == "3": # Claim Not Home Bonus
+	if cmd[:1] == "3":  # Claim Not Home Bonus
 		claimNotHome()
 		return
-	if cmd[:1] == "4": # Claim Satellite Bonus
+	if cmd[:1] == "4":  # Claim Satellite Bonus
 		claimSatellite()
 		return
 	curses.flash()
 	curses.beep()
 
+
 def proc_key(key):
-	global inputFieldFocus,hiscall,hissection,hisclass,kbuf
+	global inputFieldFocus, hiscall, hissection, hisclass, kbuf
 	if key == 9:
 		inputFieldFocus += 1
 		if inputFieldFocus > 2:
 			inputFieldFocus = 0
 		if inputFieldFocus == 0:
-			hissection = kbuf #store any input to previous field
-			stdscr.move(9,1) #move focus to call field
-			kbuf = hiscall #load current call into buffer
+			hissection = kbuf  # store any input to previous field
+			stdscr.move(9, 1)  # move focus to call field
+			kbuf = hiscall  # load current call into buffer
 			stdscr.addstr(kbuf)
 		if inputFieldFocus == 1:
-			hiscall = kbuf #store any input to previous field
+			hiscall = kbuf  # store any input to previous field
 			dupCheck(hiscall)
-			stdscr.move(9,20) #move focus to class field
-			kbuf = hisclass #load current class into buffer
+			stdscr.move(9, 20)  # move focus to class field
+			kbuf = hisclass  # load current class into buffer
 			stdscr.addstr(kbuf)
 		if inputFieldFocus == 2:
-			hisclass = kbuf #store any input to previous field
-			stdscr.move(9,27) #move focus to section field
-			kbuf = hissection #load current section into buffer
+			hisclass = kbuf  # store any input to previous field
+			stdscr.move(9, 27)  # move focus to section field
+			kbuf = hissection  # load current section into buffer
 			stdscr.addstr(kbuf)
 		return
 	elif key == BackSpace:
-		if kbuf !="":
+		if kbuf != "":
 			kbuf = kbuf[0:-1]
 			if inputFieldFocus == 0 and len(kbuf) < 3: displaySCP(superCheck("^"))
 			if inputFieldFocus == 0 and len(kbuf) > 2: displaySCP(superCheck(kbuf))
@@ -838,13 +896,12 @@ def proc_key(key):
 			hisclass = kbuf
 		elif inputFieldFocus == 2:
 			hissection = kbuf
-		if hiscall[:1]==".": # process command
+		if hiscall[:1] == ".":  # process command
 			processcommand(hiscall)
 			clearentry()
 			return
 		if hiscall == "" or hisclass == "" or hissection == "":
 			return
-		utcnow=datetime.utcnow().isoformat(' ')[:16]
 		contact = (hiscall, hisclass, hissection, band, mode, int(power))
 		log_contact(contact)
 		clearentry()
@@ -868,6 +925,7 @@ def proc_key(key):
 	# displayinfo(str(key))
 	displayInputField(inputFieldFocus)
 
+
 def main(s):
 	global stdscr, conn
 
@@ -886,28 +944,21 @@ def main(s):
 	logwindow()
 	readpreferences()
 	stats()
-	rectangle(stdscr, 11,0, 21, 34)
+	rectangle(stdscr, 11, 0, 21, 34)
 	displayHelp()
 	stdscr.refresh()
-	stdscr.move(9,1)
+	stdscr.move(9, 1)
 	while 1:
 		statusline()
 		stdscr.refresh()
-		ch=stdscr.getch()
-		#try:
+		ch = stdscr.getch()
 		if ch == curses.KEY_MOUSE:
 			pass
-			# _, x, y, _, bstate = curses.getmouse()
-				#op=str(x)+", "+str(y)
-				#stdscr.addstr(op+"  ")
-				#stdscr.refresh()
 		elif ch != -1:
 			proc_key(ch)
-				#stdscr.addstr(str(ch))
 		else:
 			time.sleep(0.1)
-		#except:
-		#	pass
-		if quit == True: break
+		if quit: break
+
 
 wrapper(main)
