@@ -610,18 +610,18 @@ def highlightBonus(bonus):
 
 def statusline():
 	y, x = stdscr.getyx()
-	now = datetime.now().isoformat(' ')[11:19]
-	utcnow = datetime.utcnow().isoformat(' ')[11:19]
+	now = datetime.now().isoformat(' ')[5:19].replace('-','/')
+	utcnow = datetime.utcnow().isoformat(' ')[5:19].replace('-','/')
 	try:
-		stdscr.addstr(22, 60, "Local Time: " + now)
-		stdscr.addstr(23, 62, "UTC Time: " + utcnow)
+		stdscr.addstr(22, 54, "Local Time: " + now)
+		stdscr.addstr(23, 56, "UTC Time: " + utcnow)
 	except curses.error as e:
 		pass
 
 	stdscr.addstr(23, 1, "Band:        Mode:")
 	stdscr.addstr(23, 7, "  " + band + "  ", curses.A_REVERSE)
 	stdscr.addstr(23, 20, "  " + mode + "  ", curses.A_REVERSE)
-	stdscr.addstr(23, 27, "                                  ")
+	stdscr.addstr(23, 27, "                            ")
 	stdscr.addstr(23, 27, " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ", curses.A_REVERSE)
 	stdscr.addstr(22, 1, "Bonuses:")
 	stdscr.addstr(22, 10, "Alt Power", highlightBonus(altpower))
