@@ -15,6 +15,7 @@ COLOR_YELLOW	Yellow
 import curses
 import time
 import sqlite3
+#import sys
 
 from curses.textpad import rectangle
 from curses import wrapper
@@ -936,7 +937,9 @@ def main(s):
 	curses.cbreak()
 	stdscr.keypad(True)
 	stdscr.nodelay(True)
-	curses.mousemask(1)
+	curses.mousemask(curses.ALL_MOUSE_EVENTS)
+	# Enable mouse tracking in xterm.
+	#sys.stdout.write('\033[?1002;h\n')
 	stdscr.clear()
 	contacts()
 	sections()
@@ -953,6 +956,13 @@ def main(s):
 		stdscr.refresh()
 		ch = stdscr.getch()
 		if ch == curses.KEY_MOUSE:
+			try:
+				_, x, y, _, buttons = curses.getmouse()
+				info = "X: " + str(x) + " Y: " + str(y) + " button: " + str(buttons)+"  "
+				displayinfo(info)
+			except curses.error:
+				displayinfo("somemouseerror")
+				pass
 			pass
 		elif ch != -1:
 			proc_key(ch)
