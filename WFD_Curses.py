@@ -15,7 +15,7 @@ COLOR_YELLOW	Yellow
 import curses
 import time
 import sqlite3
-#import sys
+# import sys
 
 from curses.textpad import rectangle
 from curses import wrapper
@@ -23,6 +23,8 @@ from datetime import datetime
 from sqlite3 import Error
 
 stdscr = curses.initscr()
+qsoew = 0
+qso=[]
 quit = False
 
 BackSpace = 263
@@ -52,11 +54,13 @@ phonecontacts = "0"
 digitalcontacts = "0"
 contacts = ""
 contactsOffset = 0
-logNumber=0
+logNumber = 0
 kbuf = ""
+editbuf = ""
 maxFieldLength = [17, 5, 7]
-
+maxEditFieldLength = [10,10,10,10,10,10,10]
 inputFieldFocus = 0
+editFieldFocus = 1
 hiscall = ""
 hissection = ""
 hisclass = ""
@@ -154,6 +158,17 @@ def delete_contact(contact):
 	stats()
 	logwindow()
 
+def change_contact(qso):
+	try:
+		conn = sqlite3.connect(database)
+		sql = "update contacts set callsign = '"+qso[1]+"', class = '"+qso[2]+"', section = '"+qso[3]+"', date_time = '"+qso[4]+"', band = '"+qso[5]+"', mode = '"+qso[6]+"', power = '"+qso[7]+"'  where id=" + qso[0]
+		cur = conn.cursor()
+		cur.execute(sql)
+		conn.commit()
+		conn.close()
+	except Error as e:
+		#displayinfo(e)
+		pass
 
 def readSections():
 	try:
@@ -208,6 +223,7 @@ def superCheck(acall):
 
 
 def contacts():
+	global stdscr
 	rectangle(stdscr, 0, 0, 7, 55)
 	contactslabel = "Recent Contacts"
 	contactslabeloffset = (49 / 2) - len(contactslabel) / 2
@@ -241,8 +257,8 @@ def stats():
 	stdscr.addstr(2, 58, "Total PHONE:")
 	stdscr.addstr(3, 58, "Total DIGITAL:")
 	stdscr.addstr(4, 58, "QSO POINTS:          ")
-	stdscr.addstr(5, 58, "QSO PER HOUR:")
-	stdscr.addstr(6, 58, "QPH Last 15min:")
+	stdscr.addstr(5, 58, "QSOs LAST HOUR:")
+	stdscr.addstr(6, 58, "QSOs LAST 15MIN:")
 	stdscr.addstr(1, 79 - len(cwcontacts), cwcontacts)
 	stdscr.addstr(2, 79 - len(phonecontacts), phonecontacts)
 	stdscr.addstr(3, 79 - len(digitalcontacts), digitalcontacts)
@@ -350,13 +366,13 @@ def cabrillo():
 		loggedtime = datetime[11:13] + datetime[14:16]
 		# print(value1, ..., sep=' ', end='\n', file=sys.stdout, flush=False)
 		print("QSO:", band + "M", mode, loggeddate, loggedtime, mycall, myclass, mysection, hiscall, hisclass,
-		      hissection, sep=' ', end='\n', file=open("WFDLOG.txt", "a"))
+			  hissection, sep=' ', end='\n', file=open("WFDLOG.txt", "a"))
 	print("END-OF-LOG:", end='\n', file=open("WFDLOG.txt", "a"))
 
 
 def logwindow():
 	global contacts, contactsOffset, logNumber
-	contactsOffset = 0 # clears scroll position
+	contactsOffset = 0  # clears scroll position
 	callfiller = "          "
 	classfiller = "   "
 	sectfiller = "   "
@@ -369,7 +385,7 @@ def logwindow():
 	c.execute("select * from contacts order by date_time desc")
 	log = c.fetchall()
 	conn.close()
-	logNumber=0
+	logNumber = 0
 	for x in log:
 		logid, hiscall, hisclass, hissection, datetime, band, mode, power = x
 		logid = zerofiller[:-len(str(logid))] + str(logid)
@@ -378,18 +394,21 @@ def logwindow():
 		hissection = hissection + sectfiller[:-len(hissection)]
 		band = band + sectfiller[:-len(band)]
 		mode = mode + modefiller[:-len(mode)]
-		logline = logid+" "+hiscall+" "+hisclass+" "+hissection+" "+datetime+" "+band+" "+mode+" "+str(power)
-		contacts.addstr(logNumber,0,logline)
+		logline = logid + " " + hiscall + " " + hisclass + " " + hissection + " " + datetime + " " + band + " " + mode + " " + str(
+			power)
+		contacts.addstr(logNumber, 0, logline)
 		logNumber += 1
 	stdscr.refresh()
 	contacts.refresh(0, 0, 1, 1, 6, 54)
+
 
 def logup():
 	global contacts, contactsOffset, logNumber
 	contactsOffset += 1
 	if contactsOffset > (logNumber - 6): contactsOffset = (logNumber - 6)
-	contacts.refresh(contactsOffset,0,1,1,6,54)
+	contacts.refresh(contactsOffset, 0, 1, 1, 6, 54)
 	pass
+
 
 def logdown():
 	global contacts, contactsOffset
@@ -397,6 +416,7 @@ def logdown():
 	if contactsOffset < 0: contactsOffset = 0
 	contacts.refresh(contactsOffset, 0, 1, 1, 6, 54)
 	pass
+
 
 def dupCheck(acall):
 	global hisclass, hissection
@@ -611,8 +631,8 @@ def highlightBonus(bonus):
 
 def statusline():
 	y, x = stdscr.getyx()
-	now = datetime.now().isoformat(' ')[5:19].replace('-','/')
-	utcnow = datetime.utcnow().isoformat(' ')[5:19].replace('-','/')
+	now = datetime.now().isoformat(' ')[5:19].replace('-', '/')
+	utcnow = datetime.utcnow().isoformat(' ')[5:19].replace('-', '/')
 	try:
 		stdscr.addstr(22, 54, "Local Time: " + now)
 		stdscr.addstr(23, 56, "UTC Time: " + utcnow)
@@ -749,16 +769,17 @@ def claimSatellite():
 
 
 def displayHelp():
+	rectangle(stdscr, 11, 0, 21, 34)
 	wy, wx = stdscr.getyx()
 	help = [".H this message  |.L Generate Log",
-	        ".Q quit program  |.1 Alt Power",
-	        ".B## change bands|.2 Outdoors",
-	        ".M[CW,PH,DI] mode|.3 AwayFromHome",
-	        ".P## change power|.4 Satellite",
-	        ".D### delete QSO |[esc] abort inp",
-	        ".Kyourcall       |",
-	        ".Cyourclass      |",
-	        ".Syoursection    |"]
+			".Q quit program  |.1 Alt Power",
+			".B## change bands|.2 Outdoors",
+			".M[CW,PH,DI] mode|.3 AwayFromHome",
+			".P## change power|.4 Satellite",
+			".D### delete QSO |[esc] abort inp",
+			".Kyourcall       |",
+			".Cyourclass      |",
+			".Syoursection    |"]
 	stdscr.move(12, 1)
 	count = 0
 	for x in help:
@@ -923,8 +944,125 @@ def proc_key(key):
 			kbuf = kbuf.upper() + chr(key).upper()
 			if inputFieldFocus == 0 and len(kbuf) > 2: displaySCP(superCheck(kbuf))
 			if inputFieldFocus == 2 and len(kbuf) > 0: sectionCheck(kbuf)
-	# displayinfo(str(key))
 	displayInputField(inputFieldFocus)
+
+
+def edit_key(key):
+	global editFieldFocus, qso, quit
+	if key == 9:
+		editFieldFocus += 1
+		if editFieldFocus > 7:
+			editFieldFocus = 1
+		qsoew.move(editFieldFocus, 10)  # move focus to call field
+		qsoew.addstr(qso[editFieldFocus])
+		return
+	elif key == BackSpace:
+		if qso[editFieldFocus] != "":
+			qso[editFieldFocus] = qso[editFieldFocus][0:-1]
+		displayEditField(editFieldFocus)
+		return
+	elif key == EnterKey:
+		change_contact(qso)
+		qsoew.erase()
+		stdscr.clear()
+		rectangle(stdscr, 0, 0, 7, 55)
+		contactslabel = "Recent Contacts"
+		contactslabeloffset = (49 / 2) - len(contactslabel) / 2
+		stdscr.addstr(0, int(contactslabeloffset), contactslabel)
+		logwindow()
+		sections()
+		stats()
+		displayHelp()
+		entry()
+		stdscr.move(9, 1)
+		quit = True
+		return
+	elif key == Escape:
+		qsoew.erase()
+		stdscr.clear()
+		rectangle(stdscr, 0, 0, 7, 55)
+		contactslabel = "Recent Contacts"
+		contactslabeloffset = (49 / 2) - len(contactslabel) / 2
+		stdscr.addstr(0, int(contactslabeloffset), contactslabel)
+		logwindow()
+		sections()
+		stats()
+		displayHelp()
+		entry()
+		stdscr.move(9, 1)
+		quit = True
+		return
+	elif key == Space:
+		return
+	elif key == 258:  # arrow down
+		editFieldFocus += 1
+		if editFieldFocus > 7:
+			editFieldFocus = 1
+		qsoew.move(editFieldFocus, 10)  # move focus to call field
+		qsoew.addstr(qso[editFieldFocus])
+		return
+	elif key == 259:  # arrow up
+		editFieldFocus -= 1
+		if editFieldFocus < 1:
+			editFieldFocus = 7
+		qsoew.move(editFieldFocus, 10)  # move focus to call field
+		qsoew.addstr(qso[editFieldFocus])
+		return
+	elif curses.ascii.isascii(key):
+		if len(qso[editFieldFocus]) < maxEditFieldLength[editFieldFocus]:
+			qso[editFieldFocus] = qso[editFieldFocus].upper() + chr(key).upper()
+	displayEditField(editFieldFocus)
+
+
+def displayEditField(field):
+	global qso
+	filler = "                 "
+	if field == 1:
+		filler = "                 "
+	elif field == 2:
+		filler = "     "
+	elif field == 3:
+		filler = "       "
+	qsoew.move(field, 10)
+	if qso[field] == "":
+		qsoew.addstr(filler)
+	else:
+		line = qso[field] + filler[:-len(qso[field])]
+		qsoew.addstr(line.upper())
+	qsoew.move(field, len(qso[field]) + 10)
+	qsoew.refresh()
+
+
+def EditClickedQSO(line):
+	global qsoew, qso, quit
+	record = contacts.instr((line - 1) + contactsOffset, 0, 55).decode("utf-8").strip().split()
+	qso = [record[0], record[1], record[2], record[3], record[4]+" "+record[5], record[6], record[7], record[8]]
+	qsoew = curses.newwin(10, 40, 6, 10)
+	qsoew.keypad(True)
+	qsoew.nodelay(True)
+	qsoew.box()
+	qsoew.addstr(1, 1, "Call   : " + qso[1])
+	qsoew.addstr(2, 1, "Class  : " + qso[2])
+	qsoew.addstr(3, 1, "Section: " + qso[3])
+	qsoew.addstr(4, 1, "At     : " + qso[4])
+	qsoew.addstr(5, 1, "Band   : " + qso[5])
+	qsoew.addstr(6, 1, "Mode   : " + qso[6])
+	qsoew.addstr(7, 1, "Powers : " + qso[7])
+	qsoew.addstr(8, 1, "[Enter] to save          [Esc] to exit")
+	displayEditField(1)
+	while 1:
+		statusline()
+		stdscr.refresh()
+		qsoew.refresh()
+		c = qsoew.getch()
+		if c != -1:
+			edit_key(c)
+		else:
+			time.sleep(0.1)
+		if quit:
+			quit = False
+			break
+
 
 
 def main(s):
@@ -939,7 +1077,7 @@ def main(s):
 	stdscr.nodelay(True)
 	curses.mousemask(curses.ALL_MOUSE_EVENTS)
 	# Enable mouse tracking in xterm.
-	#sys.stdout.write('\033[?1002;h\n')
+	# sys.stdout.write('\033[?1002;h\n')
 	stdscr.clear()
 	contacts()
 	sections()
@@ -947,7 +1085,6 @@ def main(s):
 	logwindow()
 	readpreferences()
 	stats()
-	rectangle(stdscr, 11, 0, 21, 34)
 	displayHelp()
 	stdscr.refresh()
 	stdscr.move(9, 1)
@@ -958,8 +1095,12 @@ def main(s):
 		if ch == curses.KEY_MOUSE:
 			try:
 				_, x, y, _, buttons = curses.getmouse()
-				info = "X: " + str(x) + " Y: " + str(y) + " button: " + str(buttons)+"  "
-				displayinfo(info)
+				if buttons == 65536:
+					logdown()
+				if buttons == 2097152:
+					logup()
+				if buttons == 8 and 0 < y < 7 and 0 < x < 56:
+					EditClickedQSO(y)
 			except curses.error:
 				displayinfo("somemouseerror")
 				pass
