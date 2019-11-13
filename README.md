@@ -61,7 +61,8 @@ For claimed bonuses, since I'll be using battery and solar and I'll be outdoors 
 ## Features
 
 #### Editing an existing contact
-Use the mouse to scroll the contact into view and double left click on the contact to edit.
+Use the mouse to scroll the contact into view and double left click on the contact to edit. Use the TAB or Up/Down arrow keys to move between fields.
+Backspace to erase and retype what you need.
 Once done press the Enter key to save,
 or the escape key to exit.
 
