@@ -38,7 +38,33 @@ information needed by the command.
 
 After the command is entered press the TAB key to execute it.
 
+## Initial Setup
+When run for the first time, you will need to set your callsign, class, section, band, mode and power used for the contacts.
+
+So when I initially start the program I would enter the following:
+
+```
+.KK6GTE
+.C1O
+.SORG
+.P5
+.B40
+.MCW
+``` 
+For claimed bonuses, since I'll be using battery and solar and I'll be outdoors and away from home, but I don't plan on making any Satellite contacts I'd also enter the following.
+```
+.1
+.2
+.3
+```
+
 ## Features
+
+#### Editing an existing contact
+Use the mouse to scroll the contact into view and double left click on the contact to edit.
+Once done press the Enter key to save,
+or the escape key to exit.
+
 #### Super Check Partial
 If you type more than two characters in the callsign field the program will filter the input through a
 "Super Check Partial" routine and show you possible matches to known contesting call signs. Is this useful? Doubt it.
@@ -57,7 +83,6 @@ If you have worked this person before on another band/mode the program will load
 used previously for this call so you will not have to enter this info again.
 
 ## TODO
-  * Edit an existing contact.
   * Enter a contact at a specific time.
 
 Let me know if you think of something else.
