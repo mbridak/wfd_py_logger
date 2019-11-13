@@ -1036,6 +1036,7 @@ def displayEditField(field):
 def EditClickedQSO(line):
 	global qsoew, qso, quit
 	record = contacts.instr((line - 1) + contactsOffset, 0, 55).decode("utf-8").strip().split()
+	if record == []: return
 	qso = [record[0], record[1], record[2], record[3], record[4]+" "+record[5], record[6], record[7], record[8]]
 	qsoew = curses.newwin(10, 40, 6, 10)
 	qsoew.keypad(True)
