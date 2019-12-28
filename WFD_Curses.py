@@ -57,8 +57,8 @@ contactsOffset = 0
 logNumber = 0
 kbuf = ""
 editbuf = ""
-maxFieldLength = [17, 5, 7]
-maxEditFieldLength = [10,10,10,10,10,10,10]
+maxFieldLength = [17, 5, 7, 20, 4, 3, 4]
+maxEditFieldLength = [10,17,5,4,20,4,3,4,10]
 inputFieldFocus = 0
 editFieldFocus = 1
 hiscall = ""
@@ -1009,6 +1009,7 @@ def edit_key(key):
 		qsoew.addstr(qso[editFieldFocus])
 		return
 	elif curses.ascii.isascii(key):
+		displayinfo("eff:"+str(editFieldFocus)+" mefl:"+str(maxEditFieldLength[editFieldFocus]))
 		if len(qso[editFieldFocus]) < maxEditFieldLength[editFieldFocus]:
 			qso[editFieldFocus] = qso[editFieldFocus].upper() + chr(key).upper()
 	displayEditField(editFieldFocus)
@@ -1094,6 +1095,7 @@ def main(s):
 		stdscr.refresh()
 		ch = stdscr.getch()
 		if ch == curses.KEY_MOUSE:
+			buttons=""
 			try:
 				_, x, y, _, buttons = curses.getmouse()
 				if buttons == 65536:
@@ -1103,7 +1105,7 @@ def main(s):
 				if buttons == 8 and 0 < y < 7 and 0 < x < 56:
 					EditClickedQSO(y)
 			except curses.error:
-				displayinfo("somemouseerror")
+				#displayinfo("Button:"+str(buttons))
 				pass
 			pass
 		elif ch != -1:
