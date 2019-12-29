@@ -313,6 +313,7 @@ def qrpcheck():
 
 
 def cabrillo():
+
 	bonuses = 0
 	conn = sqlite3.connect(database)
 	c = conn.cursor()
@@ -368,6 +369,18 @@ def cabrillo():
 		print("QSO:", band + "M", mode, loggeddate, loggedtime, mycall, myclass, mysection, hiscall, hisclass,
 			  hissection, sep=' ', end='\n', file=open("WFDLOG.txt", "a"))
 	print("END-OF-LOG:", end='\n', file=open("WFDLOG.txt", "a"))
+
+	oy, ox = stdscr.getyx()
+	window = curses.newpad(10, 33)
+	rectangle(stdscr, 11, 0, 21, 34)
+	window.addstr(0, 0, "Log written to: WFDLOG.txt")
+	stdscr.refresh()
+	window.refresh(0, 0, 12, 1, 20, 33)
+	stdscr.move(oy, ox)
+	writepreferences()
+	statusline()
+	stats()
+
 
 
 def logwindow():
