@@ -1022,7 +1022,7 @@ def edit_key(key):
 		qsoew.addstr(qso[editFieldFocus])
 		return
 	elif curses.ascii.isascii(key):
-		displayinfo("eff:"+str(editFieldFocus)+" mefl:"+str(maxEditFieldLength[editFieldFocus]))
+		#displayinfo("eff:"+str(editFieldFocus)+" mefl:"+str(maxEditFieldLength[editFieldFocus]))
 		if len(qso[editFieldFocus]) < maxEditFieldLength[editFieldFocus]:
 			qso[editFieldFocus] = qso[editFieldFocus].upper() + chr(key).upper()
 	displayEditField(editFieldFocus)
