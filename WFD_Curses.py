@@ -330,16 +330,11 @@ def cabrillo():
 	print("START-OF-LOG: 3.0", end='\n', file=open("WFDLOG.txt", "w"))
 	print("CREATED-BY: K6GTE Winter Field Day Logger", end='\n', file=open("WFDLOG.txt", "a"))
 	print("CONTEST: WFD", end='\n', file=open("WFDLOG.txt", "a"))
-	print("LOCATION:", mysection, end='\n', file=open("WFDLOG.txt", "a"))
 	print("CALLSIGN:", mycall, end='\n', file=open("WFDLOG.txt", "a"))
+	print("LOCATION:", end='\n', file=open("WFDLOG.txt", "a"))
+	print("ARRL-SECTION:", mysection, end='\n', file=open("WFDLOG.txt", "a"))
 	print("CATEGORY:", myclass, end='\n', file=open("WFDLOG.txt", "a"))
-	print("CATEGORY-ASSISTED: NON-ASSISTED", end='\n', file=open("WFDLOG.txt", "a"))
-	print("CATEGORY-BAND: ALL", end='\n', file=open("WFDLOG.txt", "a"))
-	print("CATEGORY-MODE: MIXED", end='\n', file=open("WFDLOG.txt", "a"))
-	print("CATEGORY-OPERATOR: SINGLE-OP", end='\n', file=open("WFDLOG.txt", "a"))
 	print("CATEGORY-POWER: " + catpower, end='\n', file=open("WFDLOG.txt", "a"))
-	print("CATEGORY-STATION: PORTABLE", end='\n', file=open("WFDLOG.txt", "a"))
-	print("CATEGORY-TRANSMITTER: ONE", end='\n', file=open("WFDLOG.txt", "a"))
 	if altpower:
 		print("SOAPBOX: 1,500 points for not using commercial power", end='\n', file=open("WFDLOG.txt", "a"))
 		bonuses = bonuses + 1500
@@ -356,9 +351,12 @@ def cabrillo():
 
 	print("CLAIMED-SCORE: " + str(score()), end='\n', file=open("WFDLOG.txt", "a"))
 	print("OPERATORS:", mycall, end='\n', file=open("WFDLOG.txt", "a"))
-	print("CLUB: none", end='\n', file=open("WFDLOG.txt", "a"))
 	print("NAME: ", end='\n', file=open("WFDLOG.txt", "a"))
 	print("ADDRESS: ", end='\n', file=open("WFDLOG.txt", "a"))
+	print("ADDRESS-CITY: ", end='\n', file=open("WFDLOG.txt", "a"))
+	print("ADDRESS-STATE: ", end='\n', file=open("WFDLOG.txt", "a"))
+	print("ADDRESS-POSTALCODE: ", end='\n', file=open("WFDLOG.txt", "a"))
+	print("ADDRESS-COUNTRY: ", end='\n', file=open("WFDLOG.txt", "a"))
 	print("EMAIL: ", end='\n', file=open("WFDLOG.txt", "a"))
 	counter = 0
 	for x in log:
