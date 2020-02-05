@@ -401,14 +401,24 @@ def logup():
 	contactsOffset += 1
 	if contactsOffset > (logNumber - 6): contactsOffset = (logNumber - 6)
 	contacts.refresh(contactsOffset, 0, 1, 1, 6, 54)
-	pass
+
+def logpagedown():
+	global contacts, contactsOffset, logNumber
+	contactsOffset += 10
+	if contactsOffset > (logNumber - 6): contactsOffset = (logNumber - 6)
+	contacts.refresh(contactsOffset, 0, 1, 1, 6, 54)
+
+def logpageup():
+	global contacts, contactsOffset
+	contactsOffset -= 10
+	if contactsOffset < 0: contactsOffset = 0
+	contacts.refresh(contactsOffset, 0, 1, 1, 6, 54)
 
 def logdown():
 	global contacts, contactsOffset
 	contactsOffset -= 1
 	if contactsOffset < 0: contactsOffset = 0
 	contacts.refresh(contactsOffset, 0, 1, 1, 6, 54)
-	pass
 
 def dupCheck(acall):
 	global hisclass, hissection
@@ -763,7 +773,6 @@ def displayinfo(info):
 	stdscr.move(y, x)
 	stdscr.refresh()
 
-
 def displayLine():
 	filler = "                        "
 	line = kbuf + filler[:-len(kbuf)]
@@ -771,7 +780,6 @@ def displayLine():
 	stdscr.addstr(line)
 	stdscr.move(9, len(kbuf) + 1)
 	stdscr.refresh()
-
 
 def displayInputField(field):
 	filler = "                 "
@@ -792,7 +800,6 @@ def displayInputField(field):
 		stdscr.addstr(line.upper())
 	stdscr.move(9, len(kbuf) + y)
 	stdscr.refresh()
-
 
 def processcommand(cmd):
 	global band, mode, power, quit
@@ -848,7 +855,6 @@ def processcommand(cmd):
 		return
 	curses.flash()
 	curses.beep()
-
 
 def proc_key(key):
 	global inputFieldFocus, hiscall, hissection, hisclass, kbuf
@@ -909,13 +915,18 @@ def proc_key(key):
 	elif key == 259:  # key up
 		logdown()
 		pass
+	elif key == 338: #page down
+		logpagedown()
+		pass
+	elif key == 339: #page up
+		logpageup()
+		pass
 	elif curses.ascii.isascii(key):
 		if len(kbuf) < maxFieldLength[inputFieldFocus]:
 			kbuf = kbuf.upper() + chr(key).upper()
 			if inputFieldFocus == 0 and len(kbuf) > 2: displaySCP(superCheck(kbuf))
 			if inputFieldFocus == 2 and len(kbuf) > 0: sectionCheck(kbuf)
 	displayInputField(inputFieldFocus)
-
 
 def edit_key(key):
 	global editFieldFocus, qso, quit
@@ -984,7 +995,6 @@ def edit_key(key):
 			qso[editFieldFocus] = qso[editFieldFocus].upper() + chr(key).upper()
 	displayEditField(editFieldFocus)
 
-
 def displayEditField(field):
 	global qso
 	filler = "                 "
@@ -1002,7 +1012,6 @@ def displayEditField(field):
 		qsoew.addstr(line.upper())
 	qsoew.move(field, len(qso[field]) + 10)
 	qsoew.refresh()
-
 
 def EditClickedQSO(line):
 	global qsoew, qso, quit
@@ -1035,7 +1044,6 @@ def EditClickedQSO(line):
 			quit = False
 			break
 
-
 def editQSO(q):
 	global qsoew, qso, quit
 	conn = sqlite3.connect(database)
@@ -1044,13 +1052,8 @@ def editQSO(q):
 	log = c.fetchall()
 	conn.close()
 	if not log: return
-	#logid, hiscall, hisclass, hissection, datetime, band, mode, power = log[0]
 	qso=['','','','','','','','']
-
 	qso[0], qso[1], qso[2], qso[3], qso[4], qso[5], qso[6], qso[7] = log[0]
-	#qso = log[0]
-	#displayinfo(str(qso))
-
 	qsoew = curses.newwin(10, 40, 6, 10)
 	qsoew.keypad(True)
 	qsoew.nodelay(True)
@@ -1079,7 +1082,6 @@ def editQSO(q):
 
 def main(s):
 	global stdscr, conn
-
 	conn = create_DB()
 	curses.start_color()
 	curses.use_default_colors()
@@ -1088,8 +1090,6 @@ def main(s):
 	stdscr.keypad(True)
 	stdscr.nodelay(True)
 	curses.mousemask(curses.ALL_MOUSE_EVENTS)
-	# Enable mouse tracking in xterm.
-	# sys.stdout.write('\033[?1002;h\n')
 	stdscr.clear()
 	contacts()
 	sections()
@@ -1115,7 +1115,6 @@ def main(s):
 				if buttons == 8 and 0 < y < 7 and 0 < x < 56:
 					EditClickedQSO(y)
 			except curses.error:
-				#displayinfo("Button:"+str(buttons))
 				pass
 			pass
 		elif ch != -1:
@@ -1123,6 +1122,5 @@ def main(s):
 		else:
 			time.sleep(0.1)
 		if quit: break
-
 
 wrapper(main)
