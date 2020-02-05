@@ -88,7 +88,6 @@ def create_DB():
 	except Error as e:
 		print(e)
 
-
 def readpreferences():
 	global mycall, myclass, mysection, power, altpower, outdoors, notathome, satellite
 	try:
@@ -112,7 +111,6 @@ def readpreferences():
 	except Error as e:
 		print(e)
 
-
 def writepreferences():
 	try:
 		conn = sqlite3.connect(database)
@@ -125,7 +123,6 @@ def writepreferences():
 		conn.close()
 	except Error as e:
 		pass
-
 
 def log_contact(logme):
 	try:
@@ -141,7 +138,6 @@ def log_contact(logme):
 	sections()
 	stats()
 	logwindow()
-
 
 def delete_contact(contact):
 	try:
@@ -161,13 +157,13 @@ def delete_contact(contact):
 def change_contact(qso):
 	try:
 		conn = sqlite3.connect(database)
-		sql = "update contacts set callsign = '"+qso[1]+"', class = '"+qso[2]+"', section = '"+qso[3]+"', date_time = '"+qso[4]+"', band = '"+qso[5]+"', mode = '"+qso[6]+"', power = '"+qso[7]+"'  where id=" + qso[0]
+		sql = "update contacts set callsign = '"+str(qso[1])+"', class = '"+str(qso[2])+"', section = '"+str(qso[3])+"', date_time = '"+str(qso[4])+"', band = '"+str(qso[5])+"', mode = '"+str(qso[6])+"', power = '"+str(qso[7])+"'  where id="+ str(qso[0])
 		cur = conn.cursor()
 		cur.execute(sql)
 		conn.commit()
 		conn.close()
 	except Error as e:
-		#displayinfo(e)
+		displayinfo(e)
 		pass
 
 def readSections():
@@ -189,7 +185,6 @@ def readSections():
 	except IOError as e:
 		print("read error during readSections", e)
 
-
 def sectionCheck(sec):
 	if sec == "": sec = "^"
 	seccheckwindow = curses.newpad(20, 33)
@@ -203,9 +198,7 @@ def sectionCheck(sec):
 	stdscr.refresh()
 	seccheckwindow.refresh(0, 0, 12, 1, 20, 33)
 
-
 readSections()
-
 
 def readSCP():
 	global scp
@@ -214,13 +207,10 @@ def readSCP():
 	f.close()
 	scp = list(map(lambda x: x.strip(), scp))
 
-
 readSCP()
-
 
 def superCheck(acall):
 	return list(filter(lambda x: x.startswith(acall), scp))
-
 
 def contacts():
 	global stdscr
@@ -228,7 +218,6 @@ def contacts():
 	contactslabel = "Recent Contacts"
 	contactslabeloffset = (49 / 2) - len(contactslabel) / 2
 	stdscr.addstr(0, int(contactslabeloffset), contactslabel)
-
 
 def stats():
 	global bandmodemult
@@ -267,7 +256,6 @@ def stats():
 	stdscr.addstr(6, 79 - len(last15), last15)
 	stdscr.move(y, x)
 
-
 def score():
 	global bandmodemult
 	qrpcheck()
@@ -291,7 +279,6 @@ def score():
 	score = score + (1500 * altpower) + (1500 * outdoors) + (1500 * notathome) + (1500 * satellite)
 	return score
 
-
 def qrpcheck():
 	global qrp, highpower
 	conn = sqlite3.connect(database)
@@ -310,7 +297,6 @@ def qrpcheck():
 	highpower = bool(list(log[0])[0])
 	conn.close()
 	qrp = not (qrpc + qrpp + qrpd)
-
 
 def cabrillo():
 
@@ -379,8 +365,6 @@ def cabrillo():
 	statusline()
 	stats()
 
-
-
 def logwindow():
 	global contacts, contactsOffset, logNumber
 	contactsOffset = 0  # clears scroll position
@@ -412,7 +396,6 @@ def logwindow():
 	stdscr.refresh()
 	contacts.refresh(0, 0, 1, 1, 6, 54)
 
-
 def logup():
 	global contacts, contactsOffset, logNumber
 	contactsOffset += 1
@@ -420,14 +403,12 @@ def logup():
 	contacts.refresh(contactsOffset, 0, 1, 1, 6, 54)
 	pass
 
-
 def logdown():
 	global contacts, contactsOffset
 	contactsOffset -= 1
 	if contactsOffset < 0: contactsOffset = 0
 	contacts.refresh(contactsOffset, 0, 1, 1, 6, 54)
 	pass
-
 
 def dupCheck(acall):
 	global hisclass, hissection
@@ -457,7 +438,6 @@ def dupCheck(acall):
 	scpwindow.refresh(0, 0, 12, 1, 20, 33)
 	stdscr.move(oy, ox)
 
-
 def displaySCP(matches):
 	scpwindow = curses.newpad(1000, 33)
 	rectangle(stdscr, 11, 0, 21, 34)
@@ -468,7 +448,6 @@ def displaySCP(matches):
 	stdscr.refresh()
 	scpwindow.refresh(0, 0, 12, 1, 20, 33)
 
-
 def workedSections():
 	global wrkdsections
 	conn = sqlite3.connect(database)
@@ -478,13 +457,11 @@ def workedSections():
 	wrkdsections = str(all_rows)
 	wrkdsections = wrkdsections.replace("('", "").replace("',), ", ",").replace("',)]", "").replace('[', '').split(',')
 
-
 def workedSection(section):
 	if section in wrkdsections:
 		return curses.A_BOLD
 	else:
 		return curses.A_NORMAL
-
 
 def sectionsCol1():
 	rectangle(stdscr, 8, 35, 21, 43)
@@ -506,7 +483,6 @@ def sectionsCol1():
 	stdscr.addstr(19, 36, "NNJ", workedSection("NNJ"))
 	stdscr.addstr(19, 40, "WNY", workedSection("WNY"))
 
-
 def sectionsCol2():
 	rectangle(stdscr, 8, 44, 21, 52)
 	stdscr.addstr(9, 45, "   3   ", curses.A_REVERSE)
@@ -527,7 +503,6 @@ def sectionsCol2():
 	stdscr.addstr(17, 50, "VI", workedSection("VI"))
 	stdscr.addstr(18, 45, "PR", workedSection("PR"))
 	stdscr.addstr(18, 49, "WCF", workedSection("WCF"))
-
 
 def sectionsCol3():
 	rectangle(stdscr, 8, 53, 21, 61)
@@ -552,7 +527,6 @@ def sectionsCol3():
 	stdscr.addstr(19, 54, "SB", workedSection("SB"))
 	stdscr.addstr(19, 59, "SV", workedSection("SV"))
 
-
 def sectionsCol4():
 	rectangle(stdscr, 8, 62, 21, 70)
 	stdscr.addstr(9, 63, "   7   ", curses.A_REVERSE)
@@ -574,7 +548,6 @@ def sectionsCol4():
 	stdscr.addstr(19, 63, "IL", workedSection("IL"))
 	stdscr.addstr(19, 68, "WI", workedSection("WI"))
 	stdscr.addstr(20, 63, "IN", workedSection("IN"))
-
 
 def sectionsCol5():
 	rectangle(stdscr, 8, 71, 21, 79)
@@ -601,7 +574,6 @@ def sectionsCol5():
 	stdscr.addstr(20, 72, "NL", workedSection("NL"))
 	stdscr.addstr(20, 77, "SK", workedSection("SK"))
 
-
 def sections():
 	workedSections()
 	sectionsCol1()
@@ -611,7 +583,6 @@ def sections():
 	sectionsCol5()
 	stdscr.refresh()
 
-
 def entry():
 	rectangle(stdscr, 8, 0, 10, 18)
 	stdscr.addstr(8, 1, "CALL")
@@ -619,7 +590,6 @@ def entry():
 	stdscr.addstr(8, 20, "class")
 	rectangle(stdscr, 8, 26, 10, 34)
 	stdscr.addstr(8, 27, "Section")
-
 
 def clearentry():
 	global inputFieldFocus, hiscall, hissection, hisclass, kbuf
@@ -632,13 +602,11 @@ def clearentry():
 	displayInputField(1)
 	displayInputField(0)
 
-
 def highlightBonus(bonus):
 	if bonus:
 		return curses.A_BOLD
 	else:
 		return curses.A_DIM
-
 
 def statusline():
 	y, x = stdscr.getyx()
@@ -666,25 +634,21 @@ def statusline():
 
 	stdscr.move(y, x)
 
-
 def setpower(p):
 	global power
 	power = p
 	writepreferences()
 	statusline()
 
-
 def setband(b):
 	global band
 	band = b
 	statusline()
 
-
 def setmode(m):
 	global mode
 	mode = m
 	statusline()
-
 
 def setcallsign(c):
 	global mycall
@@ -692,20 +656,17 @@ def setcallsign(c):
 	writepreferences()
 	statusline()
 
-
 def setclass(c):
 	global myclass
 	myclass = str(c)
 	writepreferences()
 	statusline()
 
-
 def setsection(s):
 	global mysection
 	mysection = str(s)
 	writepreferences()
 	statusline()
-
 
 def claimAltPower():
 	global altpower
@@ -724,7 +685,6 @@ def claimAltPower():
 	statusline()
 	stats()
 
-
 def claimOutdoors():
 	global outdoors
 	if outdoors:
@@ -741,7 +701,6 @@ def claimOutdoors():
 	writepreferences()
 	statusline()
 	stats()
-
 
 def claimNotHome():
 	global notathome
@@ -760,7 +719,6 @@ def claimNotHome():
 	statusline()
 	stats()
 
-
 def claimSatellite():
 	global satellite
 	if satellite:
@@ -778,19 +736,18 @@ def claimSatellite():
 	statusline()
 	stats()
 
-
 def displayHelp():
 	rectangle(stdscr, 11, 0, 21, 34)
 	wy, wx = stdscr.getyx()
-	help = [".H this message  |.L Generate Log",
-			".Q quit program  |.1 Alt Power",
-			".B## change bands|.2 Outdoors",
-			".M[CW,PH,DI] mode|.3 AwayFromHome",
-			".P## change power|.4 Satellite",
-			".D### delete QSO |[esc] abort inp",
-			".Kyourcall       |",
-			".Cyourclass      |",
-			".Syoursection    |"]
+	help = [".H this message  |.2 Outdoors",
+			".Q quit program  |.3 AwayFromHome",
+			".Kyourcall       |.4 Satellite",
+			".Cyourclass      |.E### edit QSO",
+			".Syoursection    |.D### del QSO",
+			".B## change bands|.L Generate Log",
+			".M[CW,PH,DI] mode|[esc] abort inp",
+			".P## change power|",
+			".1 Alt Power     |"]
 	stdscr.move(12, 1)
 	count = 0
 	for x in help:
@@ -798,7 +755,6 @@ def displayHelp():
 		count = count + 1
 	stdscr.move(wy, wx)
 	stdscr.refresh()
-
 
 def displayinfo(info):
 	y, x = stdscr.getyx()
@@ -859,6 +815,9 @@ def processcommand(cmd):
 		return
 	if cmd[:1] == "D":  # Delete Contact
 		delete_contact(cmd[1:])
+		return
+	if cmd[:1] == "E": # Edit QSO
+		editQSO(cmd[1:])
 		return
 	if cmd[:1] == "H":  # Print Help
 		displayHelp()
@@ -1077,6 +1036,46 @@ def EditClickedQSO(line):
 			break
 
 
+def editQSO(q):
+	global qsoew, qso, quit
+	conn = sqlite3.connect(database)
+	c = conn.cursor()
+	c.execute("select * from contacts where id=" + q)
+	log = c.fetchall()
+	conn.close()
+	if not log: return
+	#logid, hiscall, hisclass, hissection, datetime, band, mode, power = log[0]
+	qso=['','','','','','','','']
+
+	qso[0], qso[1], qso[2], qso[3], qso[4], qso[5], qso[6], qso[7] = log[0]
+	#qso = log[0]
+	#displayinfo(str(qso))
+
+	qsoew = curses.newwin(10, 40, 6, 10)
+	qsoew.keypad(True)
+	qsoew.nodelay(True)
+	qsoew.box()
+	qsoew.addstr(1, 1, "Call   : " + qso[1])
+	qsoew.addstr(2, 1, "Class  : " + qso[2])
+	qsoew.addstr(3, 1, "Section: " + qso[3])
+	qsoew.addstr(4, 1, "At     : " + qso[4])
+	qsoew.addstr(5, 1, "Band   : " + qso[5])
+	qsoew.addstr(6, 1, "Mode   : " + qso[6])
+	qsoew.addstr(7, 1, "Powers : " + str(qso[7]))
+	qsoew.addstr(8, 1, "[Enter] to save          [Esc] to exit")
+	displayEditField(1)
+	while 1:
+		statusline()
+		stdscr.refresh()
+		qsoew.refresh()
+		c = qsoew.getch()
+		if c != -1:
+			edit_key(c)
+		else:
+			time.sleep(0.1)
+		if quit:
+			quit = False
+			break
 
 def main(s):
 	global stdscr, conn
