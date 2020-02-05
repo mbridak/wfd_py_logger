@@ -39,6 +39,7 @@ information needed by the command.
 .MCW .MPH .MDI Sets the mode. CW Morse, PH Phone, DI Digital.
 .B# sets the band, .B40 for 40 meters.
 .D# Deletes log entry. .D26 will delete the log line starting with 026.
+.E# Edits log entry. .E26 will edit the log line starting with 026.
 .L Generate Cabrillo log file for submission.
 .1 Claim Alt-Power Bonus
 .2 Claim Outdoors Bonus
@@ -72,7 +73,7 @@ For claimed bonuses, since I'll be using battery and solar and I'll be outdoors 
 ## Features
 
 #### Editing an existing contact
-Use the Up/Down arrow keys to scroll the contact into view. Your mouse scroll wheel may work as well. Double left click on the contact to edit. Use the TAB or Up/Down arrow keys to move between fields.
+Use the Up/Down arrow keys to scroll the contact into view. Your mouse scroll wheel may work as well. Double left click on the contact to edit, or use the '.E' command. Use the TAB or Up/Down arrow keys to move between fields.
 Backspace to erase and retype what you need.
 Once done press the Enter key to save,
 or the escape key to exit.
