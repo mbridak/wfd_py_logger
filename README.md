@@ -9,15 +9,9 @@ I decided to write this after the 2018 Winter Field Day when I couldn't find a s
 ![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/logger.png)
 
 ## What was learned from WFD 2020
-After using this logger for 2020, I was quite pleased at the simplicity. I cloned it from github onto my laptop right after I got my doublet antenna up, and was logging with in minutes.
-
 I might want to include some integration with CAT via hamlib or flrig. As I found needing to remember to switch modes/bands during the event a little annoying. I haven't looked but am sure there must be a python lib for this.
 
-After a quick search there is a pyfldigi lib. Might use that. 
-
 I think the text input/editing could use some work. Would like to be able to arrow back and change something in the middle of the call as opposed to backspacing to the error and retyping the info.
-
-I need to make some minor edits to the generated log. Like breaking up the address field into separate street, city, state and zip. I had to hand edit the generated log to make sure it was what they were looking for.
 
 ## Caveats
 This is a simple logger ment for one person. It's not usable for clubs. It's
