@@ -1,10 +1,10 @@
 ## K6GTE Winter Field Day logger
 
-The logger is written in Python 3, and uses the curses lib. This means it will work with Linux, maybe Mac, but not Windows. You windows guys have enough loggers already.
+The logger is written in Python 3, and uses the curses lib. It will work with Linux and Mac, but since the Windows curses lib is lacking it will not work properly in Windows.
 
-The log is stored in an sqlite3 database. The screen size expected by the program is an 80 x 24 character terminal. Nothing needs to be installed, compiled etc... Just make WFD_Curses.py executable and run it within the same folder.
+The log is stored in an sqlite3 database file 'WFD_Curses.db'. If you need to wipe everything and start clean, just delete this file. The screen size expected by the program is an 80 x 24 character terminal. Nothing needs to be installed, compiled etc... Just make WFD_Curses.py executable and run it within the same folder.
 
-I decided to write this after the 2018 Winter Field Day when I couldn't find a simple Linux logger for the event. I didn't need multiuser logging or GPS disciplined time servers..
+I decided to write this after the 2018 Winter Field Day when I couldn't find a simple Linux logger for the event. I didn't need multiuser logging or GPS disciplined time servers. Just a simple logger with dup checking that could generate a cabrillo log for submission.
 
 ![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/logger.png)
 
@@ -14,14 +14,10 @@ I might want to include some integration with CAT via hamlib or flrig. As I foun
 I think the text input/editing could use some work. Would like to be able to arrow back and change something in the middle of the call as opposed to backspacing to the error and retyping the info.
 
 ## Caveats
-This is a simple logger ment for one person. It's not usable for clubs. It's
-ment for A guy/girl setting up for Winter Field Day in in their backyard wanting
-a simple logger.
-It currently generates a rudimentary Cabrillo log.
+This is a simple logger ment for single op, it's not usable for clubs.
 
 ## Commands:
-Commands start with a period character in the callsign field and are immediately followed by any
-information needed by the command.
+Commands start with a period character in the callsign field and are immediately followed by any information needed by the command.
 
 ```
 .H displays a short list of commands.
@@ -67,27 +63,20 @@ For claimed bonuses, since I'll be using battery and solar and I'll be outdoors 
 ## Features
 
 #### Editing an existing contact
-Use the Up/Down arrow keys or PageUp/PageDown to scroll the contact into view. Your mouse scroll wheel may work as well. Double left click on the contact to edit, or use the '.E' command. Use the TAB or Up/Down arrow keys to move between fields.
-Backspace to erase and retype what you need.
-Once done press the Enter key to save,
-or the escape key to exit.
+Use the Up/Down arrow keys or PageUp/PageDown to scroll the contact into view. Your mouse scroll wheel may work as well. Double left click on the contact to edit, or use the '.E' command. Use the TAB or Up/Down arrow keys to move between fields. Backspace to erase and retype what you need.
+Once done press the Enter key to save, or the Escape key to exit.
 
 #### Super Check Partial
-If you type more than two characters in the callsign field the program will filter the input through a
-"Super Check Partial" routine and show you possible matches to known contesting call signs. Is this useful? Doubt it.
+If you type more than two characters in the callsign field the program will filter the input through a "Super Check Partial" routine and show you possible matches to known contesting call signs. Is this useful? Doubt it.
 
 #### Section partial check
 As you type the section abbreviation you are presented with a list of all possible sections that start with what you have typed.
 
 #### DUP checking
-Once you type a complete callsign and press TAB to advance to the next field. The callsign is checked
-against previous callsigns in your log. It will list any prior contact made with the band and mode of
-the contact. If the band and mode are the same as the one you are currently using, the listing will be
-highlighted to alert you that this is a DUP.
+Once you type a complete callsign and press TAB to advance to the next field. The callsign is checked against previous callsigns in your log. It will list any prior contact made with the band and mode of the contact. If the band and mode are the same as the one you are currently using, the listing will be highlighted to alert you that this is a DUP.
 
 #### Autofill
-If you have worked this person before on another band/mode the program will load the class and section
-used previously for this call so you will not have to enter this info again.
+If you have worked this person before on another band/mode the program will load the class and section used previously for this call so you will not have to enter this info again.
 
 ## TODO
   * Enter a contact at a specific time.
