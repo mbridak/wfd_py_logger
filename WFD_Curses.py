@@ -313,46 +313,46 @@ def cabrillo():
 		catpower = "HIGH"
 	else:
 		catpower = "LOW"
-	print("START-OF-LOG: 3.0", end='\n', file=open("WFDLOG.txt", "w"))
-	print("CREATED-BY: K6GTE Winter Field Day Logger", end='\n', file=open("WFDLOG.txt", "a"))
-	print("CONTEST: WFD", end='\n', file=open("WFDLOG.txt", "a"))
-	print("CALLSIGN:", mycall, end='\n', file=open("WFDLOG.txt", "a"))
-	print("LOCATION:", end='\n', file=open("WFDLOG.txt", "a"))
-	print("ARRL-SECTION:", mysection, end='\n', file=open("WFDLOG.txt", "a"))
-	print("CATEGORY:", myclass, end='\n', file=open("WFDLOG.txt", "a"))
-	print("CATEGORY-POWER: " + catpower, end='\n', file=open("WFDLOG.txt", "a"))
+	print("START-OF-LOG: 3.0", end='\r\n', file=open("WFDLOG.txt", "w"))
+	print("CREATED-BY: K6GTE Winter Field Day Logger", end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("CONTEST: WFD", end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("CALLSIGN:", mycall, end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("LOCATION:", end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("ARRL-SECTION:", mysection, end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("CATEGORY:", myclass, end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("CATEGORY-POWER: " + catpower, end='\r\n', file=open("WFDLOG.txt", "a"))
 	if altpower:
-		print("SOAPBOX: 1,500 points for not using commercial power", end='\n', file=open("WFDLOG.txt", "a"))
+		print("SOAPBOX: 1,500 points for not using commercial power", end='\r\n', file=open("WFDLOG.txt", "a"))
 		bonuses = bonuses + 1500
 	if outdoors:
-		print("SOAPBOX: 1,500 points for setting up outdoors", end='\n', file=open("WFDLOG.txt", "a"))
+		print("SOAPBOX: 1,500 points for setting up outdoors", end='\r\n', file=open("WFDLOG.txt", "a"))
 		bonuses = bonuses + 1500
 	if notathome:
-		print("SOAPBOX: 1,500 points for setting up away from home", end='\n', file=open("WFDLOG.txt", "a"))
+		print("SOAPBOX: 1,500 points for setting up away from home", end='\r\n', file=open("WFDLOG.txt", "a"))
 		bonuses = bonuses + 1500
 	if satellite:
-		print("SOAPBOX: 1,500 points for working satellite", end='\n', file=open("WFDLOG.txt", "a"))
+		print("SOAPBOX: 1,500 points for working satellite", end='\r\n', file=open("WFDLOG.txt", "a"))
 		bonuses = bonuses + 1500
-	print("SOAPBOX: BONUS Total " + str(bonuses), end='\n', file=open("WFDLOG.txt", "a"))
+	print("SOAPBOX: BONUS Total " + str(bonuses), end='\r\n', file=open("WFDLOG.txt", "a"))
 
-	print("CLAIMED-SCORE: " + str(score()), end='\n', file=open("WFDLOG.txt", "a"))
-	print("OPERATORS:", mycall, end='\n', file=open("WFDLOG.txt", "a"))
-	print("NAME: ", end='\n', file=open("WFDLOG.txt", "a"))
-	print("ADDRESS: ", end='\n', file=open("WFDLOG.txt", "a"))
-	print("ADDRESS-CITY: ", end='\n', file=open("WFDLOG.txt", "a"))
-	print("ADDRESS-STATE: ", end='\n', file=open("WFDLOG.txt", "a"))
-	print("ADDRESS-POSTALCODE: ", end='\n', file=open("WFDLOG.txt", "a"))
-	print("ADDRESS-COUNTRY: ", end='\n', file=open("WFDLOG.txt", "a"))
-	print("EMAIL: ", end='\n', file=open("WFDLOG.txt", "a"))
+	print("CLAIMED-SCORE: " + str(score()), end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("OPERATORS:", mycall, end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("NAME: ", end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("ADDRESS: ", end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("ADDRESS-CITY: ", end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("ADDRESS-STATE: ", end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("ADDRESS-POSTALCODE: ", end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("ADDRESS-COUNTRY: ", end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("EMAIL: ", end='\r\n', file=open("WFDLOG.txt", "a"))
 	counter = 0
 	for x in log:
 		logid, hiscall, hisclass, hissection, datetime, band, mode, power = x
 		loggeddate = datetime[:10]
 		loggedtime = datetime[11:13] + datetime[14:16]
-		# print(value1, ..., sep=' ', end='\n', file=sys.stdout, flush=False)
+		# print(value1, ..., sep=' ', end='\r\n', file=sys.stdout, flush=False)
 		print("QSO:", band + "M", mode, loggeddate, loggedtime, mycall, myclass, mysection, hiscall, hisclass,
-			  hissection, sep=' ', end='\n', file=open("WFDLOG.txt", "a"))
-	print("END-OF-LOG:", end='\n', file=open("WFDLOG.txt", "a"))
+			  hissection, sep=' ', end='\r\n', file=open("WFDLOG.txt", "a"))
+	print("END-OF-LOG:", end='\r\n', file=open("WFDLOG.txt", "a"))
 
 	oy, ox = stdscr.getyx()
 	window = curses.newpad(10, 33)
