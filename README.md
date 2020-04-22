@@ -66,6 +66,7 @@ For claimed bonuses, since I'll be using battery and solar and I'll be outdoors 
 
 #### Radio Polling via rigctld
 If you run rigctld on the computer that you are logging from, the radio will be polled for band/mode updates automatically. There is an indicator at the bottom of the logging window to indicate polling status. Dim if no connection or timeout, and highlighted if all okay.
+![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/rigctld.png)
 
 #### Editing an existing contact
 Use the Up/Down arrow keys or PageUp/PageDown to scroll the contact into view. Your mouse scroll wheel may work as well. Double left click on the contact to edit, or use the '.E' command. Use the TAB or Up/Down arrow keys to move between fields. Backspace to erase and retype what you need.
