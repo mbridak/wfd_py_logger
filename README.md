@@ -9,7 +9,9 @@ I decided to write this after the 2018 Winter Field Day when I couldn't find a s
 ![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/logger.png)
 
 ## What was learned from WFD 2020
-I might want to include some integration with CAT via hamlib or flrig. As I found needing to remember to switch modes/bands during the event a little annoying. I haven't looked but am sure there must be a python lib for this.
+~~I might want to include some integration with CAT via hamlib or flrig. As I found needing to remember to switch modes/bands during the event a little annoying. I haven't looked but am sure there must be a python lib for this.~~
+
+The WFD group who processes the logs needs lines ending in CR/LF. I've updated the cabrillo generator for next year.
 
 I think the text input/editing could use some work. Would like to be able to arrow back and change something in the middle of the call as opposed to backspacing to the error and retyping the info.
 
@@ -61,6 +63,9 @@ For claimed bonuses, since I'll be using battery and solar and I'll be outdoors 
 ```
 
 ## Features
+
+#### Radio Polling via rigctld
+If you run rigctld on the computer that you are logging from, the radio will be polled for band/mode updates automatically. There is an indicator at the bottom of the logging window to indicate polling status. Dim if no connection or timeout, and highlighted if all okay.
 
 #### Editing an existing contact
 Use the Up/Down arrow keys or PageUp/PageDown to scroll the contact into view. Your mouse scroll wheel may work as well. Double left click on the contact to edit, or use the '.E' command. Use the TAB or Up/Down arrow keys to move between fields. Backspace to erase and retype what you need.
