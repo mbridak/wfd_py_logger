@@ -10,12 +10,10 @@ COLOR_WHITE	White
 COLOR_YELLOW	Yellow
 """
 
-# select distinct band, mode from contacts order by band; to get band modem multiplier
-
 import curses
 import time
 import sqlite3
-# import sys
+import socket
 
 from curses.textpad import rectangle
 from curses import wrapper
@@ -33,7 +31,7 @@ QuestionMark = 63
 EnterKey = 10
 Space = 32
 
-bands = ('160', '80', '40', '20', '15', '10', '6')
+bands = ('160', '80', '40', '20', '15', '10', '6', '2')
 modes = ('PH', 'CW', 'DI')
 
 mycall = "YOURCALL"
@@ -71,7 +69,79 @@ wrkdsections = []
 scp = []
 secPartial = {}
 secName = {}
+oldfreq = "0"
+oldmode = ""
+rigctrlhost = "127.0.0.1" #IP address for rigctld
+rigctrlport = 4532
+rigctrlsocket=socket.socket()
+rigctrlsocket.settimeout(0.1)
+rigonline = True
+try:
+	rigctrlsocket.connect((rigctrlhost, rigctrlport))
+except:
+	rigonline = False
 
+def getband(freq):
+	if freq.isnumeric():
+		frequency = int(float(freq))
+		if frequency > 1800000 and frequency < 2000000:
+			return "160"
+		if frequency > 3500000 and frequency < 4000000:
+			return "80"
+		if frequency > 7000000 and frequency < 7300000:
+			return "40"
+		if frequency > 10100000 and frequency < 10150000:
+			return "30"
+		if frequency > 14000000 and frequency < 14350000:
+			return "20"
+		if frequency > 18068000 and frequency < 18168000:
+			return "17"
+		if frequency > 21000000 and frequency < 21450000:
+			return "15"
+		if frequency > 24890000 and frequency < 24990000:
+			return "12"
+		if frequency > 28000000 and frequency < 29700000:
+			return "10"
+		if frequency > 50000000 and frequency < 54000000:
+			return "6"
+		if frequency > 144000000 and frequency < 148000000:
+			return "2"
+	else:
+		return "0"
+
+def getmode(rigmode):
+	if rigmode == "CW":
+		return "CW"
+	if rigmode == "USB" or rigmode == "LSB" or rigmode == "FM" or rigmode == "AM":
+		return "PH"
+	return "DI" #All else digital
+		
+def pollRadio():
+	global oldfreq, oldmode, rigctrlsocket, rigonline
+	if rigonline:
+		try:
+			#rigctrlsocket.settimeout(0.5)
+			rigctrlsocket.send(b'f\n')
+			newfreq = rigctrlsocket.recv(1024).decode().strip()
+			rigctrlsocket.send(b'm\n')
+			newmode = rigctrlsocket.recv(1024).decode().strip().split()[0]
+			if newfreq != oldfreq or newmode != oldmode:
+				oldfreq = newfreq
+				oldmode = newmode
+				setband(str(getband(newfreq)))
+				setmode(str(getmode(newmode)))
+		except:
+			rigonline = False
+
+def checkRadio():
+	global rigctrlsocket, rigonline
+	rigctrlsocket.settimeout(0.1)
+	rigonline = True
+	try:
+		rigctrlsocket.connect((rigctrlhost, rigctrlport))
+	except:
+		rigonline = False
+		pass
 
 def create_DB():
 	""" create a database and table if it does not exist """
@@ -624,8 +694,8 @@ def statusline():
 	now = datetime.now().isoformat(' ')[5:19].replace('-', '/')
 	utcnow = datetime.utcnow().isoformat(' ')[5:19].replace('-', '/')
 	try:
-		stdscr.addstr(22, 54, "Local Time: " + now)
-		stdscr.addstr(23, 56, "UTC Time: " + utcnow)
+		stdscr.addstr(22, 59, "Local: " + now)
+		stdscr.addstr(23, 61, "UTC: " + utcnow)
 	except curses.error as e:
 		pass
 
@@ -642,6 +712,7 @@ def statusline():
 	stdscr.addstr("Not At Home", highlightBonus(notathome))
 	stdscr.addch(curses.ACS_VLINE)
 	stdscr.addstr("Satellite", highlightBonus(satellite))
+	stdscr.addstr(23,50,"Rig", highlightBonus(rigonline))
 
 	stdscr.move(y, x)
 
@@ -1123,5 +1194,9 @@ def main(s):
 		else:
 			time.sleep(0.1)
 		if quit: break
+		if rigonline == False:
+			checkRadio()
+		else:
+			pollRadio()
 
 wrapper(main)
