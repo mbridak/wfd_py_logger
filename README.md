@@ -9,7 +9,7 @@ I decided to write this after the 2018 Winter Field Day when I couldn't find a s
 ![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/logger.png)
 
 ## What was learned from WFD 2020
-~~I might want to include some integration with CAT via hamlib or flrig. As I found needing to remember to switch modes/bands during the event a little annoying. I haven't looked but am sure there must be a python lib for this.~~
+~~I might want to include some integration with CAT via hamlib or flrig. As I found needing to remember to switch modes/bands during the event a little annoying. I haven't looked but am sure there must be a python lib for this.~~ Done.
 
 The WFD group who processes the logs needs lines ending in CR/LF. I've updated the cabrillo generator for next year.
 
