@@ -539,9 +539,10 @@ def workedSections():
 
 def workedSection(section):
 	if section in wrkdsections:
-		return curses.A_BOLD
+		#return curses.A_BOLD
+		return curses.color_pair(1)
 	else:
-		return curses.A_NORMAL
+		return curses.A_DIM
 
 def sectionsCol1():
 	rectangle(stdscr, 8, 35, 21, 43)
@@ -685,7 +686,7 @@ def clearentry():
 
 def highlightBonus(bonus):
 	if bonus:
-		return curses.A_BOLD
+		return curses.color_pair(1)
 	else:
 		return curses.A_DIM
 
@@ -1157,11 +1158,19 @@ def main(s):
 	conn = create_DB()
 	curses.start_color()
 	curses.use_default_colors()
+	if curses.can_change_color():
+		curses.init_color(curses.COLOR_MAGENTA,1000,640,0)
+		curses.init_color(curses.COLOR_BLACK,0,0,0)
+		curses.init_color(curses.COLOR_CYAN,500,500,500)
+		curses.init_pair(1, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
+		curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
+		curses.init_pair(3, curses.COLOR_CYAN, curses.COLOR_BLACK)
 	curses.noecho()
 	curses.cbreak()
 	stdscr.keypad(True)
 	stdscr.nodelay(True)
 	curses.mousemask(curses.ALL_MOUSE_EVENTS)
+	stdscr.attrset(curses.color_pair(0))
 	stdscr.clear()
 	contacts()
 	sections()
