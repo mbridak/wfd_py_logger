@@ -9,7 +9,7 @@ I decided to write this after the 2018 Winter Field Day when I couldn't find a s
 ![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/logger.png)
 
 ## What was learned from WFD 2020
-~~I might want to include some integration with CAT via hamlib or flrig. As I found needing to remember to switch modes/bands during the event a little annoying. I haven't looked but am sure there must be a python lib for this.~~
+~~I might want to include some integration with CAT via hamlib or flrig. As I found needing to remember to switch modes/bands during the event a little annoying. I haven't looked but am sure there must be a python lib for this.~~ Done.
 
 The WFD group who processes the logs needs lines ending in CR/LF. I've updated the cabrillo generator for next year.
 
@@ -66,6 +66,7 @@ For claimed bonuses, since I'll be using battery and solar and I'll be outdoors 
 
 #### Radio Polling via rigctld
 If you run rigctld on the computer that you are logging from, the radio will be polled for band/mode updates automatically. There is an indicator at the bottom of the logging window to indicate polling status. Dim if no connection or timeout, and highlighted if all okay.
+
 ![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/rigctld.png)
 
 #### Editing an existing contact

@@ -31,7 +31,7 @@ QuestionMark = 63
 EnterKey = 10
 Space = 32
 
-bands = ('160', '80', '40', '20', '15', '10', '6', '2')
+bands = ('160', '80', '60','40', '20', '15', '10', '6', '2')
 modes = ('PH', 'CW', 'DI')
 
 mycall = "YOURCALL"
@@ -71,7 +71,8 @@ secPartial = {}
 secName = {}
 oldfreq = "0"
 oldmode = ""
-rigctrlhost = "127.0.0.1" #IP address for rigctld
+#rigctrlhost = "192.168.1.152" #IP address for rigctld
+rigctrlhost = "127.0.0.1"
 rigctrlport = 4532
 rigctrlsocket=socket.socket()
 rigctrlsocket.settimeout(0.1)
@@ -88,6 +89,8 @@ def getband(freq):
 			return "160"
 		if frequency > 3500000 and frequency < 4000000:
 			return "80"
+		if frequency > 5330000 and frequency < 5406000:
+			return "60"
 		if frequency > 7000000 and frequency < 7300000:
 			return "40"
 		if frequency > 10100000 and frequency < 10150000:
@@ -110,7 +113,7 @@ def getband(freq):
 		return "0"
 
 def getmode(rigmode):
-	if rigmode == "CW":
+	if rigmode == "CW" or rigmode == 'CWR':
 		return "CW"
 	if rigmode == "USB" or rigmode == "LSB" or rigmode == "FM" or rigmode == "AM":
 		return "PH"
@@ -135,13 +138,14 @@ def pollRadio():
 
 def checkRadio():
 	global rigctrlsocket, rigonline
+	rigctrlsocket=socket.socket()
 	rigctrlsocket.settimeout(0.1)
 	rigonline = True
 	try:
 		rigctrlsocket.connect((rigctrlhost, rigctrlport))
 	except:
 		rigonline = False
-		pass
+
 
 def create_DB():
 	""" create a database and table if it does not exist """
