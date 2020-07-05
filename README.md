@@ -55,6 +55,8 @@ So when I initially start the program I would enter the following:
 .B40
 .MCW
 ``` 
+This says I'm K6GTE 1O ORG, running 5 watts CW on 40 Meters.
+
 For claimed bonuses, since I'll be using battery and solar and I'll be outdoors and away from home, but I don't plan on making any Satellite contacts I'd also enter the following.
 ```
 .1
