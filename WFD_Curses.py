@@ -32,6 +32,7 @@ EnterKey = 10
 Space = 32
 
 bands = ('160', '80', '60','40', '20', '15', '10', '6', '2')
+dfreq = {'160':"1.8", '80':"3.5", '60':"53.3", '40':"7.0", '20':"14.0", '15':"21.0", '10':"28.0", '6':"50.0", '2':"144", '222':"222.0", '432':"432.0", 'SAT':"0.0"}
 modes = ('PH', 'CW', 'DI')
 
 mycall = "YOURCALL"
@@ -69,6 +70,7 @@ wrkdsections = []
 scp = []
 secPartial = {}
 secName = {}
+secState = {}
 oldfreq = "0"
 oldmode = ""
 #rigctrlhost = "192.168.1.152" #IP address for rigctld
@@ -250,6 +252,7 @@ def readSections():
 			try:
 				sec, st, canum, abbrev, name = str.split(ln, None, 4)
 				secName[abbrev] = abbrev + ' ' + name + ' ' + canum
+				secState[abbrev] = st
 				for i in range(len(abbrev) - 1):
 					p = abbrev[:-i - 1]
 					secPartial[p] = 1
@@ -322,12 +325,12 @@ def stats():
 	stdscr.addstr(4, 58, "QSO POINTS:          ")
 	stdscr.addstr(5, 58, "QSOs LAST HOUR:")
 	stdscr.addstr(6, 58, "QSOs LAST 15MIN:")
-	stdscr.addstr(1, 79 - len(cwcontacts), cwcontacts)
-	stdscr.addstr(2, 79 - len(phonecontacts), phonecontacts)
-	stdscr.addstr(3, 79 - len(digitalcontacts), digitalcontacts)
-	stdscr.addstr(4, 79 - len(str(score())), str(score()))
-	stdscr.addstr(5, 79 - len(lasthour), lasthour)
-	stdscr.addstr(6, 79 - len(last15), last15)
+	stdscr.addstr(1, 75, cwcontacts.rjust(4))
+	stdscr.addstr(2, 75, phonecontacts.rjust(4))
+	stdscr.addstr(3, 75, digitalcontacts.rjust(4))
+	stdscr.addstr(4, 70, str(score()).rjust(9))
+	stdscr.addstr(5, 76, lasthour.rjust(3))
+	stdscr.addstr(6, 76, last15.rjust(3))
 	stdscr.move(y, x)
 
 def score():
@@ -371,6 +374,56 @@ def qrpcheck():
 	highpower = bool(list(log[0])[0])
 	conn.close()
 	qrp = not (qrpc + qrpp + qrpd)
+
+def getState(section):
+	try:
+		state = secState[section]
+		if state != "--":
+			return state
+	except:
+		return False
+	return False
+
+def adif():
+	logname = "WFD.adi"
+	conn = sqlite3.connect(database)
+	c = conn.cursor()
+	c.execute("select * from contacts order by date_time ASC")
+	log = c.fetchall()
+	conn.close()
+	counter = 0
+	print("<ADIF_VER:5>2.2.0", end='\r\n', file=open(logname, "w"))
+	print("<EOH>", end='\r\n', file=open(logname, "a"))
+	for x in log:
+		logid, hiscall, hisclass, hissection, datetime, band, mode, power = x
+		if mode == "DI": mode = "FT8"
+		if mode == "PH": mode = "SSB"
+		if mode == "CW":
+			rst = "599"
+		else:
+			rst = "59"
+		loggeddate = datetime[:10]
+		loggedtime = datetime[11:13] + datetime[14:16]
+		print("<QSO_DATE:%s:d>%s" % (len("".join(loggeddate.split("-"))), "".join(loggeddate.split("-"))), end='\r\n', file=open(logname, "a"))
+		print("<TIME_ON:%s>%s" % (len(loggedtime), loggedtime), end='\r\n', file=open(logname, "a"))
+		print("<CALL:%s>%s" % (len(hiscall), hiscall), end='\r\n', file=open(logname, "a"))
+		print("<MODE:%s>%s" % (len(mode), mode), end='\r\n', file=open(logname, "a"))
+		print("<BAND:%s>%s" % (len(band + "M"), band + "M"), end='\r\n', file=open(logname, "a"))
+		try:
+			print("<FREQ:%s>%s" % (len(dfreq[band]), dfreq[band]), end='\r\n', file=open(logname, "a"))
+		except:
+			pass
+		print("<RST_SENT:%s>%s" % (len(rst), rst), end='\r\n', file=open(logname, "a"))
+		print("<RST_RCVD:%s>%s" % (len(rst), rst), end='\r\n', file=open(logname, "a"))
+		print("<STX_STRING:%s>%s" % (len(myclass + " " + mysection), myclass + " " + mysection), end='\r\n', file=open(logname, "a"))
+		print("<SRX_STRING:%s>%s" % (len(hisclass + " " + hissection), hisclass + " " + hissection), end='\r\n', file=open(logname, "a"))
+		print("<ARRL_SECT:%s>%s" % (len(hissection), hissection), end='\r\n', file=open(logname, "a"))
+		print("<CLASS:%s>%s" % (len(hisclass), hisclass), end='\r\n', file=open(logname, "a"))
+		state = getState(hissection)
+		if state: print("<STATE:%s>%s" % (len(state), state), end='\r\n', file=open(logname, "a"))
+		print("<COMMENT:19>WINTER-FIELD-DAY", end='\r\n', file=open(logname, "a"))
+		print("<EOR>", end='\r\n', file=open(logname, "a"))
+		print("", end='\r\n', file=open(logname, "a"))
 
 def cabrillo():
 
@@ -428,10 +481,13 @@ def cabrillo():
 			  hissection, sep=' ', end='\r\n', file=open("WFDLOG.txt", "a"))
 	print("END-OF-LOG:", end='\r\n', file=open("WFDLOG.txt", "a"))
 
+	adif()
+
 	oy, ox = stdscr.getyx()
 	window = curses.newpad(10, 33)
 	rectangle(stdscr, 11, 0, 21, 34)
 	window.addstr(0, 0, "Log written to: WFDLOG.txt")
+	window.addstr(2, 0, "ADIF written to: WFD.adi")
 	stdscr.refresh()
 	window.refresh(0, 0, 12, 1, 20, 33)
 	stdscr.move(oy, ox)
@@ -511,7 +567,7 @@ def dupCheck(acall):
 		decorate = ""
 		hiscall, hisclass, hissection, hisband, hismode = x
 		if hisband == band and hismode == mode:
-			decorate = curses.A_BOLD
+			decorate = curses.color_pair(1)
 			curses.flash()
 			curses.beep()
 		else:
@@ -935,7 +991,7 @@ def processcommand(cmd):
 
 def proc_key(key):
 	global inputFieldFocus, hiscall, hissection, hisclass, kbuf
-	if key == 9:
+	if key == 9 or key == Space:
 		inputFieldFocus += 1
 		if inputFieldFocus > 2:
 			inputFieldFocus = 0
