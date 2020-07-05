@@ -64,7 +64,7 @@ For claimed bonuses, since I'll be using battery and solar and I'll be outdoors 
 .3
 ```
 
-##Logging
+## Logging
 Okay you've made a contact. Enter the call in the call field. As you type it in, it will do a super check partial (see below). Press TAB or SPACE to advance to the next field. Once the call is complete it will do a DUP check (see below). It will try and Autofill the next fields (see below). When entering the section, it will do a section partial check (see below). Press the ENTER key to submit the Q to the log. If it's a busted call or a dup, press the ESC key to clear all inputs and start again.
 
 ## Features
