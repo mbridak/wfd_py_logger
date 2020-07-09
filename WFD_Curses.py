@@ -9,6 +9,25 @@ COLOR_RED	Red
 COLOR_WHITE	White
 COLOR_YELLOW	Yellow
 """
+try:
+	import json
+	import requests
+	cloudlogapi="cl12345678901234567890"
+	cloudlogurl="http://www.yoururl.com/Cloudlog/index.php/api/qso"
+	qrzurl="http://xmldata.qrz.com/xml/"
+	qrzname="w1aw"
+	qrzpass="secret"
+	payload = {'username':qrzname, 'password':qrzpass}
+	r=requests.get(qrzurl,params=payload, timeout=1.0)
+	if r.status_code == 200 and r.text.find('<Key>') > 0:
+		qrzsession=r.text[r.text.find('<Key>')+5:r.text.find('</Key>')]
+	else:
+		qrzsession = False
+except:
+	cloudlogapi = False
+	cloudlogurl = False
+	qrz=False
+	qrzsession=False
 
 import curses
 import time
@@ -32,7 +51,7 @@ EnterKey = 10
 Space = 32
 
 bands = ('160', '80', '60','40', '20', '15', '10', '6', '2')
-dfreq = {'160':"1.8", '80':"3.5", '60':"53.3", '40':"7.0", '20':"14.0", '15':"21.0", '10':"28.0", '6':"50.0", '2':"144", '222':"222.0", '432':"432.0", 'SAT':"0.0"}
+dfreq = {'160':"1.800", '80':"3.500", '60':"53.300", '40':"7.000", '20':"14.000", '15':"21.000", '10':"28.000", '6':"50.000", '2':"144.000", '222':"222.000", '432':"432.000", 'SAT':"0.0"}
 modes = ('PH', 'CW', 'DI')
 
 mycall = "YOURCALL"
@@ -214,6 +233,7 @@ def log_contact(logme):
 	sections()
 	stats()
 	logwindow()
+	postcloudlog()
 
 def delete_contact(contact):
 	try:
@@ -375,6 +395,38 @@ def qrpcheck():
 	conn.close()
 	qrp = not (qrpc + qrpp + qrpd)
 
+def getBandModeTally(band, mode):
+	conn = ""
+	conn = sqlite3.connect(database)
+	c = conn.cursor()
+	c.execute("select count(*) as tally, MAX(power) as mpow from contacts where band = '"+band+"' AND mode ='"+mode+"'")
+	return c.fetchone()
+
+def getbands():
+	bandlist=[]
+	conn = sqlite3.connect(database)
+	c = conn.cursor()
+	c.execute("select DISTINCT band from contacts")
+	x=c.fetchall()
+	if x:
+		for count in x:
+			bandlist.append(count[0])
+		return bandlist
+	return []
+
+def generateBandModeTally():
+	blist = getbands()
+	bmtfn = "Statistics.txt"
+	print("\t\tCW\tPWR\tDI\tPWR\tPH\tPWR", end='\r\n', file=open(bmtfn, "w"))
+	print("-"*60, end='\r\n', file=open(bmtfn, "a"))
+	for b in bands:
+		if b in blist:
+			cwt = getBandModeTally(b,"CW")
+			dit = getBandModeTally(b,"DI")
+			pht = getBandModeTally(b,"PH")
+			print("Band:\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (b, cwt[0], cwt[1], dit[0], dit[1], pht[0], pht[1]), end='\r\n', file=open(bmtfn, "a"))
+			print("-"*60, end='\r\n', file=open(bmtfn, "a"))
+
 def getState(section):
 	try:
 		state = secState[section]
@@ -392,6 +444,7 @@ def adif():
 	log = c.fetchall()
 	conn.close()
 	counter = 0
+	grid = False
 	print("<ADIF_VER:5>2.2.0", end='\r\n', file=open(logname, "w"))
 	print("<EOH>", end='\r\n', file=open(logname, "a"))
 	for x in log:
@@ -404,6 +457,29 @@ def adif():
 			rst = "59"
 		loggeddate = datetime[:10]
 		loggedtime = datetime[11:13] + datetime[14:16]
+		yy, xx = stdscr.getyx()
+		stdscr.move(15, 1)
+		stdscr.addstr("QRZ Gridsquare Lookup: "+str(counter))
+		stdscr.move(yy, xx)
+		stdscr.refresh()
+		grid = False
+		name = False
+		try:
+			if qrzsession:
+				payload = {'s':qrzsession, 'callsign':hiscall}
+				r=requests.get(qrzurl,params=payload, timeout=3.0)
+				if r.status_code == 200:
+					if r.text.find('<grid>') > 0:
+						grid = r.text[r.text.find('<grid>')+6:r.text.find('</grid>')]
+					if r.text.find('<fname>') > 0:
+						name = r.text[r.text.find('<fname>')+7:r.text.find('</fname>')]
+					if r.text.find('<name>') > 0:
+						if not name:
+							name = r.text[r.text.find('<name>')+6:r.text.find('</name>')]
+						else:
+							name += " " + r.text[r.text.find('<name>')+6:r.text.find('</name>')]
+		except:
+			pass
 		print("<QSO_DATE:%s:d>%s" % (len("".join(loggeddate.split("-"))), "".join(loggeddate.split("-"))), end='\r\n', file=open(logname, "a"))
 		print("<TIME_ON:%s>%s" % (len(loggedtime), loggedtime), end='\r\n', file=open(logname, "a"))
 		print("<CALL:%s>%s" % (len(hiscall), hiscall), end='\r\n', file=open(logname, "a"))
@@ -421,9 +497,63 @@ def adif():
 		print("<CLASS:%s>%s" % (len(hisclass), hisclass), end='\r\n', file=open(logname, "a"))
 		state = getState(hissection)
 		if state: print("<STATE:%s>%s" % (len(state), state), end='\r\n', file=open(logname, "a"))
+		if grid: print("<GRIDSQUARE:%s>%s" % (len(grid), grid), end='\r\n', file=open(logname, "a"))
+		if name: print("<NAME:%s>%s" % (len(name), name), end='\r\n', file=open(logname, "a"))
 		print("<COMMENT:19>WINTER-FIELD-DAY", end='\r\n', file=open(logname, "a"))
 		print("<EOR>", end='\r\n', file=open(logname, "a"))
 		print("", end='\r\n', file=open(logname, "a"))
+	yy, xx = stdscr.getyx()
+	stdscr.move(15, 1)
+	stdscr.addstr("Done.                     ")
+	stdscr.move(yy, xx)
+	stdscr.refresh()
+
+def postcloudlog():
+	global qrzsession
+	if not cloudlogapi: return
+	conn = sqlite3.connect(database)
+	c = conn.cursor()
+	c.execute("select * from contacts order by id DESC")
+	q = c.fetchone()
+	conn.close()
+	logid, hiscall, hisclass, hissection, datetime, band, mode, power = q
+	grid = False
+	if qrzsession:
+		payload = {'s':qrzsession, 'callsign':hiscall}
+		r=requests.get(qrzurl,params=payload, timeout=1.0)
+		if r.status_code == 200:
+			grid = r.text[r.text.find('<grid>')+6:r.text.find('</grid>')]
+	if mode == "CW":
+		rst = "599"
+	else:
+		rst = "59"
+	loggeddate = datetime[:10]
+	loggedtime = datetime[11:13] + datetime[14:16]
+	adifq = "<QSO_DATE:%s:d>%s" % (len("".join(loggeddate.split("-"))), "".join(loggeddate.split("-")))
+	adifq += "<TIME_ON:%s>%s" % (len(loggedtime), loggedtime)
+	adifq += "<CALL:%s>%s" % (len(hiscall), hiscall)
+	adifq += "<MODE:%s>%s" % (len(mode), mode)
+	adifq += "<BAND:%s>%s" % (len(band + "M"), band + "M")
+	adifq += "<FREQ:%s>%s" % (len(dfreq[band]), dfreq[band])
+	adifq += "<RST_SENT:%s>%s" % (len(rst), rst)
+	adifq += "<RST_RCVD:%s>%s" % (len(rst), rst)
+	adifq += "<STX_STRING:%s>%s" % (len(myclass + " " + mysection), myclass + " " + mysection)
+	adifq += "<SRX_STRING:%s>%s" % (len(hisclass + " " + hissection), hisclass + " " + hissection)
+	adifq += "<ARRL_SECT:%s>%s" % (len(hissection), hissection)
+	adifq += "<CLASS:%s>%s" % (len(hisclass), hisclass)
+	state = getState(hissection)
+	if state: adifq += "<STATE:%s>%s" % (len(state), state)
+	if grid: adifq += "<GRIDSQUARE:%s>%s" % (len(grid), grid)
+	adifq += "<COMMENT:14>ARRL-FIELD-DAY"
+	adifq += "<EOR>"
+
+	payloadDict = {
+		"key":cloudlogapi,
+		"type":"adif",
+		"string":adifq
+	}
+	jsonData = json.dumps(payloadDict)
+	response = requests.post(cloudlogurl, jsonData)
 
 def cabrillo():
 
@@ -481,16 +611,18 @@ def cabrillo():
 			  hissection, sep=' ', end='\r\n', file=open("WFDLOG.txt", "a"))
 	print("END-OF-LOG:", end='\r\n', file=open("WFDLOG.txt", "a"))
 
-	adif()
+	generateBandModeTally()
 
 	oy, ox = stdscr.getyx()
 	window = curses.newpad(10, 33)
 	rectangle(stdscr, 11, 0, 21, 34)
 	window.addstr(0, 0, "Log written to: WFDLOG.txt")
+	window.addstr(1, 0, "Stats written to: Statistics.txt")
 	window.addstr(2, 0, "ADIF written to: WFD.adi")
 	stdscr.refresh()
 	window.refresh(0, 0, 12, 1, 20, 33)
 	stdscr.move(oy, ox)
+	adif()
 	writepreferences()
 	statusline()
 	stats()

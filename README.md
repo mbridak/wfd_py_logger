@@ -6,7 +6,7 @@ The log is stored in an sqlite3 database file 'WFD_Curses.db'. If you need to wi
 
 I decided to write this after the 2018 Winter Field Day when I couldn't find a simple Linux logger for the event. I didn't need multiuser logging or GPS disciplined time servers. Just a simple logger with dup checking that could generate a cabrillo log for submission.
 
-![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/logger.png)
+![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/pics/logger.png)
 
 ## What was learned from WFD 2020
 ~~I might want to include some integration with CAT via hamlib or flrig. As I found needing to remember to switch modes/bands during the event a little annoying. I haven't looked but am sure there must be a python lib for this.~~ Done.
@@ -72,7 +72,7 @@ Okay you've made a contact. Enter the call in the call field. As you type it in,
 #### Radio Polling via rigctld
 If you run rigctld on the computer that you are logging from, the radio will be polled for band/mode updates automatically. There is an indicator at the bottom of the logging window to indicate polling status. Dim if no connection or timeout, and highlighted if all okay.
 
-![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/rigctld.png)
+![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/pics/rigctld.png)
 
 #### Editing an existing contact
 Use the Up/Down arrow keys or PageUp/PageDown to scroll the contact into view. Your mouse scroll wheel may work as well. Double left click on the contact to edit, or use the '.E' command. Use the TAB or Up/Down arrow keys to move between fields. Backspace to erase and retype what you need.
