@@ -74,18 +74,35 @@ If you run rigctld on the computer that you are logging from, the radio will be 
 
 ![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/pics/rigctld.png)
 
+#### Cloudlog and QRZ API's
+If you use either Cloudlog logging or QRZ lookup you can edit the lines in FieldDayLogger.py shown below to enable.
+```
+    cloudlogapi="cl12345678901234567890"
+	cloudlogurl="http://www.yoururl.com/Cloudlog/index.php/api/qso"
+	qrzname="w1aw"
+	qrzpass="secret"
+```
+
 #### Editing an existing contact
 Use the Up/Down arrow keys or PageUp/PageDown to scroll the contact into view. Your mouse scroll wheel may work as well. Double left click on the contact to edit, or use the '.E' command. Use the TAB or Up/Down arrow keys to move between fields. Backspace to erase and retype what you need.
 Once done press the Enter key to save, or the Escape key to exit.
 
+![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/pics/editcontact.png)
+
 #### Super Check Partial
 If you type more than two characters in the callsign field the program will filter the input through a "Super Check Partial" routine and show you possible matches to known contesting call signs. Is this useful? Doubt it.
+
+![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/pics/scp.png)
 
 #### Section partial check
 As you type the section abbreviation you are presented with a list of all possible sections that start with what you have typed.
 
+![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/pics/sectioncheckpartial.png)
+
 #### DUP checking
 Once you type a complete callsign and press TAB or SPACE to advance to the next field. The callsign is checked against previous callsigns in your log. It will list any prior contact made showing the band and mode of the contact. If the band and mode are the same as the one you are currently using, the listing will be highlighted, the screen will flash, a bell will sound to alert you that this is a DUP. At this point you and the other OP can argue back and forth about who's wrong. In the end you'll put your big boy pants on and make a decision if you'll enter the call or not.
+
+![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/pics/dupe_check.png)
 
 #### Autofill
 If you have worked this person before on another band/mode the program will load the class and section used previously for this call so you will not have to enter this info again.
