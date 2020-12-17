@@ -449,7 +449,7 @@ def adif():
 	print("<EOH>", end='\r\n', file=open(logname, "a"))
 	for x in log:
 		logid, hiscall, hisclass, hissection, datetime, band, mode, power = x
-		if mode == "DI": mode = "FT8"
+		if mode == "DI": mode = "RTTY"
 		if mode == "PH": mode = "SSB"
 		if mode == "CW":
 			rst = "599"
@@ -769,7 +769,7 @@ def sectionsCol2():
 	stdscr.addstr(13, 45, "GA", workedSection("GA"))
 	stdscr.addstr(13, 49, "SFL", workedSection("SFL"))
 	stdscr.addstr(14, 45, "KY", workedSection("KY"))
-	stdscr.addstr(14, 50, "TY", workedSection("TY"))
+	stdscr.addstr(14, 50, "TN", workedSection("TN"))
 	stdscr.addstr(15, 45, "NC", workedSection("NC"))
 	stdscr.addstr(15, 50, "VA", workedSection("VA"))
 	stdscr.addstr(16, 45, "NFL", workedSection("NFL"))
