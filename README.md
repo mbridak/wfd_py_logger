@@ -1,4 +1,4 @@
-## K6GTE Winter Field Day logger
+## K6GTE Winter Field Day logger (Curses)
 
 The logger is written in Python 3, and uses the curses lib. It will work with Linux and Mac, but since the Windows curses lib is lacking it will not work properly in Windows.
 
