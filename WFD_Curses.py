@@ -33,6 +33,7 @@ import curses
 import time
 import sqlite3
 import socket
+import os
 
 from curses.textpad import rectangle
 from curses import wrapper
@@ -102,6 +103,13 @@ try:
 	rigctrlsocket.connect((rigctrlhost, rigctrlport))
 except:
 	rigonline = False
+
+def relpath(filename):
+		try:
+			base_path = sys._MEIPASS
+		except:
+			base_path = os.path.abspath(".")
+		return os.path.join(base_path, filename)
 
 def getband(freq):
 	if freq.isnumeric():
@@ -264,7 +272,7 @@ def change_contact(qso):
 
 def readSections():
 	try:
-		fd = open("arrl_sect.dat", "r")  # read section data
+		fd = open(relpath("arrl_sect.dat"), "r")  # read section data
 		while 1:
 			ln = fd.readline().strip()  # read a line and put in db
 			if not ln: break
@@ -299,7 +307,7 @@ readSections()
 
 def readSCP():
 	global scp
-	f = open("MASTER.SCP")
+	f = open(relpath("MASTER.SCP"))
 	scp = f.readlines()
 	f.close()
 	scp = list(map(lambda x: x.strip(), scp))
