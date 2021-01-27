@@ -1,12 +1,16 @@
 ## K6GTE Winter Field Day logger (Curses)
 
-The logger is written in Python 3, and uses the curses lib. It will work with Linux and Mac, but since the Windows curses lib is lacking it will not work properly in Windows. A newer version based on PyQt5 can be found [here](https://github.com/mbridak/pyqtwfdlogger).
+The logger is written in Python 3, and uses the curses lib. It will work with Linux and Mac, but since the Windows curses lib is lacking it will not work properly in Windows. 
+
+**A newer version based on PyQt5 can be found [here](https://github.com/mbridak/WinterFieldDayLogger)**.
 
 The log is stored in an sqlite3 database file 'WFD_Curses.db'. If you need to wipe everything and start clean, just delete this file. The screen size expected by the program is an 80 x 24 character terminal. Nothing needs to be installed, compiled etc... Just make WFD_Curses.py executable and run it within the same folder.
 
 I decided to write this after the 2018 Winter Field Day when I couldn't find a simple Linux logger for the event. I didn't need multiuser logging or GPS disciplined time servers. Just a simple logger with dup checking that could generate a cabrillo log for submission.
 
 ![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/pics/logger.png)
+
+**A newer version based on PyQt5 can be found [here](https://github.com/mbridak/WinterFieldDayLogger)**.
 
 ## What was learned from WFD 2020
 ~~I might want to include some integration with CAT via hamlib or flrig. As I found needing to remember to switch modes/bands during the event a little annoying. I haven't looked but am sure there must be a python lib for this.~~ Done.
@@ -17,6 +21,8 @@ I think the text input/editing could use some work. Would like to be able to arr
 
 ## Caveats
 This is a simple logger ment for single op, it's not usable for clubs.
+
+**A newer version based on PyQt5 can be found [here](https://github.com/mbridak/WinterFieldDayLogger)**.
 
 ## Commands:
 Commands start with a period character in the callsign field and are immediately followed by any information needed by the command.
