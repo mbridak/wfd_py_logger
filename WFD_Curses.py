@@ -93,8 +93,7 @@ secName = {}
 secState = {}
 oldfreq = "0"
 oldmode = ""
-#rigctrlhost = "192.168.1.152" #IP address for rigctld
-rigctrlhost = "127.0.0.1"
+rigctrlhost = "localhost"
 rigctrlport = 4532
 rigctrlsocket=socket.socket()
 rigctrlsocket.settimeout(0.1)
@@ -184,7 +183,7 @@ def create_DB():
 		c = conn.cursor()
 		sql_table = """ CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY, callsign text NOT NULL, class text NOT NULL, section text NOT NULL, date_time text NOT NULL, band text NOT NULL, mode text NOT NULL, power INTEGER NOT NULL); """
 		c.execute(sql_table)
-		sql_table = """ CREATE TABLE IF NOT EXISTS preferences (id INTEGER, mycallsign TEXT DEFAULT 'YOURCALL', myclass TEXT DEFAULT 'YOURCLASS', mysection TEXT DEFAULT 'YOURSECTION', power TEXT DEFAULT '0', altpower INTEGER DEFAULT 0, outdoors INTEGER DEFAULT 0, notathome INTEGER DEFAULT 0, satellite INTEGER DEFAULT 0); """
+		sql_table = """ CREATE TABLE IF NOT EXISTS preferences (id INTEGER, mycallsign TEXT DEFAULT 'YOURCALL', myclass TEXT DEFAULT 'YOURCLASS', mysection TEXT DEFAULT 'YOURSECTION', power TEXT DEFAULT '0', rigctrlhost TEXT default 'localhost', rigctrlport INTEGER DEFAULT 4532, altpower INTEGER DEFAULT 0, outdoors INTEGER DEFAULT 0, notathome INTEGER DEFAULT 0, satellite INTEGER DEFAULT 0); """
 		c.execute(sql_table)
 		conn.commit()
 		conn.close()
@@ -192,7 +191,7 @@ def create_DB():
 		print(e)
 
 def readpreferences():
-	global mycall, myclass, mysection, power, altpower, outdoors, notathome, satellite
+	global mycall, myclass, mysection, power, rigctrlhost, rigctrlport, altpower, outdoors, notathome, satellite
 	try:
 		conn = sqlite3.connect(database)
 		c = conn.cursor()
@@ -200,14 +199,13 @@ def readpreferences():
 		pref = c.fetchall()
 		if len(pref) > 0:
 			for x in pref:
-				_, mycall, myclass, mysection, power, altpower, outdoors, notathome, satellite = x
+				_, mycall, myclass, mysection, power, rigctrlhost, rigctrlport, altpower, outdoors, notathome, satellite = x
 				altpower = bool(altpower)
 				outdoors = bool(outdoors)
 				notathome = bool(notathome)
 				satellite = bool(satellite)
 		else:
-			sql = "INSERT INTO preferences(id, mycallsign, myclass, mysection, power, altpower, outdoors, notathome, satellite) VALUES(1,'" + mycall + "','" + myclass + "','" + mysection + "','" + power + "'," + str(
-				int(altpower)) + "," + str(int(outdoors)) + "," + str(int(notathome)) + "," + str(int(satellite)) + ")"
+			sql = "INSERT INTO preferences(id, mycallsign, myclass, mysection, power, rigctrlhost, rigctrlport, altpower, outdoors, notathome, satellite) VALUES(1,'" + mycall + "','" + myclass + "','" + mysection + "','" + power + "','" + rigctrlhost + "'," + str(int(rigctrlport)) + "," + str(int(altpower)) + "," + str(int(outdoors)) + "," + str(int(notathome)) + "," + str(int(satellite)) + ")"
 			c.execute(sql)
 			conn.commit()
 		conn.close()
@@ -217,9 +215,7 @@ def readpreferences():
 def writepreferences():
 	try:
 		conn = sqlite3.connect(database)
-		sql = "UPDATE preferences SET mycallsign = '" + mycall + "', myclass = '" + myclass + "', mysection = '" + mysection + "', power = '" + power + "', altpower = " + str(
-			int(altpower)) + ", outdoors = " + str(int(outdoors)) + ", notathome = " + str(
-			int(notathome)) + ", satellite = " + str(int(satellite)) + " WHERE id = 1"
+		sql = "UPDATE preferences SET mycallsign = '" + mycall + "', myclass = '" + myclass + "', mysection = '" + mysection + "', power = '" + power + "', rigctrlhost = '" + rigctrlhost + "', rigctrlport = " + str(int(rigctrlport)) + ", altpower = " + str(int(altpower)) + ", outdoors = " + str(int(outdoors)) + ", notathome = " + str(int(notathome)) + " WHERE id = 1"
 		cur = conn.cursor()
 		cur.execute(sql)
 		conn.commit()
@@ -914,6 +910,7 @@ def statusline():
 	stdscr.addch(curses.ACS_VLINE)
 	stdscr.addstr("Satellite", highlightBonus(satellite))
 	stdscr.addstr(23,50,"Rig", highlightBonus(rigonline))
+	stdscr.addstr(23,54,str(rigctrlport), highlightBonus(rigonline))
 
 	stdscr.move(y, x)
 
@@ -948,6 +945,18 @@ def setclass(c):
 def setsection(s):
 	global mysection
 	mysection = str(s)
+	writepreferences()
+	statusline()
+
+def setrigctrlhost(o):
+	global rigctrlhost
+	rigctrlhost = str(o)
+	writepreferences()
+	statusline()
+
+def setrigctrlport(r):
+	global rigctrlport
+	rigctrlport = r
 	writepreferences()
 	statusline()
 
@@ -1028,9 +1037,9 @@ def displayHelp():
 			".Cyourclass      |.E### edit QSO",
 			".Syoursection    |.D### del QSO",
 			".B## change bands|.L Generate Log",
-			".M[CW,PH,DI] mode|[esc] abort inp",
-			".P## change power|",
-			".1 Alt Power     |"]
+			".M[CW,PH,DI] mode|.Origctrlhost",
+			".P## change power|.Rrigctrlport",
+			".1 Alt Power     |[esc] abort inp"]
 	stdscr.move(12, 1)
 	count = 0
 	for x in help:
@@ -1110,6 +1119,12 @@ def processcommand(cmd):
 		return
 	if cmd[:1] == "S":  # Set your section
 		setsection(cmd[1:])
+		return
+	if cmd[:1] == "O":  # Set rigctld host
+		setrigctrlhost(cmd[1:])
+		return
+	if cmd[:1] == "R":  # Set rigctld port
+		setrigctrlport(cmd[1:])
 		return
 	if cmd[:1] == "L":  # Generate Cabrillo Log
 		cabrillo()
