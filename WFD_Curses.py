@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
+
 """
-COLOR_BLACK	Black
-COLOR_BLUE	Blue
-COLOR_CYAN	Cyan (light greenish blue)
-COLOR_GREEN	Green
+COLOR_BLACK	    Black
+COLOR_BLUE	    Blue
+COLOR_CYAN	    Cyan (light greenish blue)
+COLOR_GREEN	    Green
 COLOR_MAGENTA	Magenta (purplish red)
-COLOR_RED	Red
-COLOR_WHITE	White
+COLOR_RED   	Red
+COLOR_WHITE 	White
 COLOR_YELLOW	Yellow
 """
+
 try:
 	import json
 	import requests
@@ -84,7 +86,7 @@ hiscall = ""
 hissection = ""
 hisclass = ""
 
-database = "WFD_Curses.db"
+database = "/home/russ/Logs/WFD_Curses.db"
 conn = ""
 wrkdsections = []
 scp = []
@@ -93,15 +95,9 @@ secName = {}
 secState = {}
 oldfreq = "0"
 oldmode = ""
+rigonline = False
 rigctrlhost = "localhost"
 rigctrlport = 4532
-rigctrlsocket=socket.socket()
-rigctrlsocket.settimeout(0.1)
-rigonline = True
-try:
-	rigctrlsocket.connect((rigctrlhost, rigctrlport))
-except:
-	rigonline = False
 
 def relpath(filename):
 		try:
@@ -165,11 +161,10 @@ def pollRadio():
 			rigonline = False
 
 def checkRadio():
-	global rigctrlsocket, rigonline
-	rigctrlsocket=socket.socket()
-	rigctrlsocket.settimeout(0.1)
-	rigonline = True
+	global rigctrlsocket, rigctrlhost, rigctrlport, rigonline
 	try:
+		rigctrlsocket=socket.socket()
+		rigctrlsocket.settimeout(0.1)
 		rigctrlsocket.connect((rigctrlhost, rigctrlport))
 	except:
 		rigonline = False
@@ -1084,7 +1079,7 @@ def displayInputField(field):
 	stdscr.refresh()
 
 def processcommand(cmd):
-	global band, mode, power, quit
+	global band, mode, power, quit, rigctrlsocket, rigonline
 	cmd = cmd[1:].upper()
 	if cmd == "Q":  # Quit
 		quit = True
@@ -1122,9 +1117,11 @@ def processcommand(cmd):
 		return
 	if cmd[:1] == "O":  # Set rigctld host
 		setrigctrlhost(cmd[1:])
+		rigonline == False
 		return
 	if cmd[:1] == "R":  # Set rigctld port
 		setrigctrlport(cmd[1:])
+		rigonline == False
 		return
 	if cmd[:1] == "L":  # Generate Cabrillo Log
 		cabrillo()
@@ -1369,7 +1366,7 @@ def editQSO(q):
 			break
 
 def main(s):
-	global stdscr, conn
+	global stdscr, conn, rigonline
 	conn = create_DB()
 	curses.start_color()
 	curses.use_default_colors()
