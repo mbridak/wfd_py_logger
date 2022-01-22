@@ -865,7 +865,7 @@ def entry():
 	rectangle(stdscr, 8, 0, 10, 18)
 	stdscr.addstr(8, 1, "CALL")
 	rectangle(stdscr, 8, 19, 10, 25)
-	stdscr.addstr(8, 20, "class")
+	stdscr.addstr(8, 20, "Class")
 	rectangle(stdscr, 8, 26, 10, 34)
 	stdscr.addstr(8, 27, "Section")
 
@@ -886,6 +886,15 @@ def highlightBonus(bonus):
 	else:
 		return curses.A_DIM
 
+def setStatusMsg(msg):
+	oy, ox = stdscr.getyx()
+	window = curses.newpad(10, 33)
+	rectangle(stdscr, 11, 0, 21, 34)
+	window.addstr(0, 0, msg)
+	stdscr.refresh()
+	window.refresh(0, 0, 12, 1, 20, 33)
+	stdscr.move(oy, ox)
+
 def statusline():
 	y, x = stdscr.getyx()
 	now = datetime.now().isoformat(' ')[5:19].replace('-', '/')
@@ -904,7 +913,7 @@ def statusline():
 	stdscr.addstr(23, 5, band, curses.A_REVERSE)
 	stdscr.addstr(23, 13, strfreq.rjust(11), curses.A_REVERSE)
 	stdscr.addstr(23, 30, mode, curses.A_REVERSE)
-	stdscr.addstr(22, 27, "                                ")
+	stdscr.addstr(22, 36, "                          ")
 	stdscr.addstr(22, 36, " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ", curses.A_REVERSE)
 	stdscr.addstr(22, 0, "Bonus")
 	stdscr.addstr(22, 6, "AltPwr", highlightBonus(altpower))
@@ -921,9 +930,18 @@ def statusline():
 
 def setpower(p):
 	global power
-	power = p
-	writepreferences()
-	statusline()
+	try:
+		int(p)
+	except:
+		p = "0"
+	if p is None or p == "":
+		p = "0"
+	if int(p)>0 and int(p)<5001:
+		power = p
+		writepreferences()
+		statusline()
+	else:
+		setStatusMsg("Must be 1 <= Power <= 5000")
 
 def setband(b):
 	global band
@@ -948,19 +966,17 @@ def setcallsign(c):
 		writepreferences()
 		statusline()
 	else:
-		oy, ox = stdscr.getyx()
-		window = curses.newpad(10, 33)
-		rectangle(stdscr, 11, 0, 21, 34)
-		window.addstr(0, 0, "Must be valid call sign")
-		stdscr.refresh()
-		window.refresh(0, 0, 12, 1, 20, 33)
-		stdscr.move(oy, ox)
+		setStatusMsg("Must be valid call sign")
 
 def setclass(c):
 	global myclass
-	myclass = str(c)
-	writepreferences()
-	statusline()
+	regex = re.compile("^[0-9]{1,2}[HIO]$")
+	if re.match(regex,str(c)):
+		myclass = str(c)
+		writepreferences()
+		statusline()
+	else:
+		setStatusMsg("Must be valid station class")
 
 def setsection(s):
 	global mysection
@@ -987,13 +1003,7 @@ def claimAltPower():
 		altpower = False
 	else:
 		altpower = True
-	oy, ox = stdscr.getyx()
-	window = curses.newpad(10, 33)
-	rectangle(stdscr, 11, 0, 21, 34)
-	window.addstr(0, 0, "Alt Power set to: " + str(altpower))
-	stdscr.refresh()
-	window.refresh(0, 0, 12, 1, 20, 33)
-	stdscr.move(oy, ox)
+	setStatusMsg("Alt Power set to: " + str(altpower))
 	writepreferences()
 	statusline()
 	stats()
@@ -1004,13 +1014,7 @@ def claimOutdoors():
 		outdoors = False
 	else:
 		outdoors = True
-	oy, ox = stdscr.getyx()
-	window = curses.newpad(10, 33)
-	rectangle(stdscr, 11, 0, 21, 34)
-	window.addstr(0, 0, "Outdoor bonus set to: " + str(outdoors))
-	stdscr.refresh()
-	window.refresh(0, 0, 12, 1, 20, 33)
-	stdscr.move(oy, ox)
+	setStatusMsg("Outdoor bonus set to: " + str(outdoors))
 	writepreferences()
 	statusline()
 	stats()
@@ -1021,13 +1025,7 @@ def claimNotHome():
 		notathome = False
 	else:
 		notathome = True
-	oy, ox = stdscr.getyx()
-	window = curses.newpad(10, 33)
-	rectangle(stdscr, 11, 0, 21, 34)
-	window.addstr(0, 0, "Away bonus set to: " + str(notathome))
-	stdscr.refresh()
-	window.refresh(0, 0, 12, 1, 20, 33)
-	stdscr.move(oy, ox)
+	setStatusMsg("Away bonus set to: " + str(notathome))
 	writepreferences()
 	statusline()
 	stats()
@@ -1038,13 +1036,7 @@ def claimSatellite():
 		satellite = False
 	else:
 		satellite = True
-	oy, ox = stdscr.getyx()
-	window = curses.newpad(10, 33)
-	rectangle(stdscr, 11, 0, 21, 34)
-	window.addstr(0, 0, "Satellite bonus set to: " + str(satellite))
-	stdscr.refresh()
-	window.refresh(0, 0, 12, 1, 20, 33)
-	stdscr.move(oy, ox)
+	setStatusMsg("Satellite bonus set to: " + str(satellite))
 	writepreferences()
 	statusline()
 	stats()
@@ -1148,13 +1140,7 @@ def processcommand(cmd):
 			setrigctrlhost(cmd[1:])
 			rigonline = False
 		else:
-			oy, ox = stdscr.getyx()
-			window = curses.newpad(10, 33)
-			rectangle(stdscr, 11, 0, 21, 34)
-			window.addstr(0, 0, "Must be IP or localhost")
-			stdscr.refresh()
-			window.refresh(0, 0, 12, 1, 20, 33)
-			stdscr.move(oy, ox)
+			setStatusMsg("Must be IP or localhost")
 		return
 	if cmd[:1] == "R":  # Set rigctld port
 		regex = re.compile("[0-9]{1,5}")
@@ -1162,13 +1148,7 @@ def processcommand(cmd):
 			setrigctrlport(cmd[1:])
 			rigonline = False
 		else:
-			oy, ox = stdscr.getyx()
-			window = curses.newpad(10, 33)
-			rectangle(stdscr, 11, 0, 21, 34)
-			window.addstr(0, 0, "Must be 1023 < Port < 65536")
-			stdscr.refresh()
-			window.refresh(0, 0, 12, 1, 20, 33)
-			stdscr.move(oy, ox)
+			setStatusMsg("Must be 1024 <= Port <= 65535")
 		return
 	if cmd[:1] == "L":  # Generate Cabrillo Log
 		cabrillo()
