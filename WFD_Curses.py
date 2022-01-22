@@ -54,8 +54,8 @@ QuestionMark = 63
 EnterKey = 10
 Space = 32
 
-bands = ('160', '80', '60','40', '20', '15', '10', '6', '2', '70')
-dfreq = {'160':"1.800", '80':"3.500", '60':"53.300", '40':"7.000", '20':"14.000", '15':"21.000", '10':"28.000", '6':"50.000", '2':"144.000", '222':"222.000", '432':"432.000", 'SAT':"0.0"}
+bands = ('160', '80', '60','40', '20', '15', '10', '6', '2', '222', '440')
+dfreq = {'160':"1.800", '80':"3.500", '60':"53.300", '40':"7.000", '20':"14.000", '15':"21.000", '10':"28.000", '6':"50.000", '2':"144.000", '222':"222.000", '440':"432.000", 'SAT':"0.0"}
 modes = ('PH', 'CW', 'DI')
 
 mycall = "YOURCALL"
@@ -909,10 +909,10 @@ def statusline():
 	strfreq = ".".join(strfreq[i:i+3] for i in range(0,len(strfreq),3))
 	strfreq = "".join(reversed(strfreq))
 
-	stdscr.addstr(23, 0, "Band    Freq             Mode   ")
-	stdscr.addstr(23, 5, band, curses.A_REVERSE)
-	stdscr.addstr(23, 13, strfreq.rjust(11), curses.A_REVERSE)
-	stdscr.addstr(23, 30, mode, curses.A_REVERSE)
+	stdscr.addstr(23, 0, "Band     Freq             Mode   ")
+	stdscr.addstr(23, 5, band.rjust(3), curses.A_REVERSE)
+	stdscr.addstr(23, 14, strfreq.rjust(11), curses.A_REVERSE)
+	stdscr.addstr(23, 31, mode, curses.A_REVERSE)
 	stdscr.addstr(22, 36, "                          ")
 	stdscr.addstr(22, 36, " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ", curses.A_REVERSE)
 	stdscr.addstr(22, 0, "Bonus")
