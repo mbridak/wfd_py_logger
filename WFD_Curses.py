@@ -36,6 +36,7 @@ import time
 import sqlite3
 import socket
 import os
+import re
 
 from curses.textpad import rectangle
 from curses import wrapper
@@ -53,13 +54,14 @@ QuestionMark = 63
 EnterKey = 10
 Space = 32
 
-bands = ('160', '80', '60','40', '20', '15', '10', '6', '2')
+bands = ('160', '80', '60','40', '20', '15', '10', '6', '2', '70')
 dfreq = {'160':"1.800", '80':"3.500", '60':"53.300", '40':"7.000", '20':"14.000", '15':"21.000", '10':"28.000", '6':"50.000", '2':"144.000", '222':"222.000", '432':"432.000", 'SAT':"0.0"}
 modes = ('PH', 'CW', 'DI')
 
 mycall = "YOURCALL"
 myclass = "CLASS"
 mysection = "SECT"
+freq = "000000000"
 power = "0"
 band = "40"
 mode = "CW"
@@ -95,9 +97,9 @@ secName = {}
 secState = {}
 oldfreq = "0"
 oldmode = ""
-rigonline = False
 rigctrlhost = "localhost"
 rigctrlport = 4532
+rigonline = False
 
 def relpath(filename):
 		try:
@@ -133,8 +135,10 @@ def getband(freq):
 			return "6"
 		if frequency > 144000000 and frequency < 148000000:
 			return "2"
+		if frequency >= 430000000 and frequency <= 450000000:
+			return "70"
 	else:
-		return "0"
+		return "??"
 
 def getmode(rigmode):
 	if rigmode == "CW" or rigmode == 'CWR':
@@ -157,18 +161,19 @@ def pollRadio():
 				oldmode = newmode
 				setband(str(getband(newfreq)))
 				setmode(str(getmode(newmode)))
+				setfreq(str(newfreq))
 		except:
 			rigonline = False
 
 def checkRadio():
 	global rigctrlsocket, rigctrlhost, rigctrlport, rigonline
+	rigonline = True
 	try:
 		rigctrlsocket=socket.socket()
 		rigctrlsocket.settimeout(0.1)
-		rigctrlsocket.connect((rigctrlhost, rigctrlport))
-	except:
+		rigctrlsocket.connect((rigctrlhost,int(rigctrlport)))
+	except BaseException as err:
 		rigonline = False
-
 
 def create_DB():
 	""" create a database and table if it does not exist """
@@ -886,26 +891,31 @@ def statusline():
 	now = datetime.now().isoformat(' ')[5:19].replace('-', '/')
 	utcnow = datetime.utcnow().isoformat(' ')[5:19].replace('-', '/')
 	try:
-		stdscr.addstr(22, 59, "Local: " + now)
-		stdscr.addstr(23, 61, "UTC: " + utcnow)
+		stdscr.addstr(22, 62, "LOC " + now)
+		stdscr.addstr(23, 62, "UTC " + utcnow)
 	except curses.error as e:
 		pass
 
-	stdscr.addstr(23, 1, "Band:        Mode:")
-	stdscr.addstr(23, 7, "  " + band + "  ", curses.A_REVERSE)
-	stdscr.addstr(23, 20, "  " + mode + "  ", curses.A_REVERSE)
-	stdscr.addstr(23, 27, "                            ")
-	stdscr.addstr(23, 27, " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ", curses.A_REVERSE)
-	stdscr.addstr(22, 1, "Bonuses:")
-	stdscr.addstr(22, 10, "Alt Power", highlightBonus(altpower))
+	strfreq = "".join(reversed(freq))
+	strfreq = ".".join(strfreq[i:i+3] for i in range(0,len(strfreq),3))
+	strfreq = "".join(reversed(strfreq))
+
+	stdscr.addstr(23, 0, "Band    Freq             Mode   ")
+	stdscr.addstr(23, 5, band, curses.A_REVERSE)
+	stdscr.addstr(23, 13, strfreq.rjust(11), curses.A_REVERSE)
+	stdscr.addstr(23, 30, mode, curses.A_REVERSE)
+	stdscr.addstr(22, 27, "                                ")
+	stdscr.addstr(22, 36, " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ", curses.A_REVERSE)
+	stdscr.addstr(22, 0, "Bonus")
+	stdscr.addstr(22, 6, "AltPwr", highlightBonus(altpower))
 	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("Outdoors", highlightBonus(outdoors))
+	stdscr.addstr("Outdoor", highlightBonus(outdoors))
 	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("Not At Home", highlightBonus(notathome))
+	stdscr.addstr("NotHome", highlightBonus(notathome))
 	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("Satellite", highlightBonus(satellite))
-	stdscr.addstr(23,50,"Rig", highlightBonus(rigonline))
-	stdscr.addstr(23,54,str(rigctrlport), highlightBonus(rigonline))
+	stdscr.addstr("Sat", highlightBonus(satellite))
+	stdscr.addstr(23,36,"Rig                     ")
+	stdscr.addstr(23,40,rigctrlhost.lower()+":"+str(rigctrlport), highlightBonus(rigonline))
 
 	stdscr.move(y, x)
 
@@ -925,11 +935,26 @@ def setmode(m):
 	mode = m
 	statusline()
 
+def setfreq(f):
+	global freq
+	freq = f
+	statusline()
+
 def setcallsign(c):
 	global mycall
-	mycall = str(c)
-	writepreferences()
-	statusline()
+	regex = re.compile("[A-Z]{1,3}[0-9]{1,3}[A-Z]{1,3}$")
+	if re.match(regex,str(c)):
+		mycall = str(c)
+		writepreferences()
+		statusline()
+	else:
+		oy, ox = stdscr.getyx()
+		window = curses.newpad(10, 33)
+		rectangle(stdscr, 11, 0, 21, 34)
+		window.addstr(0, 0, "Must be valid call sign")
+		stdscr.refresh()
+		window.refresh(0, 0, 12, 1, 20, 33)
+		stdscr.move(oy, ox)
 
 def setclass(c):
 	global myclass
@@ -951,8 +976,9 @@ def setrigctrlhost(o):
 
 def setrigctrlport(r):
 	global rigctrlport
-	rigctrlport = r
+	rigctrlport = str(r)
 	writepreferences()
+	rigctrlport = int(r)
 	statusline()
 
 def claimAltPower():
@@ -1032,7 +1058,7 @@ def displayHelp():
 			".Cyourclass      |.E### edit QSO",
 			".Syoursection    |.D### del QSO",
 			".B## change bands|.L Generate Log",
-			".M[CW,PH,DI] mode|.Origctrlhost",
+			".M[CW,PH,DI] mode|.Irigctrlhost",
 			".P## change power|.Rrigctrlport",
 			".1 Alt Power     |[esc] abort inp"]
 	stdscr.move(12, 1)
@@ -1079,7 +1105,7 @@ def displayInputField(field):
 	stdscr.refresh()
 
 def processcommand(cmd):
-	global band, mode, power, quit, rigctrlsocket, rigonline
+	global band, mode, power, quit, rigonline
 	cmd = cmd[1:].upper()
 	if cmd == "Q":  # Quit
 		quit = True
@@ -1115,13 +1141,34 @@ def processcommand(cmd):
 	if cmd[:1] == "S":  # Set your section
 		setsection(cmd[1:])
 		return
-	if cmd[:1] == "O":  # Set rigctld host
-		setrigctrlhost(cmd[1:])
-		rigonline == False
+	if cmd[:1] == "I":  # Set rigctld host
+		regex1 = re.compile("localhost")
+		regex2 = re.compile("[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
+		if re.match(regex1,cmd[1:].lower()) or re.match(regex2,cmd[1:].lower()):
+			setrigctrlhost(cmd[1:])
+			rigonline = False
+		else:
+			oy, ox = stdscr.getyx()
+			window = curses.newpad(10, 33)
+			rectangle(stdscr, 11, 0, 21, 34)
+			window.addstr(0, 0, "Must be IP or localhost")
+			stdscr.refresh()
+			window.refresh(0, 0, 12, 1, 20, 33)
+			stdscr.move(oy, ox)
 		return
 	if cmd[:1] == "R":  # Set rigctld port
-		setrigctrlport(cmd[1:])
-		rigonline == False
+		regex = re.compile("[0-9]{1,5}")
+		if re.match(regex,cmd[1:].lower()) and int(cmd[1:])>1023 and int(cmd[1:])<65536:
+			setrigctrlport(cmd[1:])
+			rigonline = False
+		else:
+			oy, ox = stdscr.getyx()
+			window = curses.newpad(10, 33)
+			rectangle(stdscr, 11, 0, 21, 34)
+			window.addstr(0, 0, "Must be 1023 < Port < 65536")
+			stdscr.refresh()
+			window.refresh(0, 0, 12, 1, 20, 33)
+			stdscr.move(oy, ox)
 		return
 	if cmd[:1] == "L":  # Generate Cabrillo Log
 		cabrillo()
