@@ -112,31 +112,33 @@ def getband(freq):
 	if freq.isnumeric():
 		frequency = int(float(freq))
 		if frequency > 1800000 and frequency < 2000000:
-			return "160"
+			return "160m"
 		if frequency > 3500000 and frequency < 4000000:
-			return "80"
+			return "80m "
 		if frequency > 5330000 and frequency < 5406000:
-			return "60"
+			return "60m "
 		if frequency > 7000000 and frequency < 7300000:
-			return "40"
+			return "40m "
 		if frequency > 10100000 and frequency < 10150000:
-			return "30"
+			return "30m "
 		if frequency > 14000000 and frequency < 14350000:
-			return "20"
+			return "20m "
 		if frequency > 18068000 and frequency < 18168000:
-			return "17"
+			return "17m "
 		if frequency > 21000000 and frequency < 21450000:
-			return "15"
+			return "15m "
 		if frequency > 24890000 and frequency < 24990000:
-			return "12"
+			return "12m "
 		if frequency > 28000000 and frequency < 29700000:
-			return "10"
+			return "10m "
 		if frequency > 50000000 and frequency < 54000000:
-			return "6"
+			return "6m "
 		if frequency > 144000000 and frequency < 148000000:
-			return "2"
+			return "2m "
+		if frequency >= 222000000 and frequency < 225000000:
+			return "1.25m"
 		if frequency >= 430000000 and frequency <= 450000000:
-			return "70"
+			return "70cm"
 	else:
 		return "??"
 
@@ -909,12 +911,12 @@ def statusline():
 	strfreq = ".".join(strfreq[i:i+3] for i in range(0,len(strfreq),3))
 	strfreq = "".join(reversed(strfreq))
 
-	stdscr.addstr(23, 0, "Band     Freq             Mode   ")
-	stdscr.addstr(23, 5, band.rjust(3), curses.A_REVERSE)
-	stdscr.addstr(23, 14, strfreq.rjust(11), curses.A_REVERSE)
-	stdscr.addstr(23, 31, mode, curses.A_REVERSE)
-	stdscr.addstr(22, 36, "                          ")
-	stdscr.addstr(22, 36, " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ", curses.A_REVERSE)
+	stdscr.addstr(23, 0, "Band       Freq             Mode   ")
+	stdscr.addstr(23, 5, band.rjust(5), curses.A_REVERSE)
+	stdscr.addstr(23, 16, strfreq.rjust(11), curses.A_REVERSE)
+	stdscr.addstr(23, 33, mode, curses.A_REVERSE)
+	stdscr.addstr(22, 37, "                         ")
+	stdscr.addstr(22, 37, " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ", curses.A_REVERSE)
 	stdscr.addstr(22, 0, "Bonus")
 	stdscr.addstr(22, 6, "AltPwr", highlightBonus(altpower))
 	stdscr.addch(curses.ACS_VLINE)
@@ -923,8 +925,8 @@ def statusline():
 	stdscr.addstr("NotHome", highlightBonus(notathome))
 	stdscr.addch(curses.ACS_VLINE)
 	stdscr.addstr("Sat", highlightBonus(satellite))
-	stdscr.addstr(23,36,"Rig                     ")
-	stdscr.addstr(23,40,rigctrlhost.lower()+":"+str(rigctrlport), highlightBonus(rigonline))
+	stdscr.addstr(23,37,"Rig                     ")
+	stdscr.addstr(23,41,rigctrlhost.lower()+":"+str(rigctrlport), highlightBonus(rigonline))
 
 	stdscr.move(y, x)
 
