@@ -88,7 +88,7 @@ hiscall = ""
 hissection = ""
 hisclass = ""
 
-database = "/home/russ/Logs/WFD_Curses.db"
+database = "WFD_Curses.db"
 conn = ""
 wrkdsections = []
 scp = []
