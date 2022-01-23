@@ -38,6 +38,7 @@ import sqlite3
 import socket
 import os
 import re
+import sys
 
 from curses.textpad import rectangle
 from curses import wrapper
