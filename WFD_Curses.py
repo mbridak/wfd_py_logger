@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
+
 """
-COLOR_BLACK	Black
-COLOR_BLUE	Blue
-COLOR_CYAN	Cyan (light greenish blue)
-COLOR_GREEN	Green
+COLOR_BLACK	    Black
+COLOR_BLUE	    Blue
+COLOR_CYAN	    Cyan (light greenish blue)
+COLOR_GREEN	    Green
 COLOR_MAGENTA	Magenta (purplish red)
-COLOR_RED	Red
-COLOR_WHITE	White
+COLOR_RED   	Red
+COLOR_WHITE 	White
 COLOR_YELLOW	Yellow
 """
+
 try:
 	import json
 	import requests
@@ -34,6 +36,7 @@ import time
 import sqlite3
 import socket
 import os
+import re
 
 from curses.textpad import rectangle
 from curses import wrapper
@@ -51,13 +54,14 @@ QuestionMark = 63
 EnterKey = 10
 Space = 32
 
-bands = ('160', '80', '60','40', '20', '15', '10', '6', '2')
+bands = ('160', '80', '60','40', '20', '15', '10', '6', '2', '222', '432')
 dfreq = {'160':"1.800", '80':"3.500", '60':"53.300", '40':"7.000", '20':"14.000", '15':"21.000", '10':"28.000", '6':"50.000", '2':"144.000", '222':"222.000", '432':"432.000", 'SAT':"0.0"}
 modes = ('PH', 'CW', 'DI')
 
 mycall = "YOURCALL"
 myclass = "CLASS"
 mysection = "SECT"
+freq = "000000000"
 power = "0"
 band = "40"
 mode = "CW"
@@ -93,16 +97,9 @@ secName = {}
 secState = {}
 oldfreq = "0"
 oldmode = ""
-#rigctrlhost = "192.168.1.152" #IP address for rigctld
-rigctrlhost = "127.0.0.1"
+rigctrlhost = "localhost"
 rigctrlport = 4532
-rigctrlsocket=socket.socket()
-rigctrlsocket.settimeout(0.1)
-rigonline = True
-try:
-	rigctrlsocket.connect((rigctrlhost, rigctrlport))
-except:
-	rigonline = False
+rigonline = False
 
 def relpath(filename):
 		try:
@@ -138,8 +135,12 @@ def getband(freq):
 			return "6"
 		if frequency > 144000000 and frequency < 148000000:
 			return "2"
+		if frequency >= 222000000 and frequency < 225000000:
+			return "222"
+		if frequency >= 430000000 and frequency <= 450000000:
+			return "432"
 	else:
-		return "0"
+		return "??"
 
 def getmode(rigmode):
 	if rigmode == "CW" or rigmode == 'CWR':
@@ -162,19 +163,19 @@ def pollRadio():
 				oldmode = newmode
 				setband(str(getband(newfreq)))
 				setmode(str(getmode(newmode)))
+				setfreq(str(newfreq))
 		except:
 			rigonline = False
 
 def checkRadio():
-	global rigctrlsocket, rigonline
-	rigctrlsocket=socket.socket()
-	rigctrlsocket.settimeout(0.1)
+	global rigctrlsocket, rigctrlhost, rigctrlport, rigonline
 	rigonline = True
 	try:
-		rigctrlsocket.connect((rigctrlhost, rigctrlport))
-	except:
+		rigctrlsocket=socket.socket()
+		rigctrlsocket.settimeout(0.1)
+		rigctrlsocket.connect((rigctrlhost,int(rigctrlport)))
+	except BaseException as err:
 		rigonline = False
-
 
 def create_DB():
 	""" create a database and table if it does not exist """
@@ -184,7 +185,7 @@ def create_DB():
 		c = conn.cursor()
 		sql_table = """ CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY, callsign text NOT NULL, class text NOT NULL, section text NOT NULL, date_time text NOT NULL, band text NOT NULL, mode text NOT NULL, power INTEGER NOT NULL); """
 		c.execute(sql_table)
-		sql_table = """ CREATE TABLE IF NOT EXISTS preferences (id INTEGER, mycallsign TEXT DEFAULT 'YOURCALL', myclass TEXT DEFAULT 'YOURCLASS', mysection TEXT DEFAULT 'YOURSECTION', power TEXT DEFAULT '0', altpower INTEGER DEFAULT 0, outdoors INTEGER DEFAULT 0, notathome INTEGER DEFAULT 0, satellite INTEGER DEFAULT 0); """
+		sql_table = """ CREATE TABLE IF NOT EXISTS preferences (id INTEGER, mycallsign TEXT DEFAULT 'YOURCALL', myclass TEXT DEFAULT 'YOURCLASS', mysection TEXT DEFAULT 'YOURSECTION', power TEXT DEFAULT '0', rigctrlhost TEXT default 'localhost', rigctrlport INTEGER DEFAULT 4532, altpower INTEGER DEFAULT 0, outdoors INTEGER DEFAULT 0, notathome INTEGER DEFAULT 0, satellite INTEGER DEFAULT 0); """
 		c.execute(sql_table)
 		conn.commit()
 		conn.close()
@@ -192,7 +193,7 @@ def create_DB():
 		print(e)
 
 def readpreferences():
-	global mycall, myclass, mysection, power, altpower, outdoors, notathome, satellite
+	global mycall, myclass, mysection, power, rigctrlhost, rigctrlport, altpower, outdoors, notathome, satellite
 	try:
 		conn = sqlite3.connect(database)
 		c = conn.cursor()
@@ -200,14 +201,13 @@ def readpreferences():
 		pref = c.fetchall()
 		if len(pref) > 0:
 			for x in pref:
-				_, mycall, myclass, mysection, power, altpower, outdoors, notathome, satellite = x
+				_, mycall, myclass, mysection, power, rigctrlhost, rigctrlport, altpower, outdoors, notathome, satellite = x
 				altpower = bool(altpower)
 				outdoors = bool(outdoors)
 				notathome = bool(notathome)
 				satellite = bool(satellite)
 		else:
-			sql = "INSERT INTO preferences(id, mycallsign, myclass, mysection, power, altpower, outdoors, notathome, satellite) VALUES(1,'" + mycall + "','" + myclass + "','" + mysection + "','" + power + "'," + str(
-				int(altpower)) + "," + str(int(outdoors)) + "," + str(int(notathome)) + "," + str(int(satellite)) + ")"
+			sql = "INSERT INTO preferences(id, mycallsign, myclass, mysection, power, rigctrlhost, rigctrlport, altpower, outdoors, notathome, satellite) VALUES(1,'" + mycall + "','" + myclass + "','" + mysection + "','" + power + "','" + rigctrlhost + "'," + str(int(rigctrlport)) + "," + str(int(altpower)) + "," + str(int(outdoors)) + "," + str(int(notathome)) + "," + str(int(satellite)) + ")"
 			c.execute(sql)
 			conn.commit()
 		conn.close()
@@ -217,9 +217,7 @@ def readpreferences():
 def writepreferences():
 	try:
 		conn = sqlite3.connect(database)
-		sql = "UPDATE preferences SET mycallsign = '" + mycall + "', myclass = '" + myclass + "', mysection = '" + mysection + "', power = '" + power + "', altpower = " + str(
-			int(altpower)) + ", outdoors = " + str(int(outdoors)) + ", notathome = " + str(
-			int(notathome)) + ", satellite = " + str(int(satellite)) + " WHERE id = 1"
+		sql = "UPDATE preferences SET mycallsign = '" + mycall + "', myclass = '" + myclass + "', mysection = '" + mysection + "', power = '" + power + "', rigctrlhost = '" + rigctrlhost + "', rigctrlport = " + str(int(rigctrlport)) + ", altpower = " + str(int(altpower)) + ", outdoors = " + str(int(outdoors)) + ", notathome = " + str(int(notathome)) + " WHERE id = 1"
 		cur = conn.cursor()
 		cur.execute(sql)
 		conn.commit()
@@ -869,7 +867,7 @@ def entry():
 	rectangle(stdscr, 8, 0, 10, 18)
 	stdscr.addstr(8, 1, "CALL")
 	rectangle(stdscr, 8, 19, 10, 25)
-	stdscr.addstr(8, 20, "class")
+	stdscr.addstr(8, 20, "Class")
 	rectangle(stdscr, 8, 26, 10, 34)
 	stdscr.addstr(8, 27, "Section")
 
@@ -890,38 +888,69 @@ def highlightBonus(bonus):
 	else:
 		return curses.A_DIM
 
+def setStatusMsg(msg):
+	oy, ox = stdscr.getyx()
+	window = curses.newpad(10, 33)
+	rectangle(stdscr, 11, 0, 21, 34)
+	window.addstr(0, 0, msg)
+	stdscr.refresh()
+	window.refresh(0, 0, 12, 1, 20, 33)
+	stdscr.move(oy, ox)
+
 def statusline():
 	y, x = stdscr.getyx()
 	now = datetime.now().isoformat(' ')[5:19].replace('-', '/')
 	utcnow = datetime.utcnow().isoformat(' ')[5:19].replace('-', '/')
+
 	try:
-		stdscr.addstr(22, 59, "Local: " + now)
-		stdscr.addstr(23, 61, "UTC: " + utcnow)
+		stdscr.addstr(22, 62, "LOC " + now)
+		stdscr.addstr(23, 62, "UTC " + utcnow)
 	except curses.error as e:
 		pass
 
-	stdscr.addstr(23, 1, "Band:        Mode:")
-	stdscr.addstr(23, 7, "  " + band + "  ", curses.A_REVERSE)
-	stdscr.addstr(23, 20, "  " + mode + "  ", curses.A_REVERSE)
-	stdscr.addstr(23, 27, "                            ")
-	stdscr.addstr(23, 27, " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ", curses.A_REVERSE)
-	stdscr.addstr(22, 1, "Bonuses:")
-	stdscr.addstr(22, 10, "Alt Power", highlightBonus(altpower))
+	strfreq = "".join(reversed(freq))
+	strfreq = ".".join(strfreq[i:i+3] for i in range(0,len(strfreq),3))
+	strfreq = "".join(reversed(strfreq))
+
+	strband = str(band)
+	if len(band) < 3:
+		strband += "m "
+	elif len(band) < 4:
+		strband += " "
+
+	stdscr.addstr(23, 0, "Band       Freq             Mode   ")
+	stdscr.addstr(23, 5, strband.rjust(5), curses.A_REVERSE)
+	stdscr.addstr(23, 16, strfreq.rjust(11), curses.A_REVERSE)
+	stdscr.addstr(23, 33, mode, curses.A_REVERSE)
+	stdscr.addstr(22, 37, "                         ")
+	stdscr.addstr(22, 37, " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ", curses.A_REVERSE)
+	stdscr.addstr(22, 0, "Bonus")
+	stdscr.addstr(22, 6, "AltPwr", highlightBonus(altpower))
 	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("Outdoors", highlightBonus(outdoors))
+	stdscr.addstr("Outdoor", highlightBonus(outdoors))
 	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("Not At Home", highlightBonus(notathome))
+	stdscr.addstr("NotHome", highlightBonus(notathome))
 	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("Satellite", highlightBonus(satellite))
-	stdscr.addstr(23,50,"Rig", highlightBonus(rigonline))
+	stdscr.addstr("Sat", highlightBonus(satellite))
+	stdscr.addstr(23,37,"Rig                     ")
+	stdscr.addstr(23,41,rigctrlhost.lower()+":"+str(rigctrlport), highlightBonus(rigonline))
 
 	stdscr.move(y, x)
 
 def setpower(p):
 	global power
-	power = p
-	writepreferences()
-	statusline()
+	try:
+		int(p)
+	except:
+		p = "0"
+	if p is None or p == "":
+		p = "0"
+	if int(p)>0 and int(p)<5001:
+		power = p
+		writepreferences()
+		statusline()
+	else:
+		setStatusMsg("Must be 1 <= Power <= 5000")
 
 def setband(b):
 	global band
@@ -933,22 +962,48 @@ def setmode(m):
 	mode = m
 	statusline()
 
+def setfreq(f):
+	global freq
+	freq = f
+	statusline()
+
 def setcallsign(c):
 	global mycall
-	mycall = str(c)
-	writepreferences()
-	statusline()
+	regex = re.compile("[A-Z]{1,3}[0-9]{1,3}[A-Z]{1,3}$")
+	if re.match(regex,str(c)):
+		mycall = str(c)
+		writepreferences()
+		statusline()
+	else:
+		setStatusMsg("Must be valid call sign")
 
 def setclass(c):
 	global myclass
-	myclass = str(c)
-	writepreferences()
-	statusline()
+	regex = re.compile("^[0-9]{1,2}[HIO]$")
+	if re.match(regex,str(c)):
+		myclass = str(c)
+		writepreferences()
+		statusline()
+	else:
+		setStatusMsg("Must be valid station class")
 
 def setsection(s):
 	global mysection
 	mysection = str(s)
 	writepreferences()
+	statusline()
+
+def setrigctrlhost(o):
+	global rigctrlhost
+	rigctrlhost = str(o)
+	writepreferences()
+	statusline()
+
+def setrigctrlport(r):
+	global rigctrlport
+	rigctrlport = str(r)
+	writepreferences()
+	rigctrlport = int(r)
 	statusline()
 
 def claimAltPower():
@@ -957,13 +1012,7 @@ def claimAltPower():
 		altpower = False
 	else:
 		altpower = True
-	oy, ox = stdscr.getyx()
-	window = curses.newpad(10, 33)
-	rectangle(stdscr, 11, 0, 21, 34)
-	window.addstr(0, 0, "Alt Power set to: " + str(altpower))
-	stdscr.refresh()
-	window.refresh(0, 0, 12, 1, 20, 33)
-	stdscr.move(oy, ox)
+	setStatusMsg("Alt Power set to: " + str(altpower))
 	writepreferences()
 	statusline()
 	stats()
@@ -974,13 +1023,7 @@ def claimOutdoors():
 		outdoors = False
 	else:
 		outdoors = True
-	oy, ox = stdscr.getyx()
-	window = curses.newpad(10, 33)
-	rectangle(stdscr, 11, 0, 21, 34)
-	window.addstr(0, 0, "Outdoor bonus set to: " + str(outdoors))
-	stdscr.refresh()
-	window.refresh(0, 0, 12, 1, 20, 33)
-	stdscr.move(oy, ox)
+	setStatusMsg("Outdoor bonus set to: " + str(outdoors))
 	writepreferences()
 	statusline()
 	stats()
@@ -991,13 +1034,7 @@ def claimNotHome():
 		notathome = False
 	else:
 		notathome = True
-	oy, ox = stdscr.getyx()
-	window = curses.newpad(10, 33)
-	rectangle(stdscr, 11, 0, 21, 34)
-	window.addstr(0, 0, "Away bonus set to: " + str(notathome))
-	stdscr.refresh()
-	window.refresh(0, 0, 12, 1, 20, 33)
-	stdscr.move(oy, ox)
+	setStatusMsg("Away bonus set to: " + str(notathome))
 	writepreferences()
 	statusline()
 	stats()
@@ -1008,13 +1045,7 @@ def claimSatellite():
 		satellite = False
 	else:
 		satellite = True
-	oy, ox = stdscr.getyx()
-	window = curses.newpad(10, 33)
-	rectangle(stdscr, 11, 0, 21, 34)
-	window.addstr(0, 0, "Satellite bonus set to: " + str(satellite))
-	stdscr.refresh()
-	window.refresh(0, 0, 12, 1, 20, 33)
-	stdscr.move(oy, ox)
+	setStatusMsg("Satellite bonus set to: " + str(satellite))
 	writepreferences()
 	statusline()
 	stats()
@@ -1028,9 +1059,9 @@ def displayHelp():
 			".Cyourclass      |.E### edit QSO",
 			".Syoursection    |.D### del QSO",
 			".B## change bands|.L Generate Log",
-			".M[CW,PH,DI] mode|[esc] abort inp",
-			".P## change power|",
-			".1 Alt Power     |"]
+			".M[CW,PH,DI] mode|.Irigctrlhost",
+			".P## change power|.Rrigctrlport",
+			".1 Alt Power     |[esc] abort inp"]
 	stdscr.move(12, 1)
 	count = 0
 	for x in help:
@@ -1075,7 +1106,7 @@ def displayInputField(field):
 	stdscr.refresh()
 
 def processcommand(cmd):
-	global band, mode, power, quit
+	global band, mode, power, quit, rigonline
 	cmd = cmd[1:].upper()
 	if cmd == "Q":  # Quit
 		quit = True
@@ -1110,6 +1141,23 @@ def processcommand(cmd):
 		return
 	if cmd[:1] == "S":  # Set your section
 		setsection(cmd[1:])
+		return
+	if cmd[:1] == "I":  # Set rigctld host
+		regex1 = re.compile("localhost")
+		regex2 = re.compile("[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
+		if re.match(regex1,cmd[1:].lower()) or re.match(regex2,cmd[1:].lower()):
+			setrigctrlhost(cmd[1:])
+			rigonline = False
+		else:
+			setStatusMsg("Must be IP or localhost")
+		return
+	if cmd[:1] == "R":  # Set rigctld port
+		regex = re.compile("[0-9]{1,5}")
+		if re.match(regex,cmd[1:].lower()) and int(cmd[1:])>1023 and int(cmd[1:])<65536:
+			setrigctrlport(cmd[1:])
+			rigonline = False
+		else:
+			setStatusMsg("Must be 1024 <= Port <= 65535")
 		return
 	if cmd[:1] == "L":  # Generate Cabrillo Log
 		cabrillo()
@@ -1354,7 +1402,7 @@ def editQSO(q):
 			break
 
 def main(s):
-	global stdscr, conn
+	global stdscr, conn, rigonline
 	conn = create_DB()
 	curses.start_color()
 	curses.use_default_colors()
