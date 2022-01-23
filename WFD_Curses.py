@@ -799,32 +799,32 @@ def cabrillo():
     print("CATEGORY-POWER: " + catpower, end="\r\n", file=open("WFDLOG.txt", "a"))
     if altpower:
         print(
-            "SOAPBOX: 1,500 points for not using commercial power",
+            "SOAPBOX: 500 points for not using commercial power",
             end="\r\n",
             file=open("WFDLOG.txt", "a"),
         )
-        bonuses = bonuses + 1500
+        bonuses = bonuses + 500
     if outdoors:
         print(
-            "SOAPBOX: 1,500 points for setting up outdoors",
+            "SOAPBOX: 500 points for setting up outdoors",
             end="\r\n",
             file=open("WFDLOG.txt", "a"),
         )
-        bonuses = bonuses + 1500
+        bonuses = bonuses + 500
     if notathome:
         print(
-            "SOAPBOX: 1,500 points for setting up away from home",
+            "SOAPBOX: 500 points for setting up away from home",
             end="\r\n",
             file=open("WFDLOG.txt", "a"),
         )
-        bonuses = bonuses + 1500
+        bonuses = bonuses + 500
     if satellite:
         print(
-            "SOAPBOX: 1,500 points for working satellite",
+            "SOAPBOX: 500 points for working satellite",
             end="\r\n",
             file=open("WFDLOG.txt", "a"),
         )
-        bonuses = bonuses + 1500
+        bonuses = bonuses + 500
     print(
         "SOAPBOX: BONUS Total " + str(bonuses), end="\r\n", file=open("WFDLOG.txt", "a")
     )
