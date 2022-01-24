@@ -10,6 +10,7 @@ COLOR_RED   	Red
 COLOR_WHITE 	White
 COLOR_YELLOW	Yellow
 """
+import logging
 
 try:
     import json
@@ -26,6 +27,9 @@ try:
         qrzsession = r.text[r.text.find("<Key>") + 5 : r.text.find("</Key>")]
     else:
         qrzsession = False
+    if r.status_code == 200 and r.text.find("<Error>") > 0:
+        errorText = r.text[r.text.find("<Error>") + 7 : r.text.find("</Error>")]
+        logging.debug(f"QRZ Error: {errorText}")
 except:
     cloudlogapi = False
     cloudlogurl = False
@@ -40,6 +44,7 @@ import os
 import re
 import sys
 
+from pathlib import Path
 from curses.textpad import rectangle
 from curses import wrapper
 from datetime import datetime
@@ -197,7 +202,11 @@ def checkRadio():
         rigctrlsocket = socket.socket()
         rigctrlsocket.settimeout(0.1)
         rigctrlsocket.connect((rigctrlhost, int(rigctrlport)))
+    except ConnectionRefusedError:
+        logging.debug("checkRadio: ConnectionRefusedError")
+        rigonline = False
     except BaseException as err:
+        logging.debug(f"checkRadio: {err}")
         rigonline = False
 
 
@@ -213,7 +222,7 @@ def create_DB():
             c.execute(sql_table)
             conn.commit()
     except Error as e:
-        print(e)
+        logging.debug(f"create_DB: {e}")
 
 
 def readpreferences():
@@ -247,7 +256,7 @@ def readpreferences():
                 c.execute(sql)
                 conn.commit()
     except Error as e:
-        print(e)
+        logging.debug(f"readPreferences: {e}")
 
 
 def writepreferences():
@@ -258,7 +267,7 @@ def writepreferences():
             cur.execute(sql)
             conn.commit()
     except Error as e:
-        pass
+        logging.debug(f"writepreferences: {e}")
 
 
 def log_contact(logme):
@@ -269,6 +278,7 @@ def log_contact(logme):
             cur.execute(sql, logme)
             conn.commit()
     except Error as e:
+        logging.debug(f"log_contact: {e}")
         displayinfo(e)
     workedSections()
     sections()
@@ -285,6 +295,7 @@ def delete_contact(contact):
             cur.execute(sql)
             conn.commit()
     except Error as e:
+        logging.debug(f"delete_contact: {e}")
         displayinfo(e)
     workedSections()
     sections()
@@ -300,6 +311,7 @@ def change_contact(qso):
             cur.execute(sql)
             conn.commit()
     except Error as e:
+        logging.debug(f"change_contact: {e}")
         displayinfo(e)
 
 
@@ -320,9 +332,9 @@ def readSections():
                         p = abbrev[: -i - 1]
                         secPartial[p] = 1
                 except ValueError as e:
-                    print("rd arrl sec dat err, itm skpd: ", e)
+                    logging.debug(f"readSections: Value error {e}")
     except IOError as e:
-        print("read error during readSections", e)
+        logging.debug(f"readSections: IO Error {e}")
 
 
 def sectionCheck(sec):
@@ -1629,6 +1641,13 @@ def editQSO(q):
 
 
 def main(s):
+    if Path("./debug").exists():
+        logging.basicConfig(
+            filename="debug.log",
+            format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
+            datefmt="%H:%M:%S",
+            level=logging.DEBUG,
+        )
     global stdscr, conn, rigonline
     conn = create_DB()
     curses.start_color()
