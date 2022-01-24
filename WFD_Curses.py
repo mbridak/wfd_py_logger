@@ -772,111 +772,99 @@ def postcloudlog():
 
 def cabrillo():
 
-    bonuses = 0
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select * from contacts order by date_time ASC")
-    log = c.fetchall()
-    conn.close()
-    catpower = ""
-    if qrp:
-        catpower = "QRP"
-    elif highpower:
-        catpower = "HIGH"
-    else:
-        catpower = "LOW"
-    print("START-OF-LOG: 3.0", end="\r\n", file=open("WFDLOG.txt", "w"))
-    print(
-        "CREATED-BY: K6GTE Winter Field Day Logger",
-        end="\r\n",
-        file=open("WFDLOG.txt", "a"),
-    )
-    print("CONTEST: WFD", end="\r\n", file=open("WFDLOG.txt", "a"))
-    print("CALLSIGN:", mycall, end="\r\n", file=open("WFDLOG.txt", "a"))
-    print("LOCATION:", end="\r\n", file=open("WFDLOG.txt", "a"))
-    print("ARRL-SECTION:", mysection, end="\r\n", file=open("WFDLOG.txt", "a"))
-    print("CATEGORY:", myclass, end="\r\n", file=open("WFDLOG.txt", "a"))
-    print("CATEGORY-POWER: " + catpower, end="\r\n", file=open("WFDLOG.txt", "a"))
-    if altpower:
-        print(
-            "SOAPBOX: 500 points for not using commercial power",
-            end="\r\n",
-            file=open("WFDLOG.txt", "a"),
-        )
-        bonuses = bonuses + 500
-    if outdoors:
-        print(
-            "SOAPBOX: 500 points for setting up outdoors",
-            end="\r\n",
-            file=open("WFDLOG.txt", "a"),
-        )
-        bonuses = bonuses + 500
-    if notathome:
-        print(
-            "SOAPBOX: 500 points for setting up away from home",
-            end="\r\n",
-            file=open("WFDLOG.txt", "a"),
-        )
-        bonuses = bonuses + 500
-    if satellite:
-        print(
-            "SOAPBOX: 500 points for working satellite",
-            end="\r\n",
-            file=open("WFDLOG.txt", "a"),
-        )
-        bonuses = bonuses + 500
-    print(
-        "SOAPBOX: BONUS Total " + str(bonuses), end="\r\n", file=open("WFDLOG.txt", "a")
-    )
+	bonuses = 0
+	
+	catpower = ""
+	if qrp:
+		catpower = "QRP"
+	elif highpower:
+		catpower = "HIGH"
+	else:
+		catpower = "LOW"
+	with open("WFDLOG.txt", "w", encoding="ascii") as f:
+		print("START-OF-LOG: 3.0", end="\r\n", file=f)
+		print(
+			"CREATED-BY: K6GTE Winter Field Day Logger",
+			end="\r\n",
+			file=f
+		)
+		print("CONTEST: WFD", end="\r\n", file=f)
+		print("CALLSIGN:", mycall, end="\r\n", file=f)
+		print("LOCATION:", end="\r\n", file=f)
+		print("ARRL-SECTION:", mysection, end="\r\n", file=f)
+		print("CATEGORY:", myclass, end="\r\n", file=f)
+		print("CATEGORY-POWER: " + catpower, end="\r\n", file=f)
+		if altpower:
+			print(
+				"SOAPBOX: 500 points for not using commercial power",
+				end="\r\n",
+				file=f
+			)
+			bonuses = bonuses + 500
+		if outdoors:
+			print(
+				"SOAPBOX: 500 points for setting up outdoors",
+				end="\r\n",
+				file=f
+			)
+			bonuses = bonuses + 500
+		if notathome:
+			print(
+				"SOAPBOX: 500 points for setting up away from home",
+				end="\r\n",
+				file=f
+			)
+			bonuses = bonuses + 500
+		if satellite:
+			print(
+				"SOAPBOX: 500 points for working satellite",
+				end="\r\n",
+				file=f
+			)
+			bonuses = bonuses + 500
+		print(
+			f"SOAPBOX: BONUS Total {bonuses}", end="\r\n", file=f
+		)
 
-    print("CLAIMED-SCORE: " + str(score()), end="\r\n", file=open("WFDLOG.txt", "a"))
-    print("OPERATORS:", mycall, end="\r\n", file=open("WFDLOG.txt", "a"))
-    print("NAME: ", end="\r\n", file=open("WFDLOG.txt", "a"))
-    print("ADDRESS: ", end="\r\n", file=open("WFDLOG.txt", "a"))
-    print("ADDRESS-CITY: ", end="\r\n", file=open("WFDLOG.txt", "a"))
-    print("ADDRESS-STATE: ", end="\r\n", file=open("WFDLOG.txt", "a"))
-    print("ADDRESS-POSTALCODE: ", end="\r\n", file=open("WFDLOG.txt", "a"))
-    print("ADDRESS-COUNTRY: ", end="\r\n", file=open("WFDLOG.txt", "a"))
-    print("EMAIL: ", end="\r\n", file=open("WFDLOG.txt", "a"))
-    counter = 0
-    for x in log:
-        logid, hiscall, hisclass, hissection, datetime, band, mode, power = x
-        loggeddate = datetime[:10]
-        loggedtime = datetime[11:13] + datetime[14:16]
-        # print(value1, ..., sep=' ', end='\r\n', file=sys.stdout, flush=False)
-        print(
-            "QSO:",
-            band + "M",
-            mode,
-            loggeddate,
-            loggedtime,
-            mycall,
-            myclass,
-            mysection,
-            hiscall,
-            hisclass,
-            hissection,
-            sep=" ",
-            end="\r\n",
-            file=open("WFDLOG.txt", "a"),
-        )
-    print("END-OF-LOG:", end="\r\n", file=open("WFDLOG.txt", "a"))
+		print(f"CLAIMED-SCORE: {score()}", end="\r\n", file=f)
+		print(f"OPERATORS:{mycall}", end="\r\n", file=f)
+		print("NAME: ", end="\r\n", file=f)
+		print("ADDRESS: ", end="\r\n", file=f)
+		print("ADDRESS-CITY: ", end="\r\n", file=f)
+		print("ADDRESS-STATE: ", end="\r\n", file=f)
+		print("ADDRESS-POSTALCODE: ", end="\r\n", file=f)
+		print("ADDRESS-COUNTRY: ", end="\r\n", file=f)
+		print("EMAIL: ", end="\r\n", file=f)
+		with sqlite3.connect(database) as conn:
+			c = conn.cursor()
+			c.execute("select * from contacts order by date_time ASC")
+			log = c.fetchall()
+			for x in log:
+				_, hiscall, hisclass, hissection, datetime, band, mode, _ = x
+				loggeddate = datetime[:10]
+				loggedtime = datetime[11:13] + datetime[14:16]
+				print(
+					f"QSO: {band}M {mode} {loggeddate} {loggedtime} {mycall} {myclass} {mysection} {hiscall} {hisclass} {hissection",
+					end="\r\n",
+					file=f
+				)
+		print("END-OF-LOG:", end="\r\n", file=f)
 
-    generateBandModeTally()
+	generateBandModeTally()
 
-    oy, ox = stdscr.getyx()
-    window = curses.newpad(10, 33)
-    rectangle(stdscr, 11, 0, 21, 34)
-    window.addstr(0, 0, "Log written to: WFDLOG.txt")
-    window.addstr(1, 0, "Stats written to: Statistics.txt")
-    window.addstr(2, 0, "ADIF written to: WFD.adi")
-    stdscr.refresh()
-    window.refresh(0, 0, 12, 1, 20, 33)
-    stdscr.move(oy, ox)
-    adif()
-    writepreferences()
-    statusline()
-    stats()
+	oy, ox = stdscr.getyx()
+	window = curses.newpad(10, 33)
+	rectangle(stdscr, 11, 0, 21, 34)
+	window.addstr(0, 0, "Log written to: WFDLOG.txt")
+	window.addstr(1, 0, "Stats written to: Statistics.txt")
+	window.addstr(2, 0, "ADIF written to: WFD.adi")
+	stdscr.refresh()
+	window.refresh(0, 0, 12, 1, 20, 33)
+	stdscr.move(oy, ox)
+	adif()
+	writepreferences()
+	statusline()
+	stats()
 
 
 def logwindow():
@@ -904,21 +892,7 @@ def logwindow():
         band = band + sectfiller[: -len(band)]
         mode = mode + modefiller[: -len(mode)]
         logline = (
-            logid
-            + " "
-            + hiscall
-            + " "
-            + hisclass
-            + " "
-            + hissection
-            + " "
-            + datetime
-            + " "
-            + band
-            + " "
-            + mode
-            + " "
-            + str(power)
+            f"{logid} {hiscall} {hisclass} {hissection} {datetime} {band} {mode} {power}"
         )
         contacts.addstr(logNumber, 0, logline)
         logNumber += 1
@@ -967,9 +941,7 @@ def dupCheck(acall):
     conn = sqlite3.connect(database)
     c = conn.cursor()
     c.execute(
-        "select callsign, class, section, band, mode from contacts where callsign like '"
-        + acall
-        + "' order by band"
+        f"select callsign, class, section, band, mode from contacts where callsign like '{acall}' order by band"
     )
     log = c.fetchall()
     conn.close()
@@ -983,7 +955,7 @@ def dupCheck(acall):
             curses.beep()
         else:
             decorate = curses.A_NORMAL
-        scpwindow.addstr(counter, 0, hiscall + ": " + hisband + " " + hismode, decorate)
+        scpwindow.addstr(counter, 0, f"{hiscall}: {hisband} {hismode}", decorate)
         counter = counter + 1
     stdscr.refresh()
     scpwindow.refresh(0, 0, 12, 1, 20, 33)
@@ -1220,7 +1192,7 @@ def statusline():
     stdscr.addstr(
         22,
         37,
-        " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ",
+        f" {mycall}|{myclass}|{mysection}|{power}w ",
         curses.A_REVERSE,
     )
     stdscr.addstr(22, 0, "Bonus")
@@ -1810,4 +1782,5 @@ def main(s):
             pollRadio()
 
 
-wrapper(main)
+if __name__ == "__main__":
+    wrapper(main)
