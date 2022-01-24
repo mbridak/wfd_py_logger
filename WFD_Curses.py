@@ -187,13 +187,14 @@ def getmode(rigmode):
 
 
 def sendRadio(cmd,arg):
-    global band, mode, power, rigonline
+    global band, mode, freq, power, rigonline
     rigCmd = bytes(cmd+" "+arg+"\n","utf-8")
     if rigonline:
         if cmd == "F":
             if arg.isnumeric() and int(arg) >= 1800000 and int(arg) <= 450000000:
                 try:
                     rigctrlsocket.send(rigCmd)
+                    rigCode = rigctrlsocket.recv(1024).decode().strip()
                 except:
                     rigonline == False
             else:
@@ -202,13 +203,24 @@ def sendRadio(cmd,arg):
             rigCmd = bytes(cmd+" "+arg+" 0\n","utf-8")
             try:
                 rigctrlsocket.send(rigCmd)
+                rigCode = rigctrlsocket.recv(1024).decode().strip()
             except:
                 rigonline == False
-    pollRadio()
+        elif cmd == "P":
+            if arg.isnumeric() and int(arg) >= 1 and int(arg) <= 100:
+                rigCmd = bytes("L RFPOWER "+str(float(arg)/100)+"\n","utf-8")
+                logging.debug(f"Command: {rigCmd.decode().strip()}")
+                try:
+                    rigctrlsocket.send(rigCmd)
+                    rigCode = rigctrlsocket.recv(1024).decode().strip()
+                except:
+                    rigonline == False
+            else:
+                setStatusMsg("1 >= Power >= 100")
     return
 
 def pollRadio():
-    global oldfreq, oldmode, rigctrlsocket, rigonline
+    global oldfreq, oldmode, oldpwr, rigctrlsocket, rigonline
     if rigonline:
         try:
             # rigctrlsocket.settimeout(0.5)
@@ -216,11 +228,15 @@ def pollRadio():
             newfreq = rigctrlsocket.recv(1024).decode().strip()
             rigctrlsocket.send(b"m\n")
             newmode = rigctrlsocket.recv(1024).decode().strip().split()[0]
-            if newfreq != oldfreq or newmode != oldmode:
+            rigctrlsocket.send(b"l RFPOWER\n")
+            newpwr = int(float(rigctrlsocket.recv(1024).decode().strip())*100)
+            if newfreq != oldfreq or newmode != oldmode or newpwr != oldpwr:
                 oldfreq = newfreq
                 oldmode = newmode
+                oldpwr = newpwr
                 setband(str(getband(newfreq)))
                 setmode(str(getmode(newmode)))
+                setpower(str(newpwr))
                 setfreq(str(newfreq))
         except:
             rigonline = False
@@ -1350,17 +1366,23 @@ def processcommand(cmd):
         setband(cmd[1:])
         return
     if cmd[:1] == "M":  # Change Mode
-        if cmd[1:] == "CW" or cmd[1:] == "PH" or cmd[1:] == "DI":
-            if rigonline:
+        if rigonline == False:
+            if cmd[1:] == "CW" or cmd[1:] == "PH" or cmd[1:] == "DI":
+            	setmode(cmd[1:])
+            else:
+                curses.flash()
+                curses.beep()
+        else:
+            if cmd[1:] == "USB" or cmd[1:] == "LSB" or cmd[1:] == "CW" or cmd[1:] == "RTTY" or cmd[1:] == "AM" or cmd[1:] == "FM":
                 sendRadio(cmd[:1],cmd[1:])
             else:
-            	setmode(cmd[1:])
-        else:
-            curses.flash()
-            curses.beep()
+                setStatusMsg('Must be AM, FM, CW, *SB, RTTY')
         return
     if cmd[:1] == "P":  # Change Power
-        setpower(cmd[1:])
+        if rigonline:
+            sendRadio(cmd[:1],cmd[1:])
+        else:
+            setpower(cmd[1:])
         return
     if cmd[:1] == "D":  # Delete Contact
         delete_contact(cmd[1:])
