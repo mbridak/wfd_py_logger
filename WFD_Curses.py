@@ -552,20 +552,20 @@ def getbands():
 def generateBandModeTally():
     blist = getbands()
     bmtfn = "Statistics.txt"
-    print("\t\tCW\tPWR\tDI\tPWR\tPH\tPWR", end="\r\n", file=open(bmtfn, "w"))
-    print("-" * 60, end="\r\n", file=open(bmtfn, "a"))
-    for b in bands:
-        if b in blist:
-            cwt = getBandModeTally(b, "CW")
-            dit = getBandModeTally(b, "DI")
-            pht = getBandModeTally(b, "PH")
-            print(
-                "Band:\t%s\t%s\t%s\t%s\t%s\t%s\t%s"
-                % (b, cwt[0], cwt[1], dit[0], dit[1], pht[0], pht[1]),
-                end="\r\n",
-                file=open(bmtfn, "a"),
-            )
-            print("-" * 60, end="\r\n", file=open(bmtfn, "a"))
+    with open(bmtfn, "w") as f:
+        print("\t\tCW\tPWR\tDI\tPWR\tPH\tPWR", end="\r\n", file=f)
+        print("-" * 60, end="\r\n", file=f)
+        for b in bands:
+            if b in blist:
+                cwt = getBandModeTally(b, "CW")
+                dit = getBandModeTally(b, "DI")
+                pht = getBandModeTally(b, "PH")
+                print(
+                    f"Band:\t{b}\t{cwt[0]}\t{cwt[1]}\t{dit[0]}\t{dit[1]}\t{pht[0]}\t{pht[1]}",
+                    end="\r\n",
+                    file=f,
+                )
+                print("-" * 60, end="\r\n", file=f)
 
 
 def getState(section):
