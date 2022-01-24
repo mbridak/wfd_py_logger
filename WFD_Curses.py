@@ -202,14 +202,13 @@ def create_DB():
     """create a database and table if it does not exist"""
     global conn
     try:
-        conn = sqlite3.connect(database)
-        c = conn.cursor()
-        sql_table = """ CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY, callsign text NOT NULL, class text NOT NULL, section text NOT NULL, date_time text NOT NULL, band text NOT NULL, mode text NOT NULL, power INTEGER NOT NULL); """
-        c.execute(sql_table)
-        sql_table = """ CREATE TABLE IF NOT EXISTS preferences (id INTEGER, mycallsign TEXT DEFAULT 'YOURCALL', myclass TEXT DEFAULT 'YOURCLASS', mysection TEXT DEFAULT 'YOURSECTION', power TEXT DEFAULT '0', rigctrlhost TEXT default 'localhost', rigctrlport INTEGER DEFAULT 4532, altpower INTEGER DEFAULT 0, outdoors INTEGER DEFAULT 0, notathome INTEGER DEFAULT 0, satellite INTEGER DEFAULT 0); """
-        c.execute(sql_table)
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(database) as conn:
+            c = conn.cursor()
+            sql_table = """ CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY, callsign text NOT NULL, class text NOT NULL, section text NOT NULL, date_time text NOT NULL, band text NOT NULL, mode text NOT NULL, power INTEGER NOT NULL); """
+            c.execute(sql_table)
+            sql_table = """ CREATE TABLE IF NOT EXISTS preferences (id INTEGER, mycallsign TEXT DEFAULT 'YOURCALL', myclass TEXT DEFAULT 'YOURCLASS', mysection TEXT DEFAULT 'YOURSECTION', power TEXT DEFAULT '0', rigctrlhost TEXT default 'localhost', rigctrlport INTEGER DEFAULT 4532, altpower INTEGER DEFAULT 0, outdoors INTEGER DEFAULT 0, notathome INTEGER DEFAULT 0, satellite INTEGER DEFAULT 0); """
+            c.execute(sql_table)
+            conn.commit()
     except Error as e:
         print(e)
 
@@ -217,100 +216,55 @@ def create_DB():
 def readpreferences():
     global mycall, myclass, mysection, power, rigctrlhost, rigctrlport, altpower, outdoors, notathome, satellite
     try:
-        conn = sqlite3.connect(database)
-        c = conn.cursor()
-        c.execute("select * from preferences where id = 1")
-        pref = c.fetchall()
-        if len(pref) > 0:
-            for x in pref:
-                (
-                    _,
-                    mycall,
-                    myclass,
-                    mysection,
-                    power,
-                    rigctrlhost,
-                    rigctrlport,
-                    altpower,
-                    outdoors,
-                    notathome,
-                    satellite,
-                ) = x
-                altpower = bool(altpower)
-                outdoors = bool(outdoors)
-                notathome = bool(notathome)
-                satellite = bool(satellite)
-        else:
-            sql = (
-                "INSERT INTO preferences(id, mycallsign, myclass, mysection, power, rigctrlhost, rigctrlport, altpower, outdoors, notathome, satellite) VALUES(1,'"
-                + mycall
-                + "','"
-                + myclass
-                + "','"
-                + mysection
-                + "','"
-                + power
-                + "','"
-                + rigctrlhost
-                + "',"
-                + str(int(rigctrlport))
-                + ","
-                + str(int(altpower))
-                + ","
-                + str(int(outdoors))
-                + ","
-                + str(int(notathome))
-                + ","
-                + str(int(satellite))
-                + ")"
-            )
-            c.execute(sql)
-            conn.commit()
-        conn.close()
+        with sqlite3.connect(database) as conn:
+            c = conn.cursor()
+            c.execute("select * from preferences where id = 1")
+            pref = c.fetchall()
+            if len(pref) > 0:
+                for x in pref:
+                    (
+                        _,
+                        mycall,
+                        myclass,
+                        mysection,
+                        power,
+                        rigctrlhost,
+                        rigctrlport,
+                        altpower,
+                        outdoors,
+                        notathome,
+                        satellite,
+                    ) = x
+                    altpower = bool(altpower)
+                    outdoors = bool(outdoors)
+                    notathome = bool(notathome)
+                    satellite = bool(satellite)
+            else:
+                sql = f"INSERT INTO preferences(id, mycallsign, myclass, mysection, power, rigctrlhost, rigctrlport, altpower, outdoors, notathome, satellite) VALUES(1,'{mycall}','{myclass}','{mysection}','{power}','{rigctrlhost}',{int(rigctrlport)},{int(altpower)},{int(outdoors)},{int(notathome)},{int(satellite)})"
+                c.execute(sql)
+                conn.commit()
     except Error as e:
         print(e)
 
 
 def writepreferences():
     try:
-        conn = sqlite3.connect(database)
-        sql = (
-            "UPDATE preferences SET mycallsign = '"
-            + mycall
-            + "', myclass = '"
-            + myclass
-            + "', mysection = '"
-            + mysection
-            + "', power = '"
-            + power
-            + "', rigctrlhost = '"
-            + rigctrlhost
-            + "', rigctrlport = "
-            + str(int(rigctrlport))
-            + ", altpower = "
-            + str(int(altpower))
-            + ", outdoors = "
-            + str(int(outdoors))
-            + ", notathome = "
-            + str(int(notathome))
-            + " WHERE id = 1"
-        )
-        cur = conn.cursor()
-        cur.execute(sql)
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(database) as conn:
+            sql = f"UPDATE preferences SET mycallsign = '{mycall}', myclass = '{myclass}', mysection = '{mysection}', power = '{power}', rigctrlhost = '{rigctrlhost}', rigctrlport = {int(rigctrlport)}, altpower = {int(altpower)}, outdoors = {int(outdoors)}, notathome = {int(notathome)} WHERE id = 1"
+            cur = conn.cursor()
+            cur.execute(sql)
+            conn.commit()
     except Error as e:
         pass
 
 
 def log_contact(logme):
     try:
-        conn = sqlite3.connect(database)
-        sql = "INSERT INTO contacts(callsign, class, section, date_time, band, mode, power) VALUES(?,?,?,datetime('now'),?,?,?)"
-        cur = conn.cursor()
-        cur.execute(sql, logme)
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(database) as conn:
+            sql = "INSERT INTO contacts(callsign, class, section, date_time, band, mode, power) VALUES(?,?,?,datetime('now'),?,?,?)"
+            cur = conn.cursor()
+            cur.execute(sql, logme)
+            conn.commit()
     except Error as e:
         displayinfo(e)
     workedSections()
@@ -322,12 +276,11 @@ def log_contact(logme):
 
 def delete_contact(contact):
     try:
-        conn = sqlite3.connect(database)
-        sql = "delete from contacts where id=" + str(int(contact))
-        cur = conn.cursor()
-        cur.execute(sql)
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(database) as conn:
+            sql = f"delete from contacts where id={int(contact)}"
+            cur = conn.cursor()
+            cur.execute(sql)
+            conn.commit()
     except Error as e:
         displayinfo(e)
     workedSections()
@@ -338,53 +291,33 @@ def delete_contact(contact):
 
 def change_contact(qso):
     try:
-        conn = sqlite3.connect(database)
-        sql = (
-            "update contacts set callsign = '"
-            + str(qso[1])
-            + "', class = '"
-            + str(qso[2])
-            + "', section = '"
-            + str(qso[3])
-            + "', date_time = '"
-            + str(qso[4])
-            + "', band = '"
-            + str(qso[5])
-            + "', mode = '"
-            + str(qso[6])
-            + "', power = '"
-            + str(qso[7])
-            + "'  where id="
-            + str(qso[0])
-        )
-        cur = conn.cursor()
-        cur.execute(sql)
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(database) as conn:
+            sql = f"update contacts set callsign = '{qso[1]}', class = '{qso[2]}', section = '{qso[3]}', date_time = '{qso[4]}', band = '{qso[5]}', mode = '{qso[6]}', power = '{qso[7]}'  where id='{qso[0]}'"
+            cur = conn.cursor()
+            cur.execute(sql)
+            conn.commit()
     except Error as e:
         displayinfo(e)
-        pass
 
 
 def readSections():
     try:
-        fd = open(relpath("arrl_sect.dat"), "r")  # read section data
-        while 1:
-            ln = fd.readline().strip()  # read a line and put in db
-            if not ln:
-                break
-            if ln[0] == "#":
-                continue
-            try:
-                sec, st, canum, abbrev, name = str.split(ln, None, 4)
-                secName[abbrev] = abbrev + " " + name + " " + canum
-                secState[abbrev] = st
-                for i in range(len(abbrev) - 1):
-                    p = abbrev[: -i - 1]
-                    secPartial[p] = 1
-            except ValueError as e:
-                print("rd arrl sec dat err, itm skpd: ", e)
-        fd.close()
+        with open(relpath("arrl_sect.dat"), "r") as fd:  # read section data
+            while 1:
+                ln = fd.readline().strip()  # read a line and put in db
+                if not ln:
+                    break
+                if ln[0] == "#":
+                    continue
+                try:
+                    sec, st, canum, abbrev, name = str.split(ln, None, 4)
+                    secName[abbrev] = abbrev + " " + name + " " + canum
+                    secState[abbrev] = st
+                    for i in range(len(abbrev) - 1):
+                        p = abbrev[: -i - 1]
+                        secPartial[p] = 1
+                except ValueError as e:
+                    print("rd arrl sec dat err, itm skpd: ", e)
     except IOError as e:
         print("read error during readSections", e)
 
@@ -409,9 +342,8 @@ readSections()
 
 def readSCP():
     global scp
-    f = open(relpath("MASTER.SCP"))
-    scp = f.readlines()
-    f.close()
+    with open(relpath("MASTER.SCP")) as f:
+        scp = f.readlines()
     scp = list(map(lambda x: x.strip(), scp))
 
 
