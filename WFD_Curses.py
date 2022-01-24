@@ -10,7 +10,18 @@ COLOR_RED   	Red
 COLOR_WHITE 	White
 COLOR_YELLOW	Yellow
 """
+import logging
+from pathlib import Path
 
+if Path("./debug").exists():
+    logging.basicConfig(
+        filename="debug.log",
+        filemode="w",
+        format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
+        datefmt="%H:%M:%S",
+        level=logging.DEBUG,
+    )
+    logging.debug("Debug started")
 try:
     import json
     import requests
@@ -26,6 +37,9 @@ try:
         qrzsession = r.text[r.text.find("<Key>") + 5 : r.text.find("</Key>")]
     else:
         qrzsession = False
+    if r.status_code == 200 and r.text.find("<Error>") > 0:
+        errorText = r.text[r.text.find("<Error>") + 7 : r.text.find("</Error>")]
+        logging.debug(f"QRZ Error: {errorText}")
 except:
     cloudlogapi = False
     cloudlogurl = False
@@ -40,6 +54,7 @@ import os
 import re
 import sys
 
+from pathlib import Path
 from curses.textpad import rectangle
 from curses import wrapper
 from datetime import datetime
@@ -56,7 +71,7 @@ QuestionMark = 63
 EnterKey = 10
 Space = 32
 
-modes = ('PH', 'CW', 'DI')
+modes = ("PH", "CW", "DI")
 bands = ("160", "80", "60", "40", "20", "17", "15", "10", "6", "2", "222", "432")
 dfreq = {
     "160": "1.800",
@@ -64,7 +79,7 @@ dfreq = {
     "60": "53.300",
     "40": "7.000",
     "20": "14.000",
-	"17": "18.100",
+    "17": "18.100",
     "15": "21.000",
     "10": "28.000",
     "6": "50.000",
@@ -72,7 +87,7 @@ dfreq = {
     "222": "222.000",
     "432": "432.000",
     "SAT": "0.0",
-	"None": "0.0"
+    "None": "0.0",
 }
 modes = ("PH", "CW", "DI")
 
@@ -129,38 +144,39 @@ def relpath(filename):
 
 
 def getband(freq):
-	if freq.isnumeric():
-		frequency = int(float(freq))
-		if frequency > 1800000 and frequency < 2000000:
-			return "160"
-		if frequency > 3500000 and frequency < 4000000:
-			return "80"
-		if frequency > 5330000 and frequency < 5406000:
-			return "60"
-		if frequency > 7000000 and frequency < 7300000:
-			return "40"
-		if frequency > 10100000 and frequency < 10150000:
-			return "30"
-		if frequency > 14000000 and frequency < 14350000:
-			return "20"
-		if frequency > 18068000 and frequency < 18168000:
-			return "17"
-		if frequency > 21000000 and frequency < 21450000:
-			return "15"
-		if frequency > 24890000 and frequency < 24990000:
-			return "12"
-		if frequency > 28000000 and frequency < 29700000:
-			return "10"
-		if frequency > 50000000 and frequency < 54000000:
-			return "6"
-		if frequency > 144000000 and frequency < 148000000:
-			return "2"
-		if frequency >= 222000000 and frequency < 225000000:
-			return "222"
-		if frequency >= 430000000 and frequency <= 450000000:
-			return "432"
-	else:
-		return "OOB"
+    if freq.isnumeric():
+        frequency = int(float(freq))
+        if frequency > 1800000 and frequency < 2000000:
+            return "160"
+        if frequency > 3500000 and frequency < 4000000:
+            return "80"
+        if frequency > 5330000 and frequency < 5406000:
+            return "60"
+        if frequency > 7000000 and frequency < 7300000:
+            return "40"
+        if frequency > 10100000 and frequency < 10150000:
+            return "30"
+        if frequency > 14000000 and frequency < 14350000:
+            return "20"
+        if frequency > 18068000 and frequency < 18168000:
+            return "17"
+        if frequency > 21000000 and frequency < 21450000:
+            return "15"
+        if frequency > 24890000 and frequency < 24990000:
+            return "12"
+        if frequency > 28000000 and frequency < 29700000:
+            return "10"
+        if frequency > 50000000 and frequency < 54000000:
+            return "6"
+        if frequency > 144000000 and frequency < 148000000:
+            return "2"
+        if frequency >= 222000000 and frequency < 225000000:
+            return "222"
+        if frequency >= 430000000 and frequency <= 450000000:
+            return "432"
+    else:
+        return "OOB"
+
 
 def getmode(rigmode):
     if rigmode == "CW" or rigmode == "CWR":
@@ -217,7 +233,11 @@ def checkRadio():
         rigctrlsocket = socket.socket()
         rigctrlsocket.settimeout(0.1)
         rigctrlsocket.connect((rigctrlhost, int(rigctrlport)))
+    except ConnectionRefusedError:
+        logging.debug("checkRadio: ConnectionRefusedError")
+        rigonline = False
     except BaseException as err:
+        logging.debug(f"checkRadio: {err}")
         rigonline = False
 
 
@@ -233,7 +253,7 @@ def create_DB():
             c.execute(sql_table)
             conn.commit()
     except Error as e:
-        print(e)
+        logging.debug(f"create_DB: {e}")
 
 
 def readpreferences():
@@ -267,7 +287,7 @@ def readpreferences():
                 c.execute(sql)
                 conn.commit()
     except Error as e:
-        print(e)
+        logging.debug(f"readPreferences: {e}")
 
 
 def writepreferences():
@@ -278,7 +298,7 @@ def writepreferences():
             cur.execute(sql)
             conn.commit()
     except Error as e:
-        pass
+        logging.debug(f"writepreferences: {e}")
 
 
 def log_contact(logme):
@@ -289,6 +309,7 @@ def log_contact(logme):
             cur.execute(sql, logme)
             conn.commit()
     except Error as e:
+        logging.debug(f"log_contact: {e}")
         displayinfo(e)
     workedSections()
     sections()
@@ -305,6 +326,7 @@ def delete_contact(contact):
             cur.execute(sql)
             conn.commit()
     except Error as e:
+        logging.debug(f"delete_contact: {e}")
         displayinfo(e)
     workedSections()
     sections()
@@ -320,6 +342,7 @@ def change_contact(qso):
             cur.execute(sql)
             conn.commit()
     except Error as e:
+        logging.debug(f"change_contact: {e}")
         displayinfo(e)
 
 
@@ -340,9 +363,9 @@ def readSections():
                         p = abbrev[: -i - 1]
                         secPartial[p] = 1
                 except ValueError as e:
-                    print("rd arrl sec dat err, itm skpd: ", e)
+                    logging.debug(f"readSections: Value error {e}")
     except IOError as e:
-        print("read error during readSections", e)
+        logging.debug(f"readSections: IO Error {e}")
 
 
 def sectionCheck(sec):
