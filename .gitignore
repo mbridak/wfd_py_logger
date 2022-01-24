@@ -10,3 +10,4 @@ Statistics.txt
 build/
 dist/
 debug
+debug.log
