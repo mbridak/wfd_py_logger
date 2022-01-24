@@ -11,7 +11,17 @@ COLOR_WHITE 	White
 COLOR_YELLOW	Yellow
 """
 import logging
+from pathlib import Path
 
+if Path("./debug").exists():
+    logging.basicConfig(
+        filename="debug.log",
+        filemode="w",
+        format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
+        datefmt="%H:%M:%S",
+        level=logging.DEBUG,
+    )
+    logging.debug("Debug started")
 try:
     import json
     import requests
@@ -1641,13 +1651,6 @@ def editQSO(q):
 
 
 def main(s):
-    if Path("./debug").exists():
-        logging.basicConfig(
-            filename="debug.log",
-            format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
-            datefmt="%H:%M:%S",
-            level=logging.DEBUG,
-        )
     global stdscr, conn, rigonline
     conn = create_DB()
     curses.start_color()
