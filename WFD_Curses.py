@@ -433,26 +433,24 @@ def contacts():
 def stats():
     global bandmodemult
     y, x = stdscr.getyx()
-    conn = sqlite3.connect(database)
-    # conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute("select count(*) from contacts where mode = 'CW'")
-    cwcontacts = str(c.fetchone()[0])
-    c.execute("select count(*) from contacts where mode = 'PH'")
-    phonecontacts = str(c.fetchone()[0])
-    c.execute("select count(*) from contacts where mode = 'DI'")
-    digitalcontacts = str(c.fetchone()[0])
-    c.execute("select distinct band, mode from contacts")
-    bandmodemult = len(c.fetchall())
-    c.execute(
-        "SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-15 Minutes')"
-    )
-    last15 = str(c.fetchone()[0])
-    c.execute(
-        "SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-1 Hours')"
-    )
-    lasthour = str(c.fetchone()[0])
-    conn.close()
+    with sqlite3.connect(database) as conn:
+        c = conn.cursor()
+        c.execute("select count(*) from contacts where mode = 'CW'")
+        cwcontacts = str(c.fetchone()[0])
+        c.execute("select count(*) from contacts where mode = 'PH'")
+        phonecontacts = str(c.fetchone()[0])
+        c.execute("select count(*) from contacts where mode = 'DI'")
+        digitalcontacts = str(c.fetchone()[0])
+        c.execute("select distinct band, mode from contacts")
+        bandmodemult = len(c.fetchall())
+        c.execute(
+            "SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-15 Minutes')"
+        )
+        last15 = str(c.fetchone()[0])
+        c.execute(
+            "SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-1 Hours')"
+        )
+        lasthour = str(c.fetchone()[0])
     rectangle(stdscr, 0, 57, 7, 79)
     statslabel = "Score Stats"
     statslabeloffset = (25 / 2) - len(statslabel) / 2
