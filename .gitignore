@@ -1,8 +1,11 @@
 
-WFDLOG\.txt
+WFDLOG.txt
 
-WFD_Curses\.db
+WFD_Curses.db
 
-WFD\.adi
+WFD.adi
 
-Statistics\.txt
+Statistics.txt
+
+build/
+dist/
