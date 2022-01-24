@@ -1292,20 +1292,39 @@ def claimSatellite():
     stats()
 
 
-def displayHelp():
+def displayHelp(page):
     rectangle(stdscr, 11, 0, 21, 34)
     wy, wx = stdscr.getyx()
-    help = [
-        ".H this message  |.2 Outdoors",
-        ".Q quit program  |.3 AwayFromHome",
-        ".Kyourcall       |.4 Satellite",
-        ".Cyourclass      |.E### edit QSO",
-        ".Syoursection    |.D### del QSO",
-        ".B## change bands|.L Generate Log",
-        ".M[CW,PH,DI] mode|.Irigctrlhost",
-        ".P## change power|.Rrigctrlport",
-        ".1 Alt Power     |[esc] abort inp",
-    ]
+    if page == 1:
+        help = [
+            "Main Help Screen                 ",
+            "                                 ",
+            ".H this message  |.1 Outdoors    ",
+            ".0 rigctrl help  |.2 AltPwr      ",
+            ".Q quit program  |.3 AwayFromHome",
+            ".Kyourcall       |.4 Satellite   ",
+            ".Cyourclass      |.E### edit QSO ",
+            ".Syoursection    |.D### del QSO  ",
+            "[ESC] Abort Input|.L Generate Log",
+        ]
+    elif page == 2:
+        help = [
+            "Rig Control Help Screen          ",
+            "                                 ",
+            ".0 this message  |               ",
+            ".H main help     |               ",
+            ".Irighost        |.Rrigport      ",
+            ".Ffreq (in Hz)   |.Ppower (in W) ",
+            ".Mmode (eg USB)  |.Bband (eg 20) ",
+            "                                 ",
+            "                                 ",
+        ]
+    else:
+        help = [
+            "Help Screen                      ",
+            ".H Main Help Screen              ",
+            ".0 Rig Control Help Screen       "
+        ]
     stdscr.move(12, 1)
     count = 0
     for x in help:
@@ -1391,7 +1410,10 @@ def processcommand(cmd):
         editQSO(cmd[1:])
         return
     if cmd[:1] == "H":  # Print Help
-        displayHelp()
+        displayHelp(1)
+        return
+    if cmd[:1] == "0":  # Print Rig Control Help
+        displayHelp(2)
         return
     if cmd[:1] == "K":  # Set your Call Sign
         setcallsign(cmd[1:])
@@ -1545,7 +1567,7 @@ def edit_key(key):
         logwindow()
         sections()
         stats()
-        displayHelp()
+        displayHelp(1)
         entry()
         stdscr.move(9, 1)
         quit = True
@@ -1560,7 +1582,7 @@ def edit_key(key):
         logwindow()
         sections()
         stats()
-        displayHelp()
+        displayHelp(1)
         entry()
         stdscr.move(9, 1)
         quit = True
@@ -1717,7 +1739,7 @@ def main(s):
     logwindow()
     readpreferences()
     stats()
-    displayHelp()
+    displayHelp(1)
     stdscr.refresh()
     stdscr.move(9, 1)
     while 1:
