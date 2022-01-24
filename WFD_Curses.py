@@ -75,7 +75,6 @@ dfreq = {
     "SAT": "0.0",
 }
 modes = ("PH", "CW", "DI")
->>>>>>> master
 
 mycall = "YOURCALL"
 myclass = "CLASS"
@@ -162,40 +161,6 @@ def getband(freq):
 			return "432"
 	else:
 		return "OOB"
-    if freq.isnumeric():
-        frequency = int(float(freq))
-        if frequency > 1800000 and frequency < 2000000:
-            return "160"
-        if frequency > 3500000 and frequency < 4000000:
-            return "80"
-        if frequency > 5330000 and frequency < 5406000:
-            return "60"
-        if frequency > 7000000 and frequency < 7300000:
-            return "40"
-        if frequency > 10100000 and frequency < 10150000:
-            return "30"
-        if frequency > 14000000 and frequency < 14350000:
-            return "20"
-        if frequency > 18068000 and frequency < 18168000:
-            return "17"
-        if frequency > 21000000 and frequency < 21450000:
-            return "15"
-        if frequency > 24890000 and frequency < 24990000:
-            return "12"
-        if frequency > 28000000 and frequency < 29700000:
-            return "10"
-        if frequency > 50000000 and frequency < 54000000:
-            return "6"
-        if frequency > 144000000 and frequency < 148000000:
-            return "2"
-        if frequency >= 222000000 and frequency < 225000000:
-            return "222"
-        if frequency >= 430000000 and frequency <= 450000000:
-            return "432"
-    else:
-        return "??"
-
->>>>>>> master
 
 def getmode(rigmode):
     if rigmode == "CW" or rigmode == "CWR":
@@ -1285,53 +1250,6 @@ def statusline():
 	stdscr.addstr(23,41,rigctrlhost.lower()+":"+str(rigctrlport), highlightBonus(rigonline))
 
 	stdscr.move(y, x)
-    y, x = stdscr.getyx()
-    now = datetime.now().isoformat(" ")[5:19].replace("-", "/")
-    utcnow = datetime.utcnow().isoformat(" ")[5:19].replace("-", "/")
-
-    try:
-        stdscr.addstr(22, 62, "LOC " + now)
-        stdscr.addstr(23, 62, "UTC " + utcnow)
-    except curses.error as e:
-        pass
-
-    strfreq = "".join(reversed(freq))
-    strfreq = ".".join(strfreq[i : i + 3] for i in range(0, len(strfreq), 3))
-    strfreq = "".join(reversed(strfreq))
-
-    strband = str(band)
-    if len(band) < 3:
-        strband += "m "
-    elif len(band) < 4:
-        strband += " "
-
-    stdscr.addstr(23, 0, "Band       Freq             Mode   ")
-    stdscr.addstr(23, 5, strband.rjust(5), curses.A_REVERSE)
-    stdscr.addstr(23, 16, strfreq.rjust(11), curses.A_REVERSE)
-    stdscr.addstr(23, 33, mode, curses.A_REVERSE)
-    stdscr.addstr(22, 37, "                         ")
-    stdscr.addstr(
-        22,
-        37,
-        " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ",
-        curses.A_REVERSE,
-    )
-    stdscr.addstr(22, 0, "Bonus")
-    stdscr.addstr(22, 6, "AltPwr", highlightBonus(altpower))
-    stdscr.addch(curses.ACS_VLINE)
-    stdscr.addstr("Outdoor", highlightBonus(outdoors))
-    stdscr.addch(curses.ACS_VLINE)
-    stdscr.addstr("NotHome", highlightBonus(notathome))
-    stdscr.addch(curses.ACS_VLINE)
-    stdscr.addstr("Sat", highlightBonus(satellite))
-    stdscr.addstr(23, 37, "Rig                     ")
-    stdscr.addstr(
-        23, 41, rigctrlhost.lower() + ":" + str(rigctrlport), highlightBonus(rigonline)
-    )
-
-    stdscr.move(y, x)
-
->>>>>>> master
 
 def setpower(p):
     global power
