@@ -580,133 +580,112 @@ def getState(section):
 
 def adif():
     logname = "WFD.adi"
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select * from contacts order by date_time ASC")
-    log = c.fetchall()
-    conn.close()
+    with sqlite3.connect(database) as conn:
+        c = conn.cursor()
+        c.execute("select * from contacts order by date_time ASC")
+        log = c.fetchall()
     counter = 0
     grid = False
-    print("<ADIF_VER:5>2.2.0", end="\r\n", file=open(logname, "w"))
-    print("<EOH>", end="\r\n", file=open(logname, "a"))
-    for x in log:
-        logid, hiscall, hisclass, hissection, datetime, band, mode, power = x
-        if mode == "DI":
-            mode = "RTTY"
-        if mode == "PH":
-            mode = "SSB"
-        if mode == "CW":
-            rst = "599"
-        else:
-            rst = "59"
-        loggeddate = datetime[:10]
-        loggedtime = datetime[11:13] + datetime[14:16]
-        yy, xx = stdscr.getyx()
-        stdscr.move(15, 1)
-        stdscr.addstr("QRZ Gridsquare Lookup: " + str(counter))
-        stdscr.move(yy, xx)
-        stdscr.refresh()
-        grid = False
-        name = False
-        try:
-            if qrzsession:
-                payload = {"s": qrzsession, "callsign": hiscall}
-                r = requests.get(qrzurl, params=payload, timeout=3.0)
-                if r.status_code == 200:
-                    if r.text.find("<grid>") > 0:
-                        grid = r.text[
-                            r.text.find("<grid>") + 6 : r.text.find("</grid>")
-                        ]
-                    if r.text.find("<fname>") > 0:
-                        name = r.text[
-                            r.text.find("<fname>") + 7 : r.text.find("</fname>")
-                        ]
-                    if r.text.find("<name>") > 0:
-                        if not name:
-                            name = r.text[
-                                r.text.find("<name>") + 6 : r.text.find("</name>")
+    with open(logname, "w") as f:
+        print("<ADIF_VER:5>2.2.0", end="\r\n", file=f)
+        print("<EOH>", end="\r\n", file=f)
+        for x in log:
+            _, hiscall, hisclass, hissection, datetime, band, mode, _ = x
+            if mode == "DI":
+                mode = "RTTY"
+            if mode == "PH":
+                mode = "SSB"
+            if mode == "CW":
+                rst = "599"
+            else:
+                rst = "59"
+            loggeddate = datetime[:10]
+            loggedtime = datetime[11:13] + datetime[14:16]
+            yy, xx = stdscr.getyx()
+            stdscr.move(15, 1)
+            stdscr.addstr(f"QRZ Gridsquare Lookup: {counter}")
+            stdscr.move(yy, xx)
+            stdscr.refresh()
+            grid = False
+            name = False
+            try:
+                if qrzsession:
+                    payload = {"s": qrzsession, "callsign": hiscall}
+                    r = requests.get(qrzurl, params=payload, timeout=3.0)
+                    if r.status_code == 200:
+                        if r.text.find("<grid>") > 0:
+                            grid = r.text[
+                                r.text.find("<grid>") + 6 : r.text.find("</grid>")
                             ]
-                        else:
-                            name += (
-                                " "
-                                + r.text[
+                        if r.text.find("<fname>") > 0:
+                            name = r.text[
+                                r.text.find("<fname>") + 7 : r.text.find("</fname>")
+                            ]
+                        if r.text.find("<name>") > 0:
+                            if not name:
+                                name = r.text[
                                     r.text.find("<name>") + 6 : r.text.find("</name>")
                                 ]
-                            )
-        except:
-            pass
-        print(
-            "<QSO_DATE:%s:d>%s"
-            % (len("".join(loggeddate.split("-"))), "".join(loggeddate.split("-"))),
-            end="\r\n",
-            file=open(logname, "a"),
-        )
-        print(
-            "<TIME_ON:%s>%s" % (len(loggedtime), loggedtime),
-            end="\r\n",
-            file=open(logname, "a"),
-        )
-        print(
-            "<CALL:%s>%s" % (len(hiscall), hiscall), end="\r\n", file=open(logname, "a")
-        )
-        print("<MODE:%s>%s" % (len(mode), mode), end="\r\n", file=open(logname, "a"))
-        print(
-            "<BAND:%s>%s" % (len(band + "M"), band + "M"),
-            end="\r\n",
-            file=open(logname, "a"),
-        )
-        try:
+                            else:
+                                name += (
+                                    " "
+                                    + r.text[
+                                        r.text.find("<name>")
+                                        + 6 : r.text.find("</name>")
+                                    ]
+                                )
+            except:
+                pass
             print(
-                "<FREQ:%s>%s" % (len(dfreq[band]), dfreq[band]),
+                "<QSO_DATE:%s:d>%s"
+                % (len("".join(loggeddate.split("-"))), "".join(loggeddate.split("-"))),
+                end="\r\n",
+                file=f,
+            )
+            print("<TIME_ON:%s>%s" % (len(loggedtime), loggedtime), end="\r\n", file=f)
+            print(
+                "<CALL:%s>%s" % (len(hiscall), hiscall),
                 end="\r\n",
                 file=open(logname, "a"),
             )
-        except:
-            pass
-        print("<RST_SENT:%s>%s" % (len(rst), rst), end="\r\n", file=open(logname, "a"))
-        print("<RST_RCVD:%s>%s" % (len(rst), rst), end="\r\n", file=open(logname, "a"))
-        print(
-            "<STX_STRING:%s>%s"
-            % (len(myclass + " " + mysection), myclass + " " + mysection),
-            end="\r\n",
-            file=open(logname, "a"),
-        )
-        print(
-            "<SRX_STRING:%s>%s"
-            % (len(hisclass + " " + hissection), hisclass + " " + hissection),
-            end="\r\n",
-            file=open(logname, "a"),
-        )
-        print(
-            "<ARRL_SECT:%s>%s" % (len(hissection), hissection),
-            end="\r\n",
-            file=open(logname, "a"),
-        )
-        print(
-            "<CLASS:%s>%s" % (len(hisclass), hisclass),
-            end="\r\n",
-            file=open(logname, "a"),
-        )
-        state = getState(hissection)
-        if state:
             print(
-                "<STATE:%s>%s" % (len(state), state),
+                "<MODE:%s>%s" % (len(mode), mode), end="\r\n", file=open(logname, "a")
+            )
+            print("<BAND:%s>%s" % (len(band + "M"), band + "M"), end="\r\n", file=f)
+            try:
+                print(
+                    "<FREQ:%s>%s" % (len(dfreq[band]), dfreq[band]), end="\r\n", file=f
+                )
+            except:
+                pass
+            print("<RST_SENT:%s>%s" % (len(rst), rst), end="\r\n", file=f)
+            print("<RST_RCVD:%s>%s" % (len(rst), rst), end="\r\n", file=f)
+            print(
+                "<STX_STRING:%s>%s"
+                % (len(myclass + " " + mysection), myclass + " " + mysection),
                 end="\r\n",
-                file=open(logname, "a"),
+                file=f,
             )
-        if grid:
             print(
-                "<GRIDSQUARE:%s>%s" % (len(grid), grid),
+                "<SRX_STRING:%s>%s"
+                % (len(hisclass + " " + hissection), hisclass + " " + hissection),
                 end="\r\n",
-                file=open(logname, "a"),
+                file=f,
             )
-        if name:
             print(
-                "<NAME:%s>%s" % (len(name), name), end="\r\n", file=open(logname, "a")
+                "<ARRL_SECT:%s>%s" % (len(hissection), hissection), end="\r\n", file=f
             )
-        print("<COMMENT:19>WINTER-FIELD-DAY", end="\r\n", file=open(logname, "a"))
-        print("<EOR>", end="\r\n", file=open(logname, "a"))
-        print("", end="\r\n", file=open(logname, "a"))
+            print("<CLASS:%s>%s" % (len(hisclass), hisclass), end="\r\n", file=f)
+            state = getState(hissection)
+            if state:
+                print("<STATE:%s>%s" % (len(state), state), end="\r\n", file=f)
+            if grid:
+                print("<GRIDSQUARE:%s>%s" % (len(grid), grid), end="\r\n", file=f)
+            if name:
+                print("<NAME:%s>%s" % (len(name), name), end="\r\n", file=f)
+            print("<COMMENT:19>WINTER-FIELD-DAY", end="\r\n", file=f)
+            print("<EOR>", end="\r\n", file=f)
+            print("", end="\r\n", file=f)
     yy, xx = stdscr.getyx()
     stdscr.move(15, 1)
     stdscr.addstr("Done.                     ")
@@ -772,99 +751,81 @@ def postcloudlog():
 
 def cabrillo():
 
-	bonuses = 0
-	
-	catpower = ""
-	if qrp:
-		catpower = "QRP"
-	elif highpower:
-		catpower = "HIGH"
-	else:
-		catpower = "LOW"
-	with open("WFDLOG.txt", "w", encoding="ascii") as f:
-		print("START-OF-LOG: 3.0", end="\r\n", file=f)
-		print(
-			"CREATED-BY: K6GTE Winter Field Day Logger",
-			end="\r\n",
-			file=f
-		)
-		print("CONTEST: WFD", end="\r\n", file=f)
-		print("CALLSIGN:", mycall, end="\r\n", file=f)
-		print("LOCATION:", end="\r\n", file=f)
-		print("ARRL-SECTION:", mysection, end="\r\n", file=f)
-		print("CATEGORY:", myclass, end="\r\n", file=f)
-		print("CATEGORY-POWER: " + catpower, end="\r\n", file=f)
-		if altpower:
-			print(
-				"SOAPBOX: 500 points for not using commercial power",
-				end="\r\n",
-				file=f
-			)
-			bonuses = bonuses + 500
-		if outdoors:
-			print(
-				"SOAPBOX: 500 points for setting up outdoors",
-				end="\r\n",
-				file=f
-			)
-			bonuses = bonuses + 500
-		if notathome:
-			print(
-				"SOAPBOX: 500 points for setting up away from home",
-				end="\r\n",
-				file=f
-			)
-			bonuses = bonuses + 500
-		if satellite:
-			print(
-				"SOAPBOX: 500 points for working satellite",
-				end="\r\n",
-				file=f
-			)
-			bonuses = bonuses + 500
-		print(
-			f"SOAPBOX: BONUS Total {bonuses}", end="\r\n", file=f
-		)
+    bonuses = 0
 
-		print(f"CLAIMED-SCORE: {score()}", end="\r\n", file=f)
-		print(f"OPERATORS:{mycall}", end="\r\n", file=f)
-		print("NAME: ", end="\r\n", file=f)
-		print("ADDRESS: ", end="\r\n", file=f)
-		print("ADDRESS-CITY: ", end="\r\n", file=f)
-		print("ADDRESS-STATE: ", end="\r\n", file=f)
-		print("ADDRESS-POSTALCODE: ", end="\r\n", file=f)
-		print("ADDRESS-COUNTRY: ", end="\r\n", file=f)
-		print("EMAIL: ", end="\r\n", file=f)
-		with sqlite3.connect(database) as conn:
-			c = conn.cursor()
-			c.execute("select * from contacts order by date_time ASC")
-			log = c.fetchall()
-			for x in log:
-				_, hiscall, hisclass, hissection, datetime, band, mode, _ = x
-				loggeddate = datetime[:10]
-				loggedtime = datetime[11:13] + datetime[14:16]
-				print(
-					f"QSO: {band}M {mode} {loggeddate} {loggedtime} {mycall} {myclass} {mysection} {hiscall} {hisclass} {hissection",
-					end="\r\n",
-					file=f
-				)
-		print("END-OF-LOG:", end="\r\n", file=f)
+    catpower = ""
+    if qrp:
+        catpower = "QRP"
+    elif highpower:
+        catpower = "HIGH"
+    else:
+        catpower = "LOW"
+    with open("WFDLOG.txt", "w", encoding="ascii") as f:
+        print("START-OF-LOG: 3.0", end="\r\n", file=f)
+        print("CREATED-BY: K6GTE Winter Field Day Logger", end="\r\n", file=f)
+        print("CONTEST: WFD", end="\r\n", file=f)
+        print("CALLSIGN:", mycall, end="\r\n", file=f)
+        print("LOCATION:", end="\r\n", file=f)
+        print("ARRL-SECTION:", mysection, end="\r\n", file=f)
+        print("CATEGORY:", myclass, end="\r\n", file=f)
+        print("CATEGORY-POWER: " + catpower, end="\r\n", file=f)
+        if altpower:
+            print(
+                "SOAPBOX: 500 points for not using commercial power", end="\r\n", file=f
+            )
+            bonuses = bonuses + 500
+        if outdoors:
+            print("SOAPBOX: 500 points for setting up outdoors", end="\r\n", file=f)
+            bonuses = bonuses + 500
+        if notathome:
+            print(
+                "SOAPBOX: 500 points for setting up away from home", end="\r\n", file=f
+            )
+            bonuses = bonuses + 500
+        if satellite:
+            print("SOAPBOX: 500 points for working satellite", end="\r\n", file=f)
+            bonuses = bonuses + 500
+        print(f"SOAPBOX: BONUS Total {bonuses}", end="\r\n", file=f)
 
-	generateBandModeTally()
+        print(f"CLAIMED-SCORE: {score()}", end="\r\n", file=f)
+        print(f"OPERATORS:{mycall}", end="\r\n", file=f)
+        print("NAME: ", end="\r\n", file=f)
+        print("ADDRESS: ", end="\r\n", file=f)
+        print("ADDRESS-CITY: ", end="\r\n", file=f)
+        print("ADDRESS-STATE: ", end="\r\n", file=f)
+        print("ADDRESS-POSTALCODE: ", end="\r\n", file=f)
+        print("ADDRESS-COUNTRY: ", end="\r\n", file=f)
+        print("EMAIL: ", end="\r\n", file=f)
+        with sqlite3.connect(database) as conn:
+            c = conn.cursor()
+            c.execute("select * from contacts order by date_time ASC")
+            log = c.fetchall()
+            for x in log:
+                _, hiscall, hisclass, hissection, datetime, band, mode, _ = x
+                loggeddate = datetime[:10]
+                loggedtime = datetime[11:13] + datetime[14:16]
+                print(
+                    f"QSO: {band}M {mode} {loggeddate} {loggedtime} {mycall} {myclass} {mysection} {hiscall} {hisclass} {hissection}",
+                    end="\r\n",
+                    file=f,
+                )
+        print("END-OF-LOG:", end="\r\n", file=f)
 
-	oy, ox = stdscr.getyx()
-	window = curses.newpad(10, 33)
-	rectangle(stdscr, 11, 0, 21, 34)
-	window.addstr(0, 0, "Log written to: WFDLOG.txt")
-	window.addstr(1, 0, "Stats written to: Statistics.txt")
-	window.addstr(2, 0, "ADIF written to: WFD.adi")
-	stdscr.refresh()
-	window.refresh(0, 0, 12, 1, 20, 33)
-	stdscr.move(oy, ox)
-	adif()
-	writepreferences()
-	statusline()
-	stats()
+    generateBandModeTally()
+
+    oy, ox = stdscr.getyx()
+    window = curses.newpad(10, 33)
+    rectangle(stdscr, 11, 0, 21, 34)
+    window.addstr(0, 0, "Log written to: WFDLOG.txt")
+    window.addstr(1, 0, "Stats written to: Statistics.txt")
+    window.addstr(2, 0, "ADIF written to: WFD.adi")
+    stdscr.refresh()
+    window.refresh(0, 0, 12, 1, 20, 33)
+    stdscr.move(oy, ox)
+    adif()
+    writepreferences()
+    statusline()
+    stats()
 
 
 def logwindow():
@@ -891,9 +852,7 @@ def logwindow():
         hissection = hissection + sectfiller[: -len(hissection)]
         band = band + sectfiller[: -len(band)]
         mode = mode + modefiller[: -len(mode)]
-        logline = (
-            f"{logid} {hiscall} {hisclass} {hissection} {datetime} {band} {mode} {power}"
-        )
+        logline = f"{logid} {hiscall} {hisclass} {hissection} {datetime} {band} {mode} {power}"
         contacts.addstr(logNumber, 0, logline)
         logNumber += 1
     stdscr.refresh()
