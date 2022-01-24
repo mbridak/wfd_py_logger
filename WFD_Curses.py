@@ -54,8 +54,8 @@ QuestionMark = 63
 EnterKey = 10
 Space = 32
 
-bands = ('160', '80', '60','40', '20', '15', '10', '6', '2', '222', '432')
-dfreq = {'160':"1.800", '80':"3.500", '60':"53.300", '40':"7.000", '20':"14.000", '15':"21.000", '10':"28.000", '6':"50.000", '2':"144.000", '222':"222.000", '432':"432.000", 'SAT':"0.0"}
+bands = ('160', '80', '60','40', '20', '17', '15', '10', '6', '2', '222', '435')
+dfreq = {'160':"1.800", '80':"3.500", '60':"53.300", '40':"7.000", '20':"14.000", '17': '18.100', '15':"21.000", '10':"28.000", '6':"50.000", '2':"144.000", '222':"222.000", '432':"432.000", 'SAT':"0.0"}
 modes = ('PH', 'CW', 'DI')
 
 mycall = "YOURCALL"
@@ -136,9 +136,9 @@ def getband(freq):
 		if frequency > 144000000 and frequency < 148000000:
 			return "2"
 		if frequency >= 222000000 and frequency < 225000000:
-			return "222"
+			return "1.25"
 		if frequency >= 430000000 and frequency <= 450000000:
-			return "432"
+			return "70"
 	else:
 		return "??"
 
@@ -912,10 +912,15 @@ def statusline():
 	strfreq = ".".join(strfreq[i:i+3] for i in range(0,len(strfreq),3))
 	strfreq = "".join(reversed(strfreq))
 
-	strband = str(band)
-	if len(band) < 3:
-		strband += "m "
-	elif len(band) < 4:
+	suffix = "m"
+	strband = band;
+
+	if int(freq) > 225000000:
+		suffix = "cm"
+
+	strband = str(band) + suffix
+
+	if len(strband) < 4:
 		strband += " "
 
 	stdscr.addstr(23, 0, "Band       Freq             Mode   ")
