@@ -56,7 +56,7 @@ QuestionMark = 63
 EnterKey = 10
 Space = 32
 
-modes = ('PH', 'CW', 'DI')
+modes = ("PH", "CW", "DI")
 bands = ("160", "80", "60", "40", "20", "17", "15", "10", "6", "2", "222", "432")
 dfreq = {
     "160": "1.800",
@@ -64,7 +64,7 @@ dfreq = {
     "60": "53.300",
     "40": "7.000",
     "20": "14.000",
-	"17": "18.100",
+    "17": "18.100",
     "15": "21.000",
     "10": "28.000",
     "6": "50.000",
@@ -72,7 +72,7 @@ dfreq = {
     "222": "222.000",
     "432": "432.000",
     "SAT": "0.0",
-	"None": "0.0"
+    "None": "0.0",
 }
 modes = ("PH", "CW", "DI")
 
@@ -129,38 +129,39 @@ def relpath(filename):
 
 
 def getband(freq):
-	if freq.isnumeric():
-		frequency = int(float(freq))
-		if frequency > 1800000 and frequency < 2000000:
-			return "160"
-		if frequency > 3500000 and frequency < 4000000:
-			return "80"
-		if frequency > 5330000 and frequency < 5406000:
-			return "60"
-		if frequency > 7000000 and frequency < 7300000:
-			return "40"
-		if frequency > 10100000 and frequency < 10150000:
-			return "30"
-		if frequency > 14000000 and frequency < 14350000:
-			return "20"
-		if frequency > 18068000 and frequency < 18168000:
-			return "17"
-		if frequency > 21000000 and frequency < 21450000:
-			return "15"
-		if frequency > 24890000 and frequency < 24990000:
-			return "12"
-		if frequency > 28000000 and frequency < 29700000:
-			return "10"
-		if frequency > 50000000 and frequency < 54000000:
-			return "6"
-		if frequency > 144000000 and frequency < 148000000:
-			return "2"
-		if frequency >= 222000000 and frequency < 225000000:
-			return "222"
-		if frequency >= 430000000 and frequency <= 450000000:
-			return "432"
-	else:
-		return "OOB"
+    if freq.isnumeric():
+        frequency = int(float(freq))
+        if frequency > 1800000 and frequency < 2000000:
+            return "160"
+        if frequency > 3500000 and frequency < 4000000:
+            return "80"
+        if frequency > 5330000 and frequency < 5406000:
+            return "60"
+        if frequency > 7000000 and frequency < 7300000:
+            return "40"
+        if frequency > 10100000 and frequency < 10150000:
+            return "30"
+        if frequency > 14000000 and frequency < 14350000:
+            return "20"
+        if frequency > 18068000 and frequency < 18168000:
+            return "17"
+        if frequency > 21000000 and frequency < 21450000:
+            return "15"
+        if frequency > 24890000 and frequency < 24990000:
+            return "12"
+        if frequency > 28000000 and frequency < 29700000:
+            return "10"
+        if frequency > 50000000 and frequency < 54000000:
+            return "6"
+        if frequency > 144000000 and frequency < 148000000:
+            return "2"
+        if frequency >= 222000000 and frequency < 225000000:
+            return "222"
+        if frequency >= 430000000 and frequency <= 450000000:
+            return "432"
+    else:
+        return "OOB"
+
 
 def getmode(rigmode):
     if rigmode == "CW" or rigmode == "CWR":
@@ -1051,62 +1052,66 @@ def setStatusMsg(msg):
 
 
 def statusline():
-	y, x = stdscr.getyx()
-	now = datetime.now().isoformat(' ')[5:19].replace('-', '/')
-	utcnow = datetime.utcnow().isoformat(' ')[5:19].replace('-', '/')
+    y, x = stdscr.getyx()
+    now = datetime.now().isoformat(" ")[5:19].replace("-", "/")
+    utcnow = datetime.utcnow().isoformat(" ")[5:19].replace("-", "/")
 
-	try:
-		stdscr.addstr(22, 62, "LOC " + now)
-		stdscr.addstr(23, 62, "UTC " + utcnow)
-	except curses.error as e:
-		pass
+    try:
+        stdscr.addstr(22, 62, "LOC " + now)
+        stdscr.addstr(23, 62, "UTC " + utcnow)
+    except curses.error as e:
+        pass
 
-	strfreq = "".join(reversed(freq))
-	strfreq = ".".join(strfreq[i:i+3] for i in range(0,len(strfreq),3))
-	strfreq = "".join(reversed(strfreq))
+    strfreq = "".join(reversed(freq))
+    strfreq = ".".join(strfreq[i : i + 3] for i in range(0, len(strfreq), 3))
+    strfreq = "".join(reversed(strfreq))
 
-	suffix = ""
+    suffix = ""
 
-	if band == None or band == "None":
-		strband = "OOB"
-	else:
-		strband = band;
+    if band == None or band == "None":
+        strband = "OOB"
+    else:
+        strband = band
 
-	if strband == "222":
-		strband = "1.25"
-	elif strband == "432":
-		strband = "70"
+    if strband == "222":
+        strband = "1.25"
+    elif strband == "432":
+        strband = "70"
 
-	if strband == "OOB":
-		suffix = ""
-	elif int(freq) > 225000000:
-		suffix = "cm"
-	else:
-		suffix = "m"
+    if strband == "OOB":
+        suffix = ""
+    elif int(freq) > 225000000:
+        suffix = "cm"
+    else:
+        suffix = "m"
 
-	strband += suffix
+    strband += suffix
 
-	if len(strband) < 4:
-		strband += " "
+    if len(strband) < 4:
+        strband += " "
 
-	stdscr.addstr(23, 0, "Band       Freq             Mode   ")
-	stdscr.addstr(23, 5, strband.rjust(5), curses.A_REVERSE)
-	stdscr.addstr(23, 16, strfreq.rjust(11), curses.A_REVERSE)
-	stdscr.addstr(23, 33, mode, curses.A_REVERSE)
-	stdscr.addstr(22, 37, "                         ")
-	stdscr.addstr(22, 37, " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ", curses.A_REVERSE)
-	stdscr.addstr(22, 0, "Bonus")
-	stdscr.addstr(22, 6, "AltPwr", highlightBonus(altpower))
-	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("Outdoor", highlightBonus(outdoors))
-	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("NotHome", highlightBonus(notathome))
-	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("Sat", highlightBonus(satellite))
-	stdscr.addstr(23,37,"Rig                     ")
-	stdscr.addstr(23,41,rigctrlhost.lower()+":"+str(rigctrlport), highlightBonus(rigonline))
+    stdscr.addstr(23, 0, "Band       Freq             Mode   ")
+    stdscr.addstr(23, 5, strband.rjust(5), curses.A_REVERSE)
+    stdscr.addstr(23, 16, strfreq.rjust(11), curses.A_REVERSE)
+    stdscr.addstr(23, 33, mode, curses.A_REVERSE)
+    stdscr.addstr(22, 37, "                         ")
+    stdscr.addstr(
+        22, 37, f" {mycall}|{myclass}|{mysection}|{power}w ", curses.A_REVERSE
+    )
+    stdscr.addstr(22, 0, "Bonus")
+    stdscr.addstr(22, 6, "AltPwr", highlightBonus(altpower))
+    stdscr.addch(curses.ACS_VLINE)
+    stdscr.addstr("Outdoor", highlightBonus(outdoors))
+    stdscr.addch(curses.ACS_VLINE)
+    stdscr.addstr("NotHome", highlightBonus(notathome))
+    stdscr.addch(curses.ACS_VLINE)
+    stdscr.addstr("Sat", highlightBonus(satellite))
+    stdscr.addstr(23, 37, "Rig                     ")
+    stdscr.addstr(
+        23, 41, rigctrlhost.lower() + ":" + str(rigctrlport), highlightBonus(rigonline)
+    )
 
-	stdscr.move(y, x)
+    stdscr.move(y, x)
 
 
 def setpower(p):
