@@ -136,11 +136,11 @@ def getband(freq):
 		if frequency > 144000000 and frequency < 148000000:
 			return "2"
 		if frequency >= 222000000 and frequency < 225000000:
-			return "1.25"
+			return "222"
 		if frequency >= 430000000 and frequency <= 450000000:
-			return "70"
+			return "432"
 	else:
-		return "??"
+		return "OOB"
 
 def getmode(rigmode):
 	if rigmode == "CW" or rigmode == 'CWR':
@@ -912,13 +912,26 @@ def statusline():
 	strfreq = ".".join(strfreq[i:i+3] for i in range(0,len(strfreq),3))
 	strfreq = "".join(reversed(strfreq))
 
-	suffix = "m"
-	strband = band;
+	suffix = ""
 
-	if int(freq) > 225000000:
+	if band == None or band == "None":
+		strband = "OOB"
+	else:
+		strband = band;
+
+	if strband == "222":
+		strband = "1.25"
+	elif strband == "432":
+		strband = "70"
+
+	if strband == "OOB":
+		suffix = ""
+	elif int(freq) > 225000000:
 		suffix = "cm"
+	else:
+		suffix = "m"
 
-	strband = str(band) + suffix
+	strband += suffix
 
 	if len(strband) < 4:
 		strband += " "
