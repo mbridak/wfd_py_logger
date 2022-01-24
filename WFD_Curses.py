@@ -527,11 +527,7 @@ def getBandModeTally(band, mode):
     conn = sqlite3.connect(database)
     c = conn.cursor()
     c.execute(
-        "select count(*) as tally, MAX(power) as mpow from contacts where band = '"
-        + band
-        + "' AND mode ='"
-        + mode
-        + "'"
+        f"select count(*) as tally, MAX(power) as mpow from contacts where band = '{band}' AND mode ='{mode}'"
     )
     return c.fetchone()
 
