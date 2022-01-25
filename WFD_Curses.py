@@ -72,22 +72,40 @@ EnterKey = 10
 Space = 32
 
 modes = ("PH", "CW", "DI")
-bands = ("160", "80", "60", "40", "20", "17", "15", "10", "6", "2", "222", "432")
-dfreq = {
-    "160": "1.800",
-    "80": "3.500",
-    "60": "53.300",
-    "40": "7.000",
-    "20": "14.000",
-    "17": "18.100",
-    "15": "21.000",
-    "10": "28.000",
-    "6": "50.000",
-    "2": "144.000",
-    "222": "222.000",
-    "432": "432.000",
+bands = ( "160", "80", "60", "40", "30", "20", "17", "15", "12", "10", "6", "2", "222", "432")
+dfreqPH = {
+    "160": "1.910",
+    "80": "3.800",
+    "60": "5.357",
+    "40": "7.200",
+    "30": "10.135",
+    "20": "14.200",
+    "17": "18.150",
+    "15": "21.400",
+    "12": "24.950",
+    "10": "28.400",
+    "6": "53.000",
+    "2": "146.520",
+    "222": "223.500",
+    "432": "446.000",
     "SAT": "0.0",
     "None": "0.0",
+}
+dfreqCW = {
+    "160": "1.810",
+    "80": "3.550",
+    "60": "5.357",
+    "40": "7.070",
+    "30": "10.135",
+    "20": "14.080",
+    "17": "18.100",
+    "15": "21.100",
+    "12": "24.910",
+    "10": "28.150",
+    "6": "50.050",
+    "2": "144.050",
+    "222": "223.500",
+    "432": "425.000",
 }
 modes = ("PH", "CW", "DI")
 
@@ -147,33 +165,33 @@ def relpath(filename):
 def getband(freq):
     if freq.isnumeric():
         frequency = int(float(freq))
-        if frequency > 1800000 and frequency < 2000000:
+        if frequency >= 1800000 and frequency <= 2000000:
             return "160"
-        if frequency > 3500000 and frequency < 4000000:
+        if frequency >= 3500000 and frequency <= 4000000:
             return "80"
-        if frequency > 5330000 and frequency < 5406000:
+        if frequency >= 5332000 and frequency <= 5405000:
             return "60"
-        if frequency > 7000000 and frequency < 7300000:
+        if frequency >= 7000000 and frequency <= 7300000:
             return "40"
-        if frequency > 10100000 and frequency < 10150000:
+        if frequency >= 10100000 and frequency <= 10150000:
             return "30"
-        if frequency > 14000000 and frequency < 14350000:
+        if frequency >= 14000000 and frequency <= 14350000:
             return "20"
-        if frequency > 18068000 and frequency < 18168000:
+        if frequency >= 18068000 and frequency <= 18168000:
             return "17"
-        if frequency > 21000000 and frequency < 21450000:
+        if frequency >= 21000000 and frequency <= 21450000:
             return "15"
-        if frequency > 24890000 and frequency < 24990000:
+        if frequency >= 24890000 and frequency <= 24990000:
             return "12"
-        if frequency > 28000000 and frequency < 29700000:
+        if frequency >= 28000000 and frequency <= 29700000:
             return "10"
-        if frequency > 50000000 and frequency < 54000000:
+        if frequency >= 50000000 and frequency <= 54000000:
             return "6"
-        if frequency > 144000000 and frequency < 148000000:
+        if frequency >= 144000000 and frequency <= 148000000:
             return "2"
-        if frequency >= 222000000 and frequency < 225000000:
+        if frequency >= 222000000 and frequency <= 225000000:
             return "222"
-        if frequency >= 430000000 and frequency <= 450000000:
+        if frequency >= 420000000 and frequency <= 450000000:
             return "432"
     else:
         return "OOB"
@@ -191,8 +209,32 @@ def sendRadio(cmd, arg):
     global band, mode, freq, power, rigonline
     rigCmd = bytes(cmd + " " + arg + "\n", "utf-8")
     if rigonline:
+        if cmd == "B" and mode == "CW":
+            if arg in dfreqCW:
+                arg = "F " + str(dfreqCW[arg].replace(".","")) + "000\n"
+                rigCmd = bytes(arg, "utf-8")
+                try:
+                    rigctrlsocket.send(rigCmd)
+                    rigCode = rigctrlsocket.recv(1024).decode().strip()
+                except:
+                    rigonline == False
+            else:
+                setStatusMsg("Unknown band specified")
+        elif cmd =="B":
+            if arg in dfreqPH:
+                arg = "F " + str(dfreqPH[arg].replace(".","")) + "000\n"
+                rigCmd = bytes(arg, "utf-8")
+                try:
+                    rigctrlsocket.send(rigCmd)
+                    rigCode = rigctrlsocket.recv(1024).decode().strip()
+                except:
+                    rigonline == False
         if cmd == "F":
-            if arg.isnumeric() and int(arg) >= 1800000 and int(arg) <= 450000000:
+            if (
+				arg.isnumeric()
+				and int(arg) >= 1800000
+				and int(arg) <= 450000000
+            ):
                 try:
                     rigctrlsocket.send(rigCmd)
                     rigCode = rigctrlsocket.recv(1024).decode().strip()
@@ -210,14 +252,13 @@ def sendRadio(cmd, arg):
         elif cmd == "P":
             if arg.isnumeric() and int(arg) >= 1 and int(arg) <= 100:
                 rigCmd = bytes("L RFPOWER " + str(float(arg) / 100) + "\n", "utf-8")
-                logging.debug(f"Command: {rigCmd.decode().strip()}")
                 try:
                     rigctrlsocket.send(rigCmd)
                     rigCode = rigctrlsocket.recv(1024).decode().strip()
                 except:
                     rigonline == False
             else:
-                setStatusMsg("1 >= Power >= 100")
+                setStatusMsg("1 <= Power <= 100")
     return
 
 
@@ -644,7 +685,7 @@ def adif():
             print("<BAND:%s>%s" % (len(band + "M"), band + "M"), end="\r\n", file=f)
             try:
                 print(
-                    "<FREQ:%s>%s" % (len(dfreq[band]), dfreq[band]), end="\r\n", file=f
+                    "<FREQ:%s>%s" % (len(dfreqPH[band]), dfreqPH[band]), end="\r\n", file=f
                 )
             except:
                 pass
@@ -713,7 +754,7 @@ def postcloudlog():
     adifq += "<CALL:%s>%s" % (len(hiscall), hiscall)
     adifq += "<MODE:%s>%s" % (len(mode), mode)
     adifq += "<BAND:%s>%s" % (len(band + "M"), band + "M")
-    adifq += "<FREQ:%s>%s" % (len(dfreq[band]), dfreq[band])
+    adifq += "<FREQ:%s>%s" % (len(dfreqPH[band]), dfreqPH[band])
     adifq += "<RST_SENT:%s>%s" % (len(rst), rst)
     adifq += "<RST_RCVD:%s>%s" % (len(rst), rst)
     adifq += "<STX_STRING:%s>%s" % (
@@ -1392,7 +1433,11 @@ def processcommand(cmd):
         sendRadio(cmd[:1], cmd[1:])
         return
     if cmd[:1] == "B":  # Change Band
-        setband(cmd[1:])
+        if rigonline:
+            sendRadio(cmd[:1], cmd[1:])
+            return
+        else:
+            setband(cmd[1:])
         return
     if cmd[:1] == "M":  # Change Mode
         if rigonline == False:
