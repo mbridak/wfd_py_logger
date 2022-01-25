@@ -10,8 +10,12 @@ COLOR_RED   	Red
 COLOR_WHITE 	White
 COLOR_YELLOW	Yellow
 """
+
+import os
 import logging
 from pathlib import Path
+
+confFile = os.path.expanduser("~") + "/.config/wfd.conf"
 
 if Path("./debug").exists():
     logging.basicConfig(
@@ -22,24 +26,51 @@ if Path("./debug").exists():
         level=logging.DEBUG,
     )
     logging.debug("Debug started")
+
+cloudLogOn = False
+qrzOn = False
+
 try:
     import json
     import requests
 
-    cloudlogapi = "cl12345678901234567890"
-    cloudlogurl = "http://www.yoururl.com/Cloudlog/index.php/api/qso"
-    qrzurl = "http://xmldata.qrz.com/xml/"
-    qrzname = "w1aw"
-    qrzpass = "secret"
+    if os.path.exists(confFile):
+        fd = open(confFile)
+        try:
+            confData = json.load(fd)
+            cloudlogapi = confData["cloudlog"]["apikey"]
+            cloudlogurl = confData["cloudlog"]["url"]
+            qrzurl = confData["qrz"]["url"]
+            qrzname = confData["qrz"]["username"]
+            qrzpass = confData["qrz"]["password"]
+        except Exception as e:
+            logging.debug(f"{e}")
+        fd.close()
+    else:
+        cloudlogapi = "cl12345678901234567890"
+        cloudlogurl = "http://www.yoururl.com/Cloudlog/index.php/api"
+        qrzurl = "http://xmldata.qrz.com/xml/"
+        qrzname = "w1aw"
+        qrzpass = "secret"
+
     payload = {"username": qrzname, "password": qrzpass}
     r = requests.get(qrzurl, params=payload, timeout=1.0)
+
     if r.status_code == 200 and r.text.find("<Key>") > 0:
         qrzsession = r.text[r.text.find("<Key>") + 5 : r.text.find("</Key>")]
+        qrzOn = True
     else:
         qrzsession = False
     if r.status_code == 200 and r.text.find("<Error>") > 0:
         errorText = r.text[r.text.find("<Error>") + 7 : r.text.find("</Error>")]
         logging.debug(f"QRZ Error: {errorText}")
+
+    payload = "/validate/key=" + cloudlogapi
+    r = requests.get(cloudlogurl + payload)
+
+    if r.status_code == 200 or r.status_code == 400:
+        cloudLogOn = True
+
 except:
     cloudlogapi = False
     cloudlogurl = False
@@ -50,7 +81,6 @@ import curses
 import time
 import sqlite3
 import socket
-import os
 import re
 import sys
 
@@ -777,7 +807,7 @@ def postcloudlog():
 
     payloadDict = {"key": cloudlogapi, "type": "adif", "string": adifq}
     jsonData = json.dumps(payloadDict)
-    response = requests.post(cloudlogurl, jsonData)
+    response = requests.post(cloudlogurl + "/qso", jsonData)
 
 
 def cabrillo():
@@ -989,7 +1019,7 @@ def workedSection(section):
 
 
 def sectionsCol1():
-    rectangle(stdscr, 8, 35, 21, 43)
+    rectangle(stdscr, 8, 35, 19, 43)
     stdscr.addstr(8, 36, "   DX  ", curses.A_REVERSE)
     stdscr.addstr(9, 36, "   DX  ", workedSection("DX"))
     stdscr.addstr(10, 36, "   1   ", curses.A_REVERSE)
@@ -1010,7 +1040,7 @@ def sectionsCol1():
 
 
 def sectionsCol2():
-    rectangle(stdscr, 8, 44, 21, 52)
+    rectangle(stdscr, 8, 44, 19, 52)
     stdscr.addstr(8, 45, "   3   ", curses.A_REVERSE)
     stdscr.addstr(9, 45, "DE", workedSection("DE"))
     stdscr.addstr(9, 49, "MDC", workedSection("MDC"))
@@ -1135,6 +1165,11 @@ def clearentry():
     displayInputField(1)
     displayInputField(0)
 
+def YorN(boolean):
+    if boolean:
+        return "Y"
+    else:
+        return "N"
 
 def highlightBonus(bonus):
     if bonus:
@@ -1190,6 +1225,9 @@ def statusline():
     if len(strband) < 4:
         strband += " "
 
+    stdscr.addstr(20, 36, "QRZ   CloudLog  ")
+    stdscr.addstr(20, 40, YorN(qrzOn), highlightBonus(qrzOn))
+    stdscr.addstr(20, 51, YorN(cloudLogOn), highlightBonus(cloudLogOn))
     stdscr.addstr(23, 0, "Band       Freq             Mode   ")
     stdscr.addstr(23, 5, strband.rjust(5), curses.A_REVERSE)
     stdscr.addstr(23, 16, strfreq, curses.A_REVERSE)
