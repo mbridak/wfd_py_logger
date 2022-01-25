@@ -130,6 +130,7 @@ secName = {}
 secState = {}
 oldfreq = "0"
 oldmode = ""
+oldpwr = 0
 rigctrlhost = "localhost"
 rigctrlport = 4532
 rigonline = False
@@ -186,9 +187,9 @@ def getmode(rigmode):
     return "DI"  # All else digital
 
 
-def sendRadio(cmd,arg):
+def sendRadio(cmd, arg):
     global band, mode, freq, power, rigonline
-    rigCmd = bytes(cmd+" "+arg+"\n","utf-8")
+    rigCmd = bytes(cmd + " " + arg + "\n", "utf-8")
     if rigonline:
         if cmd == "F":
             if arg.isnumeric() and int(arg) >= 1800000 and int(arg) <= 450000000:
@@ -200,7 +201,7 @@ def sendRadio(cmd,arg):
             else:
                 setStatusMsg("Invalid frequency specified")
         elif cmd == "M":
-            rigCmd = bytes(cmd+" "+arg+" 0\n","utf-8")
+            rigCmd = bytes(cmd + " " + arg + " 0\n", "utf-8")
             try:
                 rigctrlsocket.send(rigCmd)
                 rigCode = rigctrlsocket.recv(1024).decode().strip()
@@ -208,7 +209,7 @@ def sendRadio(cmd,arg):
                 rigonline == False
         elif cmd == "P":
             if arg.isnumeric() and int(arg) >= 1 and int(arg) <= 100:
-                rigCmd = bytes("L RFPOWER "+str(float(arg)/100)+"\n","utf-8")
+                rigCmd = bytes("L RFPOWER " + str(float(arg) / 100) + "\n", "utf-8")
                 logging.debug(f"Command: {rigCmd.decode().strip()}")
                 try:
                     rigctrlsocket.send(rigCmd)
@@ -218,6 +219,7 @@ def sendRadio(cmd,arg):
             else:
                 setStatusMsg("1 >= Power >= 100")
     return
+
 
 def pollRadio():
     global oldfreq, oldmode, oldpwr, rigctrlsocket, rigonline
@@ -229,7 +231,7 @@ def pollRadio():
             rigctrlsocket.send(b"m\n")
             newmode = rigctrlsocket.recv(1024).decode().strip().split()[0]
             rigctrlsocket.send(b"l RFPOWER\n")
-            newpwr = int(float(rigctrlsocket.recv(1024).decode().strip())*100)
+            newpwr = int(float(rigctrlsocket.recv(1024).decode().strip()) * 100)
             if newfreq != oldfreq or newmode != oldmode or newpwr != oldpwr:
                 oldfreq = newfreq
                 oldmode = newmode
@@ -1111,60 +1113,68 @@ def setStatusMsg(msg):
 
 
 def statusline():
-	y, x = stdscr.getyx()
-	now = datetime.now().isoformat(' ')[5:19].replace('-', '/')
-	utcnow = datetime.utcnow().isoformat(' ')[5:19].replace('-', '/')
+    y, x = stdscr.getyx()
+    now = datetime.now().isoformat(" ")[5:19].replace("-", "/")
+    utcnow = datetime.utcnow().isoformat(" ")[5:19].replace("-", "/")
 
-	try:
-		stdscr.addstr(22, 62, "LOC " + now)
-		stdscr.addstr(23, 62, "UTC " + utcnow)
-	except curses.error as e:
-		pass
+    try:
+        stdscr.addstr(22, 62, "LOC " + now)
+        stdscr.addstr(23, 62, "UTC " + utcnow)
+    except curses.error as e:
+        pass
 
-	strfreq = freq.rjust(9)
-	strfreq = f"{strfreq[0:3]}.{strfreq[3:6]}.{strfreq[6:9]}"
+    strfreq = freq.rjust(9)
+    strfreq = f"{strfreq[0:3]}.{strfreq[3:6]}.{strfreq[6:9]}"
 
-	strband = band
-	if band == None or band == "None":
-		strband = "OOB"
+    strband = band
+    if band == None or band == "None":
+        strband = "OOB"
 
-	if strband == "222":
-		strband = "1.25"
-	elif strband == "432":
-		strband = "70"
+    if strband == "222":
+        strband = "1.25"
+    elif strband == "432":
+        strband = "70"
 
-	suffix = ""
+    suffix = ""
 
-	if strband == "OOB":
-		suffix = ""
-	elif int(freq) > 225000000:
-		suffix = "cm"
-	else:
-		suffix = "m"
+    if strband == "OOB":
+        suffix = ""
+    elif int(freq) > 225000000:
+        suffix = "cm"
+    else:
+        suffix = "m"
 
-	strband += suffix
+    strband += suffix
 
-	if len(strband) < 4:
-		strband += " "
+    if len(strband) < 4:
+        strband += " "
 
-	stdscr.addstr(23, 0, "Band       Freq             Mode   ")
-	stdscr.addstr(23, 5, strband.rjust(5), curses.A_REVERSE)
-	stdscr.addstr(23, 16, strfreq, curses.A_REVERSE)
-	stdscr.addstr(23, 33, mode, curses.A_REVERSE)
-	stdscr.addstr(22, 37, "                         ")
-	stdscr.addstr(22, 37, " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ", curses.A_REVERSE)
-	stdscr.addstr(22, 0, "Bonus")
-	stdscr.addstr(22, 6, "AltPwr", highlightBonus(altpower))
-	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("Outdoor", highlightBonus(outdoors))
-	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("NotHome", highlightBonus(notathome))
-	stdscr.addch(curses.ACS_VLINE)
-	stdscr.addstr("Sat", highlightBonus(satellite))
-	stdscr.addstr(23,37,"Rig                     ")
-	stdscr.addstr(23,41,rigctrlhost.lower()+":"+str(rigctrlport), highlightBonus(rigonline))
+    stdscr.addstr(23, 0, "Band       Freq             Mode   ")
+    stdscr.addstr(23, 5, strband.rjust(5), curses.A_REVERSE)
+    stdscr.addstr(23, 16, strfreq, curses.A_REVERSE)
+    stdscr.addstr(23, 33, mode, curses.A_REVERSE)
+    stdscr.addstr(22, 37, "                         ")
+    stdscr.addstr(
+        22,
+        37,
+        " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ",
+        curses.A_REVERSE,
+    )
+    stdscr.addstr(22, 0, "Bonus")
+    stdscr.addstr(22, 6, "AltPwr", highlightBonus(altpower))
+    stdscr.addch(curses.ACS_VLINE)
+    stdscr.addstr("Outdoor", highlightBonus(outdoors))
+    stdscr.addch(curses.ACS_VLINE)
+    stdscr.addstr("NotHome", highlightBonus(notathome))
+    stdscr.addch(curses.ACS_VLINE)
+    stdscr.addstr("Sat", highlightBonus(satellite))
+    stdscr.addstr(23, 37, "Rig                     ")
+    stdscr.addstr(
+        23, 41, rigctrlhost.lower() + ":" + str(rigctrlport), highlightBonus(rigonline)
+    )
 
-	stdscr.move(y, x)
+    stdscr.move(y, x)
+
 
 def setpower(p):
     global power
@@ -1323,7 +1333,7 @@ def displayHelp(page):
         help = [
             "Help Screen                      ",
             ".H Main Help Screen              ",
-            ".0 Rig Control Help Screen       "
+            ".0 Rig Control Help Screen       ",
         ]
     stdscr.move(12, 1)
     count = 0
@@ -1379,7 +1389,7 @@ def processcommand(cmd):
         quit = True
         return
     if cmd[:1] == "F":  # Set Radio Frequency
-        sendRadio(cmd[:1],cmd[1:])
+        sendRadio(cmd[:1], cmd[1:])
         return
     if cmd[:1] == "B":  # Change Band
         setband(cmd[1:])
@@ -1387,19 +1397,26 @@ def processcommand(cmd):
     if cmd[:1] == "M":  # Change Mode
         if rigonline == False:
             if cmd[1:] == "CW" or cmd[1:] == "PH" or cmd[1:] == "DI":
-            	setmode(cmd[1:])
+                setmode(cmd[1:])
             else:
                 curses.flash()
                 curses.beep()
         else:
-            if cmd[1:] == "USB" or cmd[1:] == "LSB" or cmd[1:] == "CW" or cmd[1:] == "RTTY" or cmd[1:] == "AM" or cmd[1:] == "FM":
-                sendRadio(cmd[:1],cmd[1:])
+            if (
+                cmd[1:] == "USB"
+                or cmd[1:] == "LSB"
+                or cmd[1:] == "CW"
+                or cmd[1:] == "RTTY"
+                or cmd[1:] == "AM"
+                or cmd[1:] == "FM"
+            ):
+                sendRadio(cmd[:1], cmd[1:])
             else:
-                setStatusMsg('Must be AM, FM, CW, *SB, RTTY')
+                setStatusMsg("Must be AM, FM, CW, *SB, RTTY")
         return
     if cmd[:1] == "P":  # Change Power
         if rigonline:
-            sendRadio(cmd[:1],cmd[1:])
+            sendRadio(cmd[:1], cmd[1:])
         else:
             setpower(cmd[1:])
         return
