@@ -1,0 +1,29 @@
+{
+
+  "cloudlog": {
+    "enable":     "no",
+    "apikey":     "",
+    "url":        "https://<cloudlogurl>/index.php/api"
+  },
+
+  "hamdb": {
+    "enable":     "yes",
+    "url":        "https://api.hamdb.org/",
+    "appname":    "wfd_py_logger"
+  },
+
+  "hamqth": {
+    "enable":     "no",
+    "url":        "https://www.hamqth.com/xml.php",
+    "username":   "",
+    "password":   "",
+  },
+
+  "qrz": {
+    "enable":     "no",
+    "url":        "http://xmldata.qrz.com/xml/",
+    "username":   "",
+    "password":   ""
+  }
+
+}

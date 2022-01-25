@@ -770,6 +770,8 @@ def postcloudlog():
         r = requests.get(qrzurl, params=payload, timeout=1.0)
         if r.status_code == 200:
             grid = r.text[r.text.find("<grid>") + 6 : r.text.find("</grid>")]
+        if len(grid) > 6:
+            grid = ""
     if mode == "CW":
         rst = "599"
     else:
@@ -807,7 +809,9 @@ def postcloudlog():
 
     payloadDict = {"key": cloudlogapi, "type": "adif", "string": adifq}
     jsonData = json.dumps(payloadDict)
-    response = requests.post(cloudlogurl + "/qso", jsonData)
+    logging.debug(f"{jsonData}")
+    qsoUrl = cloudlogurl + "/qso"
+    response = requests.post(qsoUrl, jsonData)
 
 
 def cabrillo():
