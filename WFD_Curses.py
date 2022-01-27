@@ -332,8 +332,8 @@ def reinithamqth():
 
 def reinitqrz():
     global confData
-    payload = {"u": confData["hamqth"]["username"], "p": confData["hamqth"]["password"]}
-    r = requests.get(confData["hamqth"]["qrz"], params=payload)
+    payload = {"u": confData["qrz"]["username"], "p": confData["qrz"]["password"]}
+    r = requests.get(confData["qrz"]["url"], params=payload)
     if r.status_code == 200:
         xmlData = BeautifulSoup(r.text, "xml")
         qrzsession = xmlData.QRZDatabase.Session.Key.string
