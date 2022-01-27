@@ -787,6 +787,23 @@ def adif():
     stdscr.refresh()
 
 
+def parsecallsign(callsign):
+    try:
+        callelements = callsign.split("/")
+    except:
+        return callsign
+    if len(callelements) == 3:
+        return(callelements[1])
+    elif len(callelements) == 2:
+        regex = re.compile("^([0-9])?[A-Za-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}$")
+        if re.match(regex, callelements[0]):
+            return(callelements[0])
+        else:
+            return(callelements[1])
+    else:
+        return callsign
+
+
 def postcloudlog():
     global confData, hamdbOn, hamqthSession, qrzsession
     if not cloudlogapi:
@@ -798,10 +815,11 @@ def postcloudlog():
     conn.close()
     logid, hiscall, hisclass, hissection, datetime, band, mode, power = q
     grid = False
+    strippedcall = parsecallsign(hiscall)
     if hamqthSession:
         payload = {
             "id": hamqthSession,
-            "callsign": hiscall,
+            "callsign": strippedcall,
             "prg": confData["hamqth"]["appname"]
         }
         r = requests.get(confData['hamqth']['url'], params=payload)
@@ -817,14 +835,20 @@ def postcloudlog():
             if len(grid) < 4 or len(grid) > 6:
                 grid = ""
     if hamdbOn:
-        payload = hiscall + "/xml/" + confData['hamdb']['appname']
+        grid = ""
+        payload = strippedcall + "/xml/" + confData['hamdb']['appname']
         r = requests.get(confData['hamdb']['url'] + "/" + payload)
         if r.status_code == 200:
-            grid = r.text[r.text.find("<grid>") + 6 : r.text.find("</grid>")]
-        if len(grid) > 6:
+            xmlData = BeautifulSoup(r.text, "xml")
+            logging.debug(f"{r.text}")
+            try:
+                grid = xmlData.hamdb.callsign.grid.string
+            except:
+                grid = ""
+        if len(grid) < 4 or len(grid) > 6:
             grid = ""
     if qrzsession:
-        payload = {"s": qrzsession, "callsign": hiscall}
+        payload = {"s": qrzsession, "callsign": strippedcall}
         r = requests.get(qrzurl, params=payload, timeout=1.0)
         if r.status_code == 200:
             xmlData = BeautifulSoup(r.text, "xml")
@@ -1377,7 +1401,7 @@ def setfreq(f):
 
 def setcallsign(c):
     global mycall
-    regex = re.compile("[A-Z]{1,3}[0-9]{1,3}[A-Z]{1,3}$")
+    regex = re.compile("^([0-9])?[A-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}$")
     if re.match(regex, str(c)):
         mycall = str(c)
         writepreferences()
@@ -1388,7 +1412,7 @@ def setcallsign(c):
 
 def setclass(c):
     global myclass
-    regex = re.compile("^[0-9]{1,2}[HIO]$")
+    regex = re.compile("^[0-9]{1,2}[HhIiOo]$")
     if re.match(regex, str(c)):
         myclass = str(c)
         writepreferences()
@@ -1702,7 +1726,7 @@ def proc_key(key):
             return
         if hiscall == "" or hisclass == "" or hissection == "":
             return
-        isCall = re.compile("[A-Z]{1,3}[0-9]{1,3}[A-z]{1,3}(/[A-Z0-9]{1,3})?")
+        isCall = re.compile("^(([0-9])?[A-z]{1,2}[0-9]/)?[A-Za-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}(/[A-Za-z0-9]{1,3})?$")
         if re.match(isCall, hiscall):
             contact = (hiscall, hisclass, hissection, band, mode, int(power))
             log_contact(contact)
