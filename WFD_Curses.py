@@ -84,15 +84,18 @@ try:
             if xmlData.QRZDatabase.Session.Key.string:
                 qrzsession = xmlData.QRZDatabase.Session.Key.string
         else:
-            logging.debug(f"{xmldata.QRZDatabase.Session.Error.string}")
+            logging.debug(f"{xmlData.QRZDatabase.Session.Error.string}")
             qrzsession = False
 
     if confData['hamdb']['enable'].lower() == "yes":
         hamdbOn = True
 
     if confData['hamqth']['enable'].lower() == "yes":
-        payload = "?u=" + confData['hamqth']['username'] + "&p=" + confData['hamqth']['password']
-        r = requests.get(confData['hamqth']['url'] + payload)
+        payload = {
+            "u": confData["hamqth"]["username"],
+            "p": confData["hamqth"]["password"]
+            }
+        r = requests.get(confData['hamqth']['url'], params=payload)
         if r.status_code == 200:
             xmlData = BeautifulSoup(r.text, "xml")
             hamqthSession = xmlData.HamQTH.session.session_id.string
@@ -215,6 +218,19 @@ rigctrlhost = "localhost"
 rigctrlport = 4532
 rigonline = False
 
+def reinithamqth():
+    global confData
+    payload = {
+        "u": confData["hamqth"]["username"],
+        "p": confData["hamqth"]["password"]
+        }
+    r = requests.get(confData['hamqth']['url'], params=payload)
+    if r.status_code == 200:
+        xmlData = BeautifulSoup(r.text, "xml")
+        hamqthSession = xmlData.HamQTH.session.session_id.string
+    else:
+        hamqthSession = False
+    return hamqthSession
 
 def relpath(filename):
     try:
@@ -772,7 +788,7 @@ def adif():
 
 
 def postcloudlog():
-    global confData, hamdbOn, hamqthOn, qrzsession
+    global confData, hamdbOn, hamqthSession, qrzsession
     if not cloudlogapi:
         return
     conn = sqlite3.connect(database)
@@ -783,11 +799,21 @@ def postcloudlog():
     logid, hiscall, hisclass, hissection, datetime, band, mode, power = q
     grid = False
     if hamqthSession:
-        payload = "?id=" + hamqthSession + "&callsign=" + hiscall + "&prg=" + confData['hamqth']['appname']
-        r = requests.get(confData['hamqth']['url'] + payload)
+        payload = {
+            "id": hamqthSession,
+            "callsign": hiscall,
+            "prg": confData["hamqth"]["appname"]
+        }
+        r = requests.get(confData['hamqth']['url'], params=payload)
         if r.status_code == 200:
             xmlData = BeautifulSoup(r.text, "xml")
-            grid = xmlData.HamQTH.search.grid.string
+            try:
+                grid = xmlData.HamQTH.search.grid.string
+            except:
+                hamqthSession = reinithamqth()
+                r = requests.get(confData["hamqth"]["url"], params=payload)
+                xmlData = BeautifulSoup(r.text, "xml")
+                grid = xmlData.HamQTH.search.grid.string
             if len(grid) < 4 or len(grid) > 6:
                 grid = ""
     if hamdbOn:
@@ -801,8 +827,15 @@ def postcloudlog():
         payload = {"s": qrzsession, "callsign": hiscall}
         r = requests.get(qrzurl, params=payload, timeout=1.0)
         if r.status_code == 200:
-            grid = r.text[r.text.find("<grid>") + 6 : r.text.find("</grid>")]
-        if len(grid) > 6:
+            xmlData = BeautifulSoup(r.text, "xml")
+            try:
+                grid = xmlData.QRZDatabase.Callsign.grid.string
+            except:
+                qrzsession = reinitqrz()
+                r = requests.get(qrzurl, params=payload, timeout=1.0)
+                xmlData = BeautifulSoup(r.text, "xml")
+                grid = xmlData.QRZDatabase.Callsign.grid.string
+        if len(grid) < 4 or len(grid) > 6:
             grid = ""
     if mode == "CW":
         rst = "599"
@@ -839,8 +872,22 @@ def postcloudlog():
     adifq += "<COMMENT:14>ARRL-FIELD-DAY"
     adifq += "<EOR>"
 
-    payloadDict = {"key": cloudlogapi, "type": "adif", "string": adifq}
-    jsonData = json.dumps(payloadDict)
+    try:
+        if int(confData["cloudlog"]["station_id"]) > 0:
+            payload = {
+                "key": cloudlogapi,
+                "type": "adif",
+                "station_profile_id": confData["cloudlog"]["station_id"],
+                "string": adifq
+            }
+    except:
+        payload = {
+            "key": cloudlogapi,
+            "type": "adif",
+            "string": adifq
+            }
+
+    jsonData = json.dumps(payload)
     logging.debug(f"{jsonData}")
     qsoUrl = cloudlogurl + "/qso"
     response = requests.post(qsoUrl, jsonData)

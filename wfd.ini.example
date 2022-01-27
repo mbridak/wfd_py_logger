@@ -3,6 +3,7 @@
   "cloudlog": {
     "enable":     "no",
     "apikey":     "",
+    "station_id": "",
     "url":        "https://<cloudlogurl>/index.php/api"
   },
 
