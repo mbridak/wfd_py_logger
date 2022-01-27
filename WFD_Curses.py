@@ -815,6 +815,7 @@ def postcloudlog():
     conn.close()
     logid, hiscall, hisclass, hissection, datetime, band, mode, power = q
     grid = False
+    name = False
     strippedcall = parsecallsign(hiscall)
     if hamqthSession:
         payload = {
@@ -832,19 +833,29 @@ def postcloudlog():
                 r = requests.get(confData["hamqth"]["url"], params=payload)
                 xmlData = BeautifulSoup(r.text, "xml")
                 grid = xmlData.HamQTH.search.grid.string
-            if len(grid) < 4 or len(grid) > 6:
-                grid = ""
+        try:
+            name = xmlData.HamQTH.search.adr_name.string
+        except:
+            name = ""
+        if len(grid) < 4 or len(grid) > 6:
+            grid = ""
     if hamdbOn:
         grid = ""
         payload = strippedcall + "/xml/" + confData['hamdb']['appname']
         r = requests.get(confData['hamdb']['url'] + "/" + payload)
         if r.status_code == 200:
             xmlData = BeautifulSoup(r.text, "xml")
-            logging.debug(f"{r.text}")
             try:
                 grid = xmlData.hamdb.callsign.grid.string
             except:
                 grid = ""
+        try:
+            name = "%s %s" % (
+                xmlData.hamdb.callsign.fname.string,
+                xmlData.find("name").string
+                )
+        except:
+            name = ""
         if len(grid) < 4 or len(grid) > 6:
             grid = ""
     if qrzsession:
@@ -859,6 +870,13 @@ def postcloudlog():
                 r = requests.get(qrzurl, params=payload, timeout=1.0)
                 xmlData = BeautifulSoup(r.text, "xml")
                 grid = xmlData.QRZDatabase.Callsign.grid.string
+        try:
+            name = "%s %s" % (
+                xmlData.QRZDatabase.Callsign.fname.string,
+                xmlData.find("name").string
+                )
+        except:
+                name = ""
         if len(grid) < 4 or len(grid) > 6:
             grid = ""
     if mode == "CW":
@@ -893,6 +911,8 @@ def postcloudlog():
         adifq += "<STATE:%s>%s" % (len(state), state)
     if grid:
         adifq += "<GRIDSQUARE:%s>%s" % (len(grid), grid)
+    if name:
+        adifq += "<NAME:%s>%s" % (len(name), name)
     adifq += "<COMMENT:14>ARRL-FIELD-DAY"
     adifq += "<EOR>"
 
