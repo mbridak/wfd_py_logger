@@ -84,7 +84,6 @@ try:
             if xmlData.QRZDatabase.Session.Key.string:
                 qrzsession = xmlData.QRZDatabase.Session.Key.string
         else:
-            logging.debug(f"{xmlData.QRZDatabase.Session.Error.string}")
             qrzsession = False
 
     if confData['hamdb']['enable'].lower() == "yes":
@@ -232,6 +231,20 @@ def reinithamqth():
         hamqthSession = False
     return hamqthSession
 
+def reinitqrz():
+    global confData
+    payload = {
+        "u": confData["hamqth"]["username"],
+        "p": confData["hamqth"]["password"]
+    }
+    r = requests.get(confData['hamqth']['qrz'], params=payload)
+    if r.status_code = 200:
+        xmlData = BeautifulSoup(r.text, "xml")
+        qrzsession = xmlData.QRZDatabase.Session.Key.string
+    else:
+        qrzsession = ""
+    return qrzsession
+
 def relpath(filename):
     try:
         base_path = sys._MEIPASS
@@ -336,7 +349,7 @@ def sendRadio(cmd, arg):
                 except:
                     rigonline == False
             else:
-                setStatusMsg("1 <= Power <= 100")
+                setStatusMsg("Must be 1 <= Power <= 100")
     return
 
 
@@ -1393,12 +1406,12 @@ def setpower(p):
         p = "0"
     if p is None or p == "":
         p = "0"
-    if int(p) > 0 and int(p) < 5001:
+    if int(p) > 0 and int(p) < 101:
         power = p
         writepreferences()
         statusline()
     else:
-        setStatusMsg("Must be 1 <= Power <= 5000")
+        setStatusMsg("Must be 1 <= Power <= 100")
 
 
 def setband(b):
