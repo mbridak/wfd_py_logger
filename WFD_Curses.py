@@ -10,9 +10,12 @@ COLOR_RED   	Red
 COLOR_WHITE 	White
 COLOR_YELLOW	Yellow
 """
+
+import os
 import logging
 from pathlib import Path
-
+from bs4 import BeautifulSoup
+ 
 if Path("./debug").exists():
     logging.basicConfig(
         filename="debug.log",
@@ -22,35 +25,96 @@ if Path("./debug").exists():
         level=logging.DEBUG,
     )
     logging.debug("Debug started")
+
+cloudLogOn = False
+qrzsession = False
+hamdbOn = False
+hamqthSession = False
+
 try:
     import json
     import requests
 
-    cloudlogapi = "cl12345678901234567890"
-    cloudlogurl = "http://www.yoururl.com/Cloudlog/index.php/api/qso"
-    qrzurl = "http://xmldata.qrz.com/xml/"
-    qrzname = "w1aw"
-    qrzpass = "secret"
-    payload = {"username": qrzname, "password": qrzpass}
-    r = requests.get(qrzurl, params=payload, timeout=1.0)
-    if r.status_code == 200 and r.text.find("<Key>") > 0:
-        qrzsession = r.text[r.text.find("<Key>") + 5 : r.text.find("</Key>")]
-    else:
-        qrzsession = False
-    if r.status_code == 200 and r.text.find("<Error>") > 0:
-        errorText = r.text[r.text.find("<Error>") + 7 : r.text.find("</Error>")]
-        logging.debug(f"QRZ Error: {errorText}")
+    confFile = os.path.expanduser("~") + "/.config/wfd.ini"
+
+    if os.path.exists(confFile):
+        fd = open(confFile)
+        try:
+            confData = json.load(fd)
+        except Exception as e:
+            logging.debug(f"{e}")
+        fd.close()
+    elif os.path.exists("/usr/local/etc/wfd.ini"):
+        fd = open("/usr/local/etc/wfd.ini")
+        try:
+            confData = json.load(fd)
+        except Exception as e:
+            logging.debug(f"{e}")
+        fd.close()
+    elif os.path.exists("/etc/wfd.ini"):
+        fd = open("/etc/wfd.ini")
+        try:
+            confData = json.load(fd)
+        except Exception as e:
+            logging.debug(f"{e}")
+        fd.close()
+
+    if confData["cloudlog"]["enable"].lower() == "yes":
+
+        cloudlogapi = confData["cloudlog"]["apikey"]
+        cloudlogurl = confData["cloudlog"]["url"]
+
+        payload = "/validate/key=" + cloudlogapi
+        r = requests.get(cloudlogurl + payload)
+
+        if r.status_code == 200 or r.status_code == 400:
+            cloudLogOn = True
+
+    if confData['qrz']['enable'].lower() == "yes":
+
+        qrzurl = confData["qrz"]["url"]
+        qrzname = confData["qrz"]["username"]
+        qrzpass = confData["qrz"]["password"]
+
+        payload = {"username": qrzname, "password": qrzpass}
+        r = requests.get(qrzurl, params=payload, timeout=1.0)
+
+        if r.status_code == 200:
+            xmlData = BeautifulSoup(r.text, "xml")
+            if xmlData.QRZDatabase.Session.Key.string:
+                qrzsession = xmlData.QRZDatabase.Session.Key.string
+        else:
+            logging.debug(f"{xmlData.QRZDatabase.Session.Error.string}")
+            qrzsession = False
+
+    if confData['hamdb']['enable'].lower() == "yes":
+        hamdbOn = True
+
+    if confData['hamqth']['enable'].lower() == "yes":
+        payload = {
+            "u": confData["hamqth"]["username"],
+            "p": confData["hamqth"]["password"]
+            }
+        r = requests.get(confData['hamqth']['url'], params=payload)
+        if r.status_code == 200:
+            xmlData = BeautifulSoup(r.text, "xml")
+            hamqthSession = xmlData.HamQTH.session.session_id.string
+        else:
+            hamqthSession = False
+
 except:
     cloudlogapi = False
     cloudlogurl = False
+    cloudLogOn = False
+    HamDbOn = False
     qrz = False
     qrzsession = False
+    hamqthSession = False
 
 import curses
 import time
 import sqlite3
 import socket
-import os
 import re
 import sys
 
@@ -107,7 +171,8 @@ dfreqCW = {
     "222": "223.500",
     "432": "425.000",
 }
-modes = ("PH", "CW", "DI")
+
+validSections = [ "CT", "RI", "EMA", "VT", "ME", "WMA", "NH", "ENY", "NN", "NLI", "SNJ", "NNJ", "WNY", "DE",  "MDC", "EPA", "EPA", "AL", "SC", "GA", "SFL", "KY", "TN", "NC", "VA", "NFL", "VI", "PR", "WCF", "AR", "NTX", "LA", "OK", "MS", "STX", "NM", "WTX", "EB", "SCV", "LAX", "SDG", "ORG", "SF", "PAC", "SJV", "SB", "SV", "AK", "NV", "AZ", "OR", "EWA", "UT", "ID", "WWA", "MT", "WY", "MI", "WV", "OH", "IL", "WI", "IN", "CO", "MO", "IA", "ND", "KS", "NE", "MN",  "SD", "AB", "NT", "BC", "ONE", "GTA", "ONN", "MAR", "ONS", "MB", "QC", "NL", "SK", "PE" ]     
 
 mycall = "YOURCALL"
 myclass = "CLASS"
@@ -153,6 +218,19 @@ rigctrlhost = "localhost"
 rigctrlport = 4532
 rigonline = False
 
+def reinithamqth():
+    global confData
+    payload = {
+        "u": confData["hamqth"]["username"],
+        "p": confData["hamqth"]["password"]
+        }
+    r = requests.get(confData['hamqth']['url'], params=payload)
+    if r.status_code == 200:
+        xmlData = BeautifulSoup(r.text, "xml")
+        hamqthSession = xmlData.HamQTH.session.session_id.string
+    else:
+        hamqthSession = False
+    return hamqthSession
 
 def relpath(filename):
     try:
@@ -241,7 +319,7 @@ def sendRadio(cmd, arg):
                 except:
                     rigonline == False
             else:
-                setStatusMsg("Invalid frequency specified")
+                setStatusMsg("Specify frequency in Hz")
         elif cmd == "M":
             rigCmd = bytes(cmd + " " + arg + " 0\n", "utf-8")
             try:
@@ -378,19 +456,22 @@ def log_contact(logme):
 
 
 def delete_contact(contact):
-    try:
-        with sqlite3.connect(database) as conn:
-            sql = f"delete from contacts where id={int(contact)}"
-            cur = conn.cursor()
-            cur.execute(sql)
-            conn.commit()
-    except Error as e:
-        logging.debug(f"delete_contact: {e}")
-        displayinfo(e)
-    workedSections()
-    sections()
-    stats()
-    logwindow()
+    if contact:
+        try:
+            with sqlite3.connect(database) as conn:
+                sql = f"delete from contacts where id={int(contact)}"
+                cur = conn.cursor()
+                cur.execute(sql)
+                conn.commit()
+        except Error as e:
+            logging.debug(f"delete_contact: {e}")
+            displayinfo(e)
+        workedSections()
+        sections()
+        stats()
+        logwindow()
+    else:
+        setStatusMsg("Must specify a contact number")
 
 
 def change_contact(qso):
@@ -403,7 +484,6 @@ def change_contact(qso):
     except Error as e:
         logging.debug(f"change_contact: {e}")
         displayinfo(e)
-
 
 def readSections():
     try:
@@ -644,27 +724,10 @@ def adif():
                     payload = {"s": qrzsession, "callsign": hiscall}
                     r = requests.get(qrzurl, params=payload, timeout=3.0)
                     if r.status_code == 200:
-                        if r.text.find("<grid>") > 0:
-                            grid = r.text[
-                                r.text.find("<grid>") + 6 : r.text.find("</grid>")
-                            ]
-                        if r.text.find("<fname>") > 0:
-                            name = r.text[
-                                r.text.find("<fname>") + 7 : r.text.find("</fname>")
-                            ]
-                        if r.text.find("<name>") > 0:
-                            if not name:
-                                name = r.text[
-                                    r.text.find("<name>") + 6 : r.text.find("</name>")
-                                ]
-                            else:
-                                name += (
-                                    " "
-                                    + r.text[
-                                        r.text.find("<name>")
-                                        + 6 : r.text.find("</name>")
-                                    ]
-                                )
+                        xmlData = BeautifulSoup(r.text, "xml")
+                        if xmlData.QRZDatabase.Callsign.grid:
+                            grid = xmlData.QRZDatabase.Callsign.grid.string
+                        name = xmlData.QRZDatabase.Callsign.fname.string + " " + xmlData.QRZDatabase.Callsign.name.string
             except:
                 pass
             print(
@@ -724,8 +787,25 @@ def adif():
     stdscr.refresh()
 
 
+def parsecallsign(callsign):
+    try:
+        callelements = callsign.split("/")
+    except:
+        return callsign
+    if len(callelements) == 3:
+        return(callelements[1])
+    elif len(callelements) == 2:
+        regex = re.compile("^([0-9])?[A-Za-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}$")
+        if re.match(regex, callelements[0]):
+            return(callelements[0])
+        else:
+            return(callelements[1])
+    else:
+        return callsign
+
+
 def postcloudlog():
-    global qrzsession
+    global confData, hamdbOn, hamqthSession, qrzsession
     if not cloudlogapi:
         return
     conn = sqlite3.connect(database)
@@ -735,11 +815,70 @@ def postcloudlog():
     conn.close()
     logid, hiscall, hisclass, hissection, datetime, band, mode, power = q
     grid = False
+    name = False
+    strippedcall = parsecallsign(hiscall)
+    if hamqthSession:
+        payload = {
+            "id": hamqthSession,
+            "callsign": strippedcall,
+            "prg": confData["hamqth"]["appname"]
+        }
+        r = requests.get(confData['hamqth']['url'], params=payload)
+        if r.status_code == 200:
+            xmlData = BeautifulSoup(r.text, "xml")
+            try:
+                grid = xmlData.HamQTH.search.grid.string
+            except:
+                hamqthSession = reinithamqth()
+                r = requests.get(confData["hamqth"]["url"], params=payload)
+                xmlData = BeautifulSoup(r.text, "xml")
+                grid = xmlData.HamQTH.search.grid.string
+        try:
+            name = xmlData.HamQTH.search.adr_name.string
+        except:
+            name = ""
+        if len(grid) < 4 or len(grid) > 6:
+            grid = ""
+    if hamdbOn:
+        grid = ""
+        payload = strippedcall + "/xml/" + confData['hamdb']['appname']
+        r = requests.get(confData['hamdb']['url'] + "/" + payload)
+        if r.status_code == 200:
+            xmlData = BeautifulSoup(r.text, "xml")
+            try:
+                grid = xmlData.hamdb.callsign.grid.string
+            except:
+                grid = ""
+        try:
+            name = "%s %s" % (
+                xmlData.hamdb.callsign.fname.string,
+                xmlData.find("name").string
+                )
+        except:
+            name = ""
+        if len(grid) < 4 or len(grid) > 6:
+            grid = ""
     if qrzsession:
-        payload = {"s": qrzsession, "callsign": hiscall}
+        payload = {"s": qrzsession, "callsign": strippedcall}
         r = requests.get(qrzurl, params=payload, timeout=1.0)
         if r.status_code == 200:
-            grid = r.text[r.text.find("<grid>") + 6 : r.text.find("</grid>")]
+            xmlData = BeautifulSoup(r.text, "xml")
+            try:
+                grid = xmlData.QRZDatabase.Callsign.grid.string
+            except:
+                qrzsession = reinitqrz()
+                r = requests.get(qrzurl, params=payload, timeout=1.0)
+                xmlData = BeautifulSoup(r.text, "xml")
+                grid = xmlData.QRZDatabase.Callsign.grid.string
+        try:
+            name = "%s %s" % (
+                xmlData.QRZDatabase.Callsign.fname.string,
+                xmlData.find("name").string
+                )
+        except:
+                name = ""
+        if len(grid) < 4 or len(grid) > 6:
+            grid = ""
     if mode == "CW":
         rst = "599"
     else:
@@ -772,12 +911,30 @@ def postcloudlog():
         adifq += "<STATE:%s>%s" % (len(state), state)
     if grid:
         adifq += "<GRIDSQUARE:%s>%s" % (len(grid), grid)
+    if name:
+        adifq += "<NAME:%s>%s" % (len(name), name)
     adifq += "<COMMENT:14>ARRL-FIELD-DAY"
     adifq += "<EOR>"
 
-    payloadDict = {"key": cloudlogapi, "type": "adif", "string": adifq}
-    jsonData = json.dumps(payloadDict)
-    response = requests.post(cloudlogurl, jsonData)
+    try:
+        if int(confData["cloudlog"]["station_id"]) > 0:
+            payload = {
+                "key": cloudlogapi,
+                "type": "adif",
+                "station_profile_id": confData["cloudlog"]["station_id"],
+                "string": adifq
+            }
+    except:
+        payload = {
+            "key": cloudlogapi,
+            "type": "adif",
+            "string": adifq
+            }
+
+    jsonData = json.dumps(payload)
+    logging.debug(f"{jsonData}")
+    qsoUrl = cloudlogurl + "/qso"
+    response = requests.post(qsoUrl, jsonData)
 
 
 def cabrillo():
@@ -989,7 +1146,7 @@ def workedSection(section):
 
 
 def sectionsCol1():
-    rectangle(stdscr, 8, 35, 21, 43)
+    rectangle(stdscr, 8, 35, 19, 43)
     stdscr.addstr(8, 36, "   DX  ", curses.A_REVERSE)
     stdscr.addstr(9, 36, "   DX  ", workedSection("DX"))
     stdscr.addstr(10, 36, "   1   ", curses.A_REVERSE)
@@ -1010,7 +1167,7 @@ def sectionsCol1():
 
 
 def sectionsCol2():
-    rectangle(stdscr, 8, 44, 21, 52)
+    rectangle(stdscr, 8, 44, 19, 52)
     stdscr.addstr(8, 45, "   3   ", curses.A_REVERSE)
     stdscr.addstr(9, 45, "DE", workedSection("DE"))
     stdscr.addstr(9, 49, "MDC", workedSection("MDC"))
@@ -1135,6 +1292,11 @@ def clearentry():
     displayInputField(1)
     displayInputField(0)
 
+def YorN(boolean):
+    if boolean:
+        return "Y"
+    else:
+        return "N"
 
 def highlightBonus(bonus):
     if bonus:
@@ -1190,6 +1352,12 @@ def statusline():
     if len(strband) < 4:
         strband += " "
 
+    stdscr.addstr(20, 35, " HamDB   HamQTH   ")
+    stdscr.addstr(20, 42, YorN(hamdbOn), highlightBonus(hamdbOn))
+    stdscr.addstr(20, 51, YorN(hamqthSession), highlightBonus(hamqthSession))
+    stdscr.addstr(21, 35, " QRZ   Cloudlog   ")
+    stdscr.addstr(21, 40, YorN(qrzsession), highlightBonus(qrzsession))
+    stdscr.addstr(21, 51, YorN(cloudLogOn), highlightBonus(cloudLogOn))
     stdscr.addstr(23, 0, "Band       Freq             Mode   ")
     stdscr.addstr(23, 5, strband.rjust(5), curses.A_REVERSE)
     stdscr.addstr(23, 16, strfreq, curses.A_REVERSE)
@@ -1253,7 +1421,7 @@ def setfreq(f):
 
 def setcallsign(c):
     global mycall
-    regex = re.compile("[A-Z]{1,3}[0-9]{1,3}[A-Z]{1,3}$")
+    regex = re.compile("^([0-9])?[A-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}$")
     if re.match(regex, str(c)):
         mycall = str(c)
         writepreferences()
@@ -1264,7 +1432,7 @@ def setcallsign(c):
 
 def setclass(c):
     global myclass
-    regex = re.compile("^[0-9]{1,2}[HIO]$")
+    regex = re.compile("^[0-9]{1,2}[HhIiOo]$")
     if re.match(regex, str(c)):
         myclass = str(c)
         writepreferences()
@@ -1274,10 +1442,13 @@ def setclass(c):
 
 
 def setsection(s):
-    global mysection
-    mysection = str(s)
-    writepreferences()
-    statusline()
+    global mysection, sections
+    if s and str(s) in validSections:
+        mysection = str(s)
+        writepreferences()
+        statusline()
+    else:
+        setStatusMsg("Must be valid section")
 
 
 def setrigctrlhost(o):
@@ -1433,19 +1604,21 @@ def processcommand(cmd):
         sendRadio(cmd[:1], cmd[1:])
         return
     if cmd[:1] == "B":  # Change Band
-        if rigonline:
-            sendRadio(cmd[:1], cmd[1:])
-            return
+        if cmd[1:] and cmd[1:] in bands:
+            if rigonline:
+                sendRadio(cmd[:1], cmd[1:])
+                return
+            else:
+                setband(cmd[1:])
         else:
-            setband(cmd[1:])
+            setStatusMsg('Specify valid band')
         return
     if cmd[:1] == "M":  # Change Mode
         if rigonline == False:
             if cmd[1:] == "CW" or cmd[1:] == "PH" or cmd[1:] == "DI":
                 setmode(cmd[1:])
             else:
-                curses.flash()
-                curses.beep()
+                setStatusMsg("Must be CW, DI, PH")
         else:
             if (
                 cmd[1:] == "USB"
@@ -1573,9 +1746,13 @@ def proc_key(key):
             return
         if hiscall == "" or hisclass == "" or hissection == "":
             return
-        contact = (hiscall, hisclass, hissection, band, mode, int(power))
-        log_contact(contact)
-        clearentry()
+        isCall = re.compile("^(([0-9])?[A-z]{1,2}[0-9]/)?[A-Za-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}(/[A-Za-z0-9]{1,3})?$")
+        if re.match(isCall, hiscall):
+            contact = (hiscall, hisclass, hissection, band, mode, int(power))
+            log_contact(contact)
+            clearentry()
+        else:
+            setStatusMsg("Must be valid call sign")
         return
     elif key == Escape:
         clearentry()
@@ -1739,6 +1916,9 @@ def EditClickedQSO(line):
 
 
 def editQSO(q):
+    if q == False or q == "":
+        setStatusMsg("Must specify a contact number")
+        return
     global qsoew, qso, quit
     conn = sqlite3.connect(database)
     c = conn.cursor()
