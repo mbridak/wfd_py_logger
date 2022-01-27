@@ -15,7 +15,7 @@ import os
 import logging
 from pathlib import Path
 from bs4 import BeautifulSoup
- 
+
 if Path("./debug").exists():
     logging.basicConfig(
         filename="debug.log",
@@ -70,7 +70,7 @@ try:
         if r.status_code == 200 or r.status_code == 400:
             cloudLogOn = True
 
-    if confData['qrz']['enable'].lower() == "yes":
+    if confData["qrz"]["enable"].lower() == "yes":
 
         qrzurl = confData["qrz"]["url"]
         qrzname = confData["qrz"]["username"]
@@ -86,15 +86,15 @@ try:
         else:
             qrzsession = False
 
-    if confData['hamdb']['enable'].lower() == "yes":
+    if confData["hamdb"]["enable"].lower() == "yes":
         hamdbOn = True
 
-    if confData['hamqth']['enable'].lower() == "yes":
+    if confData["hamqth"]["enable"].lower() == "yes":
         payload = {
             "u": confData["hamqth"]["username"],
-            "p": confData["hamqth"]["password"]
-            }
-        r = requests.get(confData['hamqth']['url'], params=payload)
+            "p": confData["hamqth"]["password"],
+        }
+        r = requests.get(confData["hamqth"]["url"], params=payload)
         if r.status_code == 200:
             xmlData = BeautifulSoup(r.text, "xml")
             hamqthSession = xmlData.HamQTH.session.session_id.string
@@ -135,7 +135,22 @@ EnterKey = 10
 Space = 32
 
 modes = ("PH", "CW", "DI")
-bands = ( "160", "80", "60", "40", "30", "20", "17", "15", "12", "10", "6", "2", "222", "432")
+bands = (
+    "160",
+    "80",
+    "60",
+    "40",
+    "30",
+    "20",
+    "17",
+    "15",
+    "12",
+    "10",
+    "6",
+    "2",
+    "222",
+    "432",
+)
 dfreqPH = {
     "160": "1.910",
     "80": "3.800",
@@ -171,7 +186,92 @@ dfreqCW = {
     "432": "425.000",
 }
 
-validSections = [ "CT", "RI", "EMA", "VT", "ME", "WMA", "NH", "ENY", "NN", "NLI", "SNJ", "NNJ", "WNY", "DE",  "MDC", "EPA", "EPA", "AL", "SC", "GA", "SFL", "KY", "TN", "NC", "VA", "NFL", "VI", "PR", "WCF", "AR", "NTX", "LA", "OK", "MS", "STX", "NM", "WTX", "EB", "SCV", "LAX", "SDG", "ORG", "SF", "PAC", "SJV", "SB", "SV", "AK", "NV", "AZ", "OR", "EWA", "UT", "ID", "WWA", "MT", "WY", "MI", "WV", "OH", "IL", "WI", "IN", "CO", "MO", "IA", "ND", "KS", "NE", "MN",  "SD", "AB", "NT", "BC", "ONE", "GTA", "ONN", "MAR", "ONS", "MB", "QC", "NL", "SK", "PE" ]     
+validSections = [
+    "CT",
+    "RI",
+    "EMA",
+    "VT",
+    "ME",
+    "WMA",
+    "NH",
+    "ENY",
+    "NN",
+    "NLI",
+    "SNJ",
+    "NNJ",
+    "WNY",
+    "DE",
+    "MDC",
+    "EPA",
+    "EPA",
+    "AL",
+    "SC",
+    "GA",
+    "SFL",
+    "KY",
+    "TN",
+    "NC",
+    "VA",
+    "NFL",
+    "VI",
+    "PR",
+    "WCF",
+    "AR",
+    "NTX",
+    "LA",
+    "OK",
+    "MS",
+    "STX",
+    "NM",
+    "WTX",
+    "EB",
+    "SCV",
+    "LAX",
+    "SDG",
+    "ORG",
+    "SF",
+    "PAC",
+    "SJV",
+    "SB",
+    "SV",
+    "AK",
+    "NV",
+    "AZ",
+    "OR",
+    "EWA",
+    "UT",
+    "ID",
+    "WWA",
+    "MT",
+    "WY",
+    "MI",
+    "WV",
+    "OH",
+    "IL",
+    "WI",
+    "IN",
+    "CO",
+    "MO",
+    "IA",
+    "ND",
+    "KS",
+    "NE",
+    "MN",
+    "SD",
+    "AB",
+    "NT",
+    "BC",
+    "ONE",
+    "GTA",
+    "ONN",
+    "MAR",
+    "ONS",
+    "MB",
+    "QC",
+    "NL",
+    "SK",
+    "PE",
+]
 
 mycall = "YOURCALL"
 myclass = "CLASS"
@@ -217,13 +317,11 @@ rigctrlhost = "localhost"
 rigctrlport = 4532
 rigonline = False
 
+
 def reinithamqth():
     global confData
-    payload = {
-        "u": confData["hamqth"]["username"],
-        "p": confData["hamqth"]["password"]
-        }
-    r = requests.get(confData['hamqth']['url'], params=payload)
+    payload = {"u": confData["hamqth"]["username"], "p": confData["hamqth"]["password"]}
+    r = requests.get(confData["hamqth"]["url"], params=payload)
     if r.status_code == 200:
         xmlData = BeautifulSoup(r.text, "xml")
         hamqthSession = xmlData.HamQTH.session.session_id.string
@@ -231,19 +329,18 @@ def reinithamqth():
         hamqthSession = False
     return hamqthSession
 
+
 def reinitqrz():
     global confData
-    payload = {
-        "u": confData["hamqth"]["username"],
-        "p": confData["hamqth"]["password"]
-    }
-    r = requests.get(confData['hamqth']['qrz'], params=payload)
-    if r.status_code = 200:
+    payload = {"u": confData["hamqth"]["username"], "p": confData["hamqth"]["password"]}
+    r = requests.get(confData["hamqth"]["qrz"], params=payload)
+    if r.status_code == 200:
         xmlData = BeautifulSoup(r.text, "xml")
         qrzsession = xmlData.QRZDatabase.Session.Key.string
     else:
         qrzsession = ""
     return qrzsession
+
 
 def relpath(filename):
     try:
@@ -302,7 +399,7 @@ def sendRadio(cmd, arg):
     if rigonline:
         if cmd == "B" and mode == "CW":
             if arg in dfreqCW:
-                arg = "F " + str(dfreqCW[arg].replace(".","")) + "000\n"
+                arg = "F " + str(dfreqCW[arg].replace(".", "")) + "000\n"
                 rigCmd = bytes(arg, "utf-8")
                 try:
                     rigctrlsocket.send(rigCmd)
@@ -311,9 +408,9 @@ def sendRadio(cmd, arg):
                     rigonline == False
             else:
                 setStatusMsg("Unknown band specified")
-        elif cmd =="B":
+        elif cmd == "B":
             if arg in dfreqPH:
-                arg = "F " + str(dfreqPH[arg].replace(".","")) + "000\n"
+                arg = "F " + str(dfreqPH[arg].replace(".", "")) + "000\n"
                 rigCmd = bytes(arg, "utf-8")
                 try:
                     rigctrlsocket.send(rigCmd)
@@ -321,11 +418,7 @@ def sendRadio(cmd, arg):
                 except:
                     rigonline == False
         if cmd == "F":
-            if (
-				arg.isnumeric()
-				and int(arg) >= 1800000
-				and int(arg) <= 450000000
-            ):
+            if arg.isnumeric() and int(arg) >= 1800000 and int(arg) <= 450000000:
                 try:
                     rigctrlsocket.send(rigCmd)
                     rigCode = rigctrlsocket.recv(1024).decode().strip()
@@ -497,6 +590,7 @@ def change_contact(qso):
     except Error as e:
         logging.debug(f"change_contact: {e}")
         displayinfo(e)
+
 
 def readSections():
     try:
@@ -740,7 +834,11 @@ def adif():
                         xmlData = BeautifulSoup(r.text, "xml")
                         if xmlData.QRZDatabase.Callsign.grid:
                             grid = xmlData.QRZDatabase.Callsign.grid.string
-                        name = xmlData.QRZDatabase.Callsign.fname.string + " " + xmlData.QRZDatabase.Callsign.name.string
+                        name = (
+                            xmlData.QRZDatabase.Callsign.fname.string
+                            + " "
+                            + xmlData.QRZDatabase.Callsign.name.string
+                        )
             except:
                 pass
             print(
@@ -761,7 +859,9 @@ def adif():
             print("<BAND:%s>%s" % (len(band + "M"), band + "M"), end="\r\n", file=f)
             try:
                 print(
-                    "<FREQ:%s>%s" % (len(dfreqPH[band]), dfreqPH[band]), end="\r\n", file=f
+                    "<FREQ:%s>%s" % (len(dfreqPH[band]), dfreqPH[band]),
+                    end="\r\n",
+                    file=f,
                 )
             except:
                 pass
@@ -806,13 +906,13 @@ def parsecallsign(callsign):
     except:
         return callsign
     if len(callelements) == 3:
-        return(callelements[1])
+        return callelements[1]
     elif len(callelements) == 2:
         regex = re.compile("^([0-9])?[A-Za-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}$")
         if re.match(regex, callelements[0]):
-            return(callelements[0])
+            return callelements[0]
         else:
-            return(callelements[1])
+            return callelements[1]
     else:
         return callsign
 
@@ -834,9 +934,9 @@ def postcloudlog():
         payload = {
             "id": hamqthSession,
             "callsign": strippedcall,
-            "prg": confData["hamqth"]["appname"]
+            "prg": confData["hamqth"]["appname"],
         }
-        r = requests.get(confData['hamqth']['url'], params=payload)
+        r = requests.get(confData["hamqth"]["url"], params=payload)
         if r.status_code == 200:
             xmlData = BeautifulSoup(r.text, "xml")
             try:
@@ -854,8 +954,8 @@ def postcloudlog():
             grid = ""
     if hamdbOn:
         grid = ""
-        payload = strippedcall + "/xml/" + confData['hamdb']['appname']
-        r = requests.get(confData['hamdb']['url'] + "/" + payload)
+        payload = strippedcall + "/xml/" + confData["hamdb"]["appname"]
+        r = requests.get(confData["hamdb"]["url"] + "/" + payload)
         if r.status_code == 200:
             xmlData = BeautifulSoup(r.text, "xml")
             try:
@@ -865,8 +965,8 @@ def postcloudlog():
         try:
             name = "%s %s" % (
                 xmlData.hamdb.callsign.fname.string,
-                xmlData.find("name").string
-                )
+                xmlData.find("name").string,
+            )
         except:
             name = ""
         if len(grid) < 4 or len(grid) > 6:
@@ -886,10 +986,10 @@ def postcloudlog():
         try:
             name = "%s %s" % (
                 xmlData.QRZDatabase.Callsign.fname.string,
-                xmlData.find("name").string
-                )
+                xmlData.find("name").string,
+            )
         except:
-                name = ""
+            name = ""
         if len(grid) < 4 or len(grid) > 6:
             grid = ""
     if mode == "CW":
@@ -935,14 +1035,10 @@ def postcloudlog():
                 "key": cloudlogapi,
                 "type": "adif",
                 "station_profile_id": confData["cloudlog"]["station_id"],
-                "string": adifq
+                "string": adifq,
             }
     except:
-        payload = {
-            "key": cloudlogapi,
-            "type": "adif",
-            "string": adifq
-            }
+        payload = {"key": cloudlogapi, "type": "adif", "string": adifq}
 
     jsonData = json.dumps(payload)
     logging.debug(f"{jsonData}")
@@ -1305,11 +1401,13 @@ def clearentry():
     displayInputField(1)
     displayInputField(0)
 
+
 def YorN(boolean):
     if boolean:
         return "Y"
     else:
         return "N"
+
 
 def highlightBonus(bonus):
     if bonus:
@@ -1624,7 +1722,7 @@ def processcommand(cmd):
             else:
                 setband(cmd[1:])
         else:
-            setStatusMsg('Specify valid band')
+            setStatusMsg("Specify valid band")
         return
     if cmd[:1] == "M":  # Change Mode
         if rigonline == False:
@@ -1759,7 +1857,9 @@ def proc_key(key):
             return
         if hiscall == "" or hisclass == "" or hissection == "":
             return
-        isCall = re.compile("^(([0-9])?[A-z]{1,2}[0-9]/)?[A-Za-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}(/[A-Za-z0-9]{1,3})?$")
+        isCall = re.compile(
+            "^(([0-9])?[A-z]{1,2}[0-9]/)?[A-Za-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}(/[A-Za-z0-9]{1,3})?$"
+        )
         if re.match(isCall, hiscall):
             contact = (hiscall, hisclass, hissection, band, mode, int(power))
             log_contact(contact)
