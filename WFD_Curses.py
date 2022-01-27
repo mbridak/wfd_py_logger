@@ -84,7 +84,6 @@ try:
             if xmlData.QRZDatabase.Session.Key.string:
                 qrzsession = xmlData.QRZDatabase.Session.Key.string
         else:
-            logging.debug(f"{xmlData.QRZDatabase.Session.Error.string}")
             qrzsession = False
 
     if confData['hamdb']['enable'].lower() == "yes":
