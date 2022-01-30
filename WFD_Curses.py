@@ -13,6 +13,7 @@ COLOR_YELLOW	Yellow
 
 import os
 import logging
+import datetime
 from pathlib import Path
 from bs4 import BeautifulSoup
 
@@ -30,6 +31,7 @@ cloudLogOn = False
 qrzsession = False
 hamdbOn = False
 hamqthSession = False
+pollTime = datetime.datetime.now()
 
 try:
     import json
@@ -120,7 +122,6 @@ import sys
 from pathlib import Path
 from curses.textpad import rectangle
 from curses import wrapper
-from datetime import datetime
 from sqlite3 import Error
 
 stdscr = curses.initscr()
@@ -450,7 +451,7 @@ def pollRadio():
     global oldfreq, oldmode, oldpwr, rigctrlsocket, rigonline
     if rigonline:
         try:
-            # rigctrlsocket.settimeout(0.5)
+            rigctrlsocket.settimeout(3.0)
             rigctrlsocket.send(b"f\n")
             newfreq = rigctrlsocket.recv(1024).decode().strip()
             rigctrlsocket.send(b"m\n")
@@ -465,7 +466,7 @@ def pollRadio():
                 setmode(str(getmode(newmode)))
                 setpower(str(newpwr))
                 setfreq(str(newfreq))
-        except:
+        except Exception as e:
             rigonline = False
 
 
@@ -945,7 +946,10 @@ def postcloudlog():
                 hamqthSession = reinithamqth()
                 r = requests.get(confData["hamqth"]["url"], params=payload)
                 xmlData = BeautifulSoup(r.text, "xml")
-                grid = xmlData.HamQTH.search.grid.string
+                try:
+                    grid = xmlData.HamQTH.search.grid.string
+                except:
+                    grid = ""
         try:
             name = xmlData.HamQTH.search.adr_name.string
         except:
@@ -982,7 +986,10 @@ def postcloudlog():
                 qrzsession = reinitqrz()
                 r = requests.get(qrzurl, params=payload, timeout=1.0)
                 xmlData = BeautifulSoup(r.text, "xml")
-                grid = xmlData.QRZDatabase.Callsign.grid.string
+                try:
+                    grid = xmlData.QRZDatabase.Callsign.grid.string
+                except:
+                    grid = ""
         try:
             name = "%s %s" % (
                 xmlData.QRZDatabase.Callsign.fname.string,
@@ -1428,8 +1435,8 @@ def setStatusMsg(msg):
 
 def statusline():
     y, x = stdscr.getyx()
-    now = datetime.now().isoformat(" ")[5:19].replace("-", "/")
-    utcnow = datetime.utcnow().isoformat(" ")[5:19].replace("-", "/")
+    now = datetime.datetime.now().isoformat(" ")[5:19].replace("-", "/")
+    utcnow = datetime.datetime.utcnow().isoformat(" ")[5:19].replace("-", "/")
 
     try:
         stdscr.addstr(22, 62, "LOC " + now)
@@ -2070,7 +2077,7 @@ def editQSO(q):
 
 
 def main(s):
-    global stdscr, conn, rigonline
+    global pollTime, stdscr, conn, rigonline
     conn = create_DB()
     curses.start_color()
     curses.use_default_colors()
@@ -2120,10 +2127,12 @@ def main(s):
             time.sleep(0.1)
         if quit:
             break
-        if rigonline == False:
-            checkRadio()
-        else:
-            pollRadio()
+        if datetime.datetime.now() > pollTime:
+            if rigonline == False:
+                checkRadio()
+            else:
+                pollRadio()
+                pollTime = datetime.datetime.now()+datetime.timedelta(seconds=5)
 
 
 if __name__ == "__main__":
