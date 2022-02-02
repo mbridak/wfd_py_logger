@@ -12,3 +12,4 @@ dist/
 debug
 debug.log
 .vscode/
+wfd.ini
