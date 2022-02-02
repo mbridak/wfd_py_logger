@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# rows, cols = stdscr.getmaxyx()
+
 """
 COLOR_BLACK	    Black
 COLOR_BLUE	    Blue
@@ -58,11 +60,11 @@ qsoew = 0
 qso = []
 quit = False
 
-BackSpace = 263
-Escape = 27
-QuestionMark = 63
-EnterKey = 10
-Space = 32
+BACK_SPACE = 263
+ESCAPE = 27
+QUESTIONMARK = 63
+ENTERKEY = 10
+SPACE = 32
 
 modes = ("PH", "CW", "DI")
 bands = (
@@ -225,8 +227,8 @@ contactsOffset = 0
 logNumber = 0
 kbuf = ""
 editbuf = ""
-maxFieldLength = [17, 5, 7, 20, 4, 3, 4]
-maxEditFieldLength = [10, 17, 5, 4, 20, 4, 3, 4, 10]
+MAXFIELDLENGTH = [17, 5, 7, 20, 4, 3, 4]
+MAXEDITFIELDLENGTH = [10, 17, 5, 4, 20, 4, 3, 4, 10]
 inputFieldFocus = 0
 editFieldFocus = 1
 hiscall = ""
@@ -243,28 +245,32 @@ secState = {}
 oldfreq = "0"
 oldmode = ""
 oldpwr = 0
+rigctrlsocket = None
 rigctrlhost = "localhost"
 rigctrlport = 4532
 rigonline = False
 
 
-def reinithamqth():
-    payload = {"u": confData["hamqth"]["username"], "p": confData["hamqth"]["password"]}
-    r = requests.get(confData["hamqth"]["url"], params=payload)
-    if r.status_code == 200:
-        xmlData = BeautifulSoup(r.text, "xml")
-        hamqth_session = xmlData.HamQTH.session.session_id.string
+def reinithamqth() -> str:
+    """get hamqth session"""
+    the_payload = {
+        "u": confData["hamqth"]["username"],
+        "p": confData["hamqth"]["password"],
+    }
+    the_result = requests.get(confData["hamqth"]["url"], params=the_payload)
+    if the_result.status_code == 200:
+        return BeautifulSoup(result.text, "xml").HamQTH.session.session_id.string
     else:
-        hamqth_session = False
-    return hamqth_session
+        return False
 
 
-def reinitqrz():
-    payload = {"u": confData["qrz"]["username"], "p": confData["qrz"]["password"]}
-    r = requests.get(confData["qrz"]["url"], params=payload)
-    if r.status_code == 200:
-        xmlData = BeautifulSoup(r.text, "xml")
-        qrzsession = xmlData.QRZDatabase.Session.Key.string
+def reinitqrz() -> str:
+    """get qrz session key"""
+    global qrzsession
+    the_payload = {"u": confData["qrz"]["username"], "p": confData["qrz"]["password"]}
+    the_result = requests.get(confData["qrz"]["url"], params=the_payload)
+    if the_result.status_code == 200:
+        return BeautifulSoup(the_result.text, "xml").QRZDatabase.Session.Key.string
     else:
         qrzsession = ""
     return qrzsession
@@ -282,9 +288,10 @@ def relpath(filename):
     return os.path.join(base_path, filename)
 
 
-def getband(freq):
-    if freq.isnumeric():
-        frequency = int(float(freq))
+def getband(the_freq) -> str:
+    """returns a string containing the band a frequency is on."""
+    if the_freq.isnumeric():
+        frequency = int(float(the_freq))
         if frequency >= 1800000 and frequency <= 2000000:
             return "160"
         if frequency >= 3500000 and frequency <= 4000000:
@@ -317,7 +324,7 @@ def getband(freq):
         return "OOB"
 
 
-def getmode(rigmode):
+def getmode(rigmode: str) -> str:
     if rigmode == "CW" or rigmode == "CWR":
         return "CW"
     if rigmode == "USB" or rigmode == "LSB" or rigmode == "FM" or rigmode == "AM":
@@ -325,61 +332,63 @@ def getmode(rigmode):
     return "DI"  # All else digital
 
 
-def sendRadio(cmd, arg):
-    global band, mode, freq, power, rigonline
-    rigCmd = bytes(cmd + " " + arg + "\n", "utf-8")
+def send_radio(cmd: str, arg: str) -> None:
+    """sends commands to the radio"""
+    global rigonline
+    rigCmd = bytes(f"{cmd} {arg}\n", "utf-8")
     if rigonline:
         if cmd == "B" and mode == "CW":
             if arg in dfreqCW:
-                arg = "F " + str(dfreqCW[arg].replace(".", "")) + "000\n"
+                arg = f"F {str(dfreqCW[arg].replace('.', ''))}000\n"
                 rigCmd = bytes(arg, "utf-8")
                 try:
                     rigctrlsocket.send(rigCmd)
-                    rigCode = rigctrlsocket.recv(1024).decode().strip()
-                except:
-                    rigonline == False
+                    _ = rigctrlsocket.recv(1024).decode().strip()
+                except socket.error:
+                    rigonline = False
             else:
                 setStatusMsg("Unknown band specified")
         elif cmd == "B":
             if arg in dfreqPH:
-                arg = "F " + str(dfreqPH[arg].replace(".", "")) + "000\n"
+                arg = f"F {str(dfreqPH[arg].replace('.', ''))}000\n"
                 rigCmd = bytes(arg, "utf-8")
                 try:
                     rigctrlsocket.send(rigCmd)
-                    rigCode = rigctrlsocket.recv(1024).decode().strip()
-                except:
-                    rigonline == False
+                    _ = rigctrlsocket.recv(1024).decode().strip()
+                except socket.error:
+                    rigonline = False
         if cmd == "F":
             if arg.isnumeric() and int(arg) >= 1800000 and int(arg) <= 450000000:
                 try:
                     rigctrlsocket.send(rigCmd)
-                    rigCode = rigctrlsocket.recv(1024).decode().strip()
-                except:
-                    rigonline == False
+                    _ = rigctrlsocket.recv(1024).decode().strip()
+                except socket.error:
+                    rigonline = False
             else:
                 setStatusMsg("Specify frequency in Hz")
         elif cmd == "M":
-            rigCmd = bytes(cmd + " " + arg + " 0\n", "utf-8")
+            rigCmd = bytes(f"{cmd} {arg} 0\n", "utf-8")
             try:
                 rigctrlsocket.send(rigCmd)
-                rigCode = rigctrlsocket.recv(1024).decode().strip()
-            except:
-                rigonline == False
+                _ = rigctrlsocket.recv(1024).decode().strip()
+            except socket.error:
+                rigonline = False
         elif cmd == "P":
             if arg.isnumeric() and int(arg) >= 1 and int(arg) <= 100:
-                rigCmd = bytes("L RFPOWER " + str(float(arg) / 100) + "\n", "utf-8")
+                rigCmd = bytes(f"L RFPOWER {str(float(arg) / 100)}\n", "utf-8")
                 try:
                     rigctrlsocket.send(rigCmd)
-                    rigCode = rigctrlsocket.recv(1024).decode().strip()
-                except:
-                    rigonline == False
+                    _ = rigctrlsocket.recv(1024).decode().strip()
+                except socket.error:
+                    rigonline = False
             else:
                 setStatusMsg("Must be 1 <= Power <= 100")
     return
 
 
-def poll_radio():
-    global oldfreq, oldmode, oldpwr, rigctrlsocket, rigonline
+def poll_radio() -> None:
+    """Polls the state of the radio."""
+    global oldfreq, oldmode, oldpwr, rigonline
     if rigonline:
         try:
             rigctrlsocket.settimeout(3.0)
@@ -397,12 +406,14 @@ def poll_radio():
                 setmode(str(getmode(newmode)))
                 setpower(str(newpwr))
                 setfreq(str(newfreq))
-        except Exception as e:
+        except socket.error as local_exception:
+            logging.debug("poll_radio %s", local_exception)
             rigonline = False
 
 
 def check_radio():
-    global rigctrlsocket, rigctrlhost, rigctrlport, rigonline
+    """checks if the radio is still online."""
+    global rigctrlsocket, rigonline
     rigonline = True
     try:
         rigctrlsocket = socket.socket()
@@ -412,7 +423,7 @@ def check_radio():
         logging.debug("check_radio: ConnectionRefusedError")
         rigonline = False
     except BaseException as err:
-        logging.debug(f"check_radio: {err}")
+        logging.debug("check_radio: %s", err)
         rigonline = False
 
 
@@ -495,6 +506,7 @@ def writepreferences() -> None:
 
 
 def log_contact(logme) -> None:
+    """Inserts a contact into the db."""
     try:
         with sqlite3.connect(database) as conn:
             sql = (
@@ -515,6 +527,7 @@ def log_contact(logme) -> None:
 
 
 def delete_contact(contact) -> None:
+    """Deletes a contact from the db."""
     if contact:
         try:
             with sqlite3.connect(database) as conn:
@@ -534,6 +547,7 @@ def delete_contact(contact) -> None:
 
 
 def change_contact(qso) -> None:
+    """Updates an edited contact."""
     try:
         with sqlite3.connect(database) as conn:
             sql = (
@@ -549,7 +563,8 @@ def change_contact(qso) -> None:
         displayinfo(exception)
 
 
-def readSections() -> None:
+def read_sections() -> None:
+    """Reads in ARRL section data into a list"""
     try:
         with open(relpath("arrl_sect.dat"), "r") as fd:  # read section data
             while 1:
@@ -566,44 +581,46 @@ def readSections() -> None:
                         p = abbrev[: -i - 1]
                         secPartial[p] = 1
                 except ValueError as e:
-                    logging.debug(f"readSections: Value error {e}")
-    except IOError as e:
-        logging.debug(f"readSections: IO Error {e}")
+                    logging.debug(f"read_sections: Value error {e}")
+    except IOError as exception:
+        logging.debug("read_sections: IO Error %s", exception)
 
 
-def sectionCheck(sec):
+def section_check(sec: str) -> None:
+    """checks if a string is part of a section name"""
     if sec == "":
         sec = "^"
     seccheckwindow = curses.newpad(20, 33)
     rectangle(stdscr, 11, 0, 21, 34)
-    x = list(secName.keys())
-    xx = list(filter(lambda y: y.startswith(sec), x))
+    list_of_keys = list(secName.keys())
+    matches = list(filter(lambda y: y.startswith(sec), list_of_keys))
     count = 0
-    for xxx in xx:
-        seccheckwindow.addstr(count, 1, secName[xxx])
+    for match in matches:
+        seccheckwindow.addstr(count, 1, secName[match])
         count += 1
     stdscr.refresh()
     seccheckwindow.refresh(0, 0, 12, 1, 20, 33)
 
 
-readSections()
-
-
-def readSCP():
+def read_scp() -> None:
+    """reads in the super check partion data into a list"""
     global scp
     with open(relpath("MASTER.SCP")) as f:
         scp = f.readlines()
     scp = list(map(lambda x: x.strip(), scp))
 
 
-readSCP()
-
-
-def superCheck(acall):
+def super_check(acall: str) -> list:
+    """returns a list of matches for acall against known contesters."""
     return list(filter(lambda x: x.startswith(acall), scp))
 
 
-def contacts():
+def contacts_label():
+    """
+    all it does is centers a string to create a label for a window...
+    why is this it's own function?
+    I'm sure there is a reason. I just don't remember.
+    """
     global stdscr
     rectangle(stdscr, 0, 0, 7, 55)
     contactslabel = "Recent Contacts"
@@ -611,28 +628,29 @@ def contacts():
     stdscr.addstr(0, int(contactslabeloffset), contactslabel)
 
 
-def stats():
+def stats() -> None:
+    """calculates and displays the current statistics."""
     global bandmodemult
     y, x = stdscr.getyx()
     with sqlite3.connect(database) as conn:
-        c = conn.cursor()
-        c.execute("select count(*) from contacts where mode = 'CW'")
-        cwcontacts = str(c.fetchone()[0])
-        c.execute("select count(*) from contacts where mode = 'PH'")
-        phonecontacts = str(c.fetchone()[0])
-        c.execute("select count(*) from contacts where mode = 'DI'")
-        digitalcontacts = str(c.fetchone()[0])
-        c.execute("select distinct band, mode from contacts")
-        bandmodemult = len(c.fetchall())
-        c.execute(
+        cursor = conn.cursor()
+        cursor.execute("select count(*) from contacts where mode = 'CW'")
+        cwcontacts = str(cursor.fetchone()[0])
+        cursor.execute("select count(*) from contacts where mode = 'PH'")
+        phonecontacts = str(cursor.fetchone()[0])
+        cursor.execute("select count(*) from contacts where mode = 'DI'")
+        digitalcontacts = str(cursor.fetchone()[0])
+        cursor.execute("select distinct band, mode from contacts")
+        bandmodemult = len(cursor.fetchall())
+        cursor.execute(
             "SELECT count(*) FROM contacts "
             "where datetime(date_time) >=datetime('now', '-15 Minutes')"
         )
-        last15 = str(c.fetchone()[0])
-        c.execute(
+        last15 = str(cursor.fetchone()[0])
+        cursor.execute(
             "SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-1 Hours')"
         )
-        lasthour = str(c.fetchone()[0])
+        lasthour = str(cursor.fetchone()[0])
     rectangle(stdscr, 0, 57, 7, 79)
     statslabel = "Score Stats"
     statslabeloffset = (25 / 2) - len(statslabel) / 2
@@ -652,7 +670,8 @@ def stats():
     stdscr.move(y, x)
 
 
-def score():
+def score() -> int:
+    """generates current score, returns an int"""
     global bandmodemult
     qrpcheck()
     conn = sqlite3.connect(database)
@@ -1679,12 +1698,12 @@ def processcommand(cmd):
         quit = True
         return
     if cmd[:1] == "F":  # Set Radio Frequency
-        sendRadio(cmd[:1], cmd[1:])
+        send_radio(cmd[:1], cmd[1:])
         return
     if cmd[:1] == "B":  # Change Band
         if cmd[1:] and cmd[1:] in bands:
             if rigonline:
-                sendRadio(cmd[:1], cmd[1:])
+                send_radio(cmd[:1], cmd[1:])
                 return
             else:
                 setband(cmd[1:])
@@ -1706,13 +1725,13 @@ def processcommand(cmd):
                 or cmd[1:] == "AM"
                 or cmd[1:] == "FM"
             ):
-                sendRadio(cmd[:1], cmd[1:])
+                send_radio(cmd[:1], cmd[1:])
             else:
                 setStatusMsg("Must be AM, FM, CW, *SB, RTTY")
         return
     if cmd[:1] == "P":  # Change Power
         if rigonline:
-            sendRadio(cmd[:1], cmd[1:])
+            send_radio(cmd[:1], cmd[1:])
         else:
             setpower(cmd[1:])
         return
@@ -1779,7 +1798,7 @@ def processcommand(cmd):
 
 def proc_key(key):
     global inputFieldFocus, hiscall, hissection, hisclass, kbuf
-    if key == 9 or key == Space:
+    if key == 9 or key == SPACE:
         inputFieldFocus += 1
         if inputFieldFocus > 2:
             inputFieldFocus = 0
@@ -1800,18 +1819,18 @@ def proc_key(key):
             kbuf = hissection  # load current section into buffer
             stdscr.addstr(kbuf)
         return
-    elif key == BackSpace:
+    elif key == BACK_SPACE:
         if kbuf != "":
             kbuf = kbuf[0:-1]
             if inputFieldFocus == 0 and len(kbuf) < 3:
-                displaySCP(superCheck("^"))
+                displaySCP(super_check("^"))
             if inputFieldFocus == 0 and len(kbuf) > 2:
-                displaySCP(superCheck(kbuf))
+                displaySCP(super_check(kbuf))
             if inputFieldFocus == 2:
-                sectionCheck(kbuf)
+                section_check(kbuf)
         displayInputField(inputFieldFocus)
         return
-    elif key == EnterKey:
+    elif key == ENTERKEY:
         if inputFieldFocus == 0:
             hiscall = kbuf
         elif inputFieldFocus == 1:
@@ -1834,10 +1853,10 @@ def proc_key(key):
         else:
             setStatusMsg("Must be valid call sign")
         return
-    elif key == Escape:
+    elif key == ESCAPE:
         clearentry()
         return
-    elif key == Space:
+    elif key == SPACE:
         return
     elif key == 258:  # key down
         logup()
@@ -1852,12 +1871,12 @@ def proc_key(key):
         logpageup()
         pass
     elif curses.ascii.isascii(key):
-        if len(kbuf) < maxFieldLength[inputFieldFocus]:
+        if len(kbuf) < MAXFIELDLENGTH[inputFieldFocus]:
             kbuf = kbuf.upper() + chr(key).upper()
             if inputFieldFocus == 0 and len(kbuf) > 2:
-                displaySCP(superCheck(kbuf))
+                displaySCP(super_check(kbuf))
             if inputFieldFocus == 2 and len(kbuf) > 0:
-                sectionCheck(kbuf)
+                section_check(kbuf)
     displayInputField(inputFieldFocus)
 
 
@@ -1870,12 +1889,12 @@ def edit_key(key):
         qsoew.move(editFieldFocus, 10)  # move focus to call field
         qsoew.addstr(qso[editFieldFocus])
         return
-    elif key == BackSpace:
+    elif key == BACK_SPACE:
         if qso[editFieldFocus] != "":
             qso[editFieldFocus] = qso[editFieldFocus][0:-1]
         displayEditField(editFieldFocus)
         return
-    elif key == EnterKey:
+    elif key == ENTERKEY:
         change_contact(qso)
         qsoew.erase()
         stdscr.clear()
@@ -1891,7 +1910,7 @@ def edit_key(key):
         stdscr.move(9, 1)
         quit = True
         return
-    elif key == Escape:
+    elif key == ESCAPE:
         qsoew.erase()
         stdscr.clear()
         rectangle(stdscr, 0, 0, 7, 55)
@@ -1906,7 +1925,7 @@ def edit_key(key):
         stdscr.move(9, 1)
         quit = True
         return
-    elif key == Space:
+    elif key == SPACE:
         return
     elif key == 258:  # arrow down
         editFieldFocus += 1
@@ -1923,8 +1942,8 @@ def edit_key(key):
         qsoew.addstr(qso[editFieldFocus])
         return
     elif curses.ascii.isascii(key):
-        # displayinfo("eff:"+str(editFieldFocus)+" mefl:"+str(maxEditFieldLength[editFieldFocus]))
-        if len(qso[editFieldFocus]) < maxEditFieldLength[editFieldFocus]:
+        # displayinfo("eff:"+str(editFieldFocus)+" mefl:"+str(MAXEDITFIELDLENGTH[editFieldFocus]))
+        if len(qso[editFieldFocus]) < MAXEDITFIELDLENGTH[editFieldFocus]:
             qso[editFieldFocus] = qso[editFieldFocus].upper() + chr(key).upper()
     displayEditField(editFieldFocus)
 
@@ -2056,7 +2075,7 @@ def main(s) -> None:
     curses.mousemask(curses.ALL_MOUSE_EVENTS)
     stdscr.attrset(curses.color_pair(0))
     stdscr.clear()
-    contacts()
+    contacts_label()
     sections()
     entry()
     logwindow()
@@ -2097,6 +2116,8 @@ def main(s) -> None:
 
 
 if __name__ == "__main__":
+    read_sections()
+    read_scp()
     if os.path.exists("./wfd.ini"):
         confFile = "./wfd.ini"
     elif os.path.exists(os.path.expanduser("~") + "/.config/wfd.ini"):
@@ -2153,7 +2174,7 @@ if __name__ == "__main__":
             logging.debug("KeyError: %s", exception)
 
         try:
-            if confData["hamqth"]["senable"].lower() == "yes":
+            if confData["hamqth"]["enable"].lower() == "yes":
                 payload = {
                     "u": confData["hamqth"]["username"],
                     "p": confData["hamqth"]["password"],
