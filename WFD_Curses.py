@@ -18,18 +18,19 @@ import logging
 import datetime
 import curses
 import time
-import sqlite3
-import socket
 import re
 import sys
 
 from pathlib import Path
 from curses.textpad import rectangle
 from curses import wrapper
-from sqlite3 import Error
-from json import JSONDecodeError, dumps, loads
-from bs4 import BeautifulSoup
+from json import dumps, loads
 import requests
+from database import DataBase
+from preferences import Preferences
+from lookup import HamDBlookup, HamQTH, QRZlookup
+from cat_interface import CAT
+
 
 if Path("./debug").exists():
     logging.basicConfig(
@@ -41,19 +42,13 @@ if Path("./debug").exists():
     )
     logging.debug("Debug started")
 
-confFile = ""
-qrzsession = False
-hamdb_on = False
-hamqth_session = False
+
 poll_time = datetime.datetime.now()
 cloudlogapi = False
 cloudlogurl = False
 cloudlog_on = False
-HamDbOn = False
-qrz = False
-qrzsession = False
-hamqth_session = False
-
+preference = None
+rigonline = True
 
 stdscr = curses.initscr()
 qsoew = 0
@@ -245,35 +240,6 @@ secState = {}
 oldfreq = "0"
 oldmode = ""
 oldpwr = 0
-rigctrlsocket = None
-rigctrlhost = "localhost"
-rigctrlport = 4532
-rigonline = False
-
-
-def reinithamqth() -> str:
-    """get hamqth session"""
-    the_payload = {
-        "u": confData["hamqth"]["username"],
-        "p": confData["hamqth"]["password"],
-    }
-    the_result = requests.get(confData["hamqth"]["url"], params=the_payload)
-    if the_result.status_code == 200:
-        return BeautifulSoup(result.text, "xml").HamQTH.session.session_id.string
-    else:
-        return False
-
-
-def reinitqrz() -> str:
-    """get qrz session key"""
-    global qrzsession
-    the_payload = {"u": confData["qrz"]["username"], "p": confData["qrz"]["password"]}
-    the_result = requests.get(confData["qrz"]["url"], params=the_payload)
-    if the_result.status_code == 200:
-        return BeautifulSoup(the_result.text, "xml").QRZDatabase.Session.Key.string
-    else:
-        qrzsession = ""
-    return qrzsession
 
 
 def relpath(filename):
@@ -334,191 +300,88 @@ def getmode(rigmode: str) -> str:
 
 def send_radio(cmd: str, arg: str) -> None:
     """sends commands to the radio"""
-    global rigonline
     rigCmd = bytes(f"{cmd} {arg}\n", "utf-8")
-    if rigonline:
+    if cat_control:
         if cmd == "B" and mode == "CW":
             if arg in dfreqCW:
-                arg = f"F {str(dfreqCW[arg].replace('.', ''))}000\n"
-                rigCmd = bytes(arg, "utf-8")
-                try:
-                    rigctrlsocket.send(rigCmd)
-                    _ = rigctrlsocket.recv(1024).decode().strip()
-                except socket.error:
-                    rigonline = False
+                cat_control.set_vfo(f"{str(dfreqCW[arg].replace('.', ''))}000\n")
             else:
                 setStatusMsg("Unknown band specified")
         elif cmd == "B":
             if arg in dfreqPH:
-                arg = f"F {str(dfreqPH[arg].replace('.', ''))}000\n"
-                rigCmd = bytes(arg, "utf-8")
-                try:
-                    rigctrlsocket.send(rigCmd)
-                    _ = rigctrlsocket.recv(1024).decode().strip()
-                except socket.error:
-                    rigonline = False
+                cat_control.set_vfo(f"{str(dfreqPH[arg].replace('.', ''))}000\n")
         if cmd == "F":
             if arg.isnumeric() and int(arg) >= 1800000 and int(arg) <= 450000000:
-                try:
-                    rigctrlsocket.send(rigCmd)
-                    _ = rigctrlsocket.recv(1024).decode().strip()
-                except socket.error:
-                    rigonline = False
+                cat_control.set_vfo(f"{arg}")
             else:
                 setStatusMsg("Specify frequency in Hz")
         elif cmd == "M":
             rigCmd = bytes(f"{cmd} {arg} 0\n", "utf-8")
-            try:
-                rigctrlsocket.send(rigCmd)
-                _ = rigctrlsocket.recv(1024).decode().strip()
-            except socket.error:
-                rigonline = False
+            cat_control.set_mode(arg)
         elif cmd == "P":
-            if arg.isnumeric() and int(arg) >= 1 and int(arg) <= 100:
-                rigCmd = bytes(f"L RFPOWER {str(float(arg) / 100)}\n", "utf-8")
-                try:
-                    rigctrlsocket.send(rigCmd)
-                    _ = rigctrlsocket.recv(1024).decode().strip()
-                except socket.error:
-                    rigonline = False
-            else:
-                setStatusMsg("Must be 1 <= Power <= 100")
+            pass
+            # if arg.isnumeric() and int(arg) >= 1 and int(arg) <= 100:
+            #    rigCmd = bytes(f"L RFPOWER {str(float(arg) / 100)}\n", "utf-8")
+            #    try:
+            #        rigctrlsocket.send(rigCmd)
+            #        _ = rigctrlsocket.recv(1024).decode().strip()
+            #    except socket.error:
+            #        rigonline = False
+            # else:
+            #    setStatusMsg("Must be 1 <= Power <= 100")
     return
 
 
 def poll_radio() -> None:
     """Polls the state of the radio."""
     global oldfreq, oldmode, oldpwr, rigonline
-    if rigonline:
-        try:
-            rigctrlsocket.settimeout(3.0)
-            rigctrlsocket.send(b"f\n")
-            newfreq = rigctrlsocket.recv(1024).decode().strip()
-            rigctrlsocket.send(b"m\n")
-            newmode = rigctrlsocket.recv(1024).decode().strip().split()[0]
-            rigctrlsocket.send(b"l RFPOWER\n")
-            newpwr = int(float(rigctrlsocket.recv(1024).decode().strip()) * 100)
-            if newfreq != oldfreq or newmode != oldmode or newpwr != oldpwr:
-                oldfreq = newfreq
-                oldmode = newmode
-                oldpwr = newpwr
-                setband(str(getband(newfreq)))
-                setmode(str(getmode(newmode)))
-                setpower(str(newpwr))
-                setfreq(str(newfreq))
-        except socket.error as local_exception:
-            logging.debug("poll_radio %s", local_exception)
-            rigonline = False
+    if cat_control:
+        newfreq = cat_control.get_vfo()
+        newmode = cat_control.get_mode()
+        # rigctrlsocket.send(b"l RFPOWER\n")
+        # newpwr = int(float(rigctrlsocket.recv(1024).decode().strip()) * 100)
+        if newfreq != oldfreq or newmode != oldmode:  # or newpwr != oldpwr
+            oldfreq = newfreq
+            oldmode = newmode
+            # oldpwr = newpwr
+            setband(str(getband(newfreq)))
+            setmode(str(getmode(newmode)))
+            # setpower(str(newpwr))
+            setfreq(str(newfreq))
 
 
 def check_radio():
     """checks if the radio is still online."""
-    global rigctrlsocket, rigonline
-    rigonline = True
-    try:
-        rigctrlsocket = socket.socket()
-        rigctrlsocket.settimeout(0.1)
-        rigctrlsocket.connect((rigctrlhost, int(rigctrlport)))
-    except ConnectionRefusedError:
-        logging.debug("check_radio: ConnectionRefusedError")
-        rigonline = False
-    except BaseException as err:
-        logging.debug("check_radio: %s", err)
-        rigonline = False
-
-
-def create_DB() -> None:
-    """create a database and table if it does not exist"""
-    try:
-        with sqlite3.connect(database) as conn:
-            cursor = conn.cursor()
-            sql_table = """ CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY, callsign text NOT NULL, class text NOT NULL, section text NOT NULL, date_time text NOT NULL, band text NOT NULL, mode text NOT NULL, power INTEGER NOT NULL); """
-            cursor.execute(sql_table)
-            sql_table = """ CREATE TABLE IF NOT EXISTS preferences (id INTEGER, mycallsign TEXT DEFAULT 'YOURCALL', myclass TEXT DEFAULT 'YOURCLASS', mysection TEXT DEFAULT 'YOURSECTION', power TEXT DEFAULT '0', rigctrlhost TEXT default 'localhost', rigctrlport INTEGER DEFAULT 4532, altpower INTEGER DEFAULT 0, outdoors INTEGER DEFAULT 0, notathome INTEGER DEFAULT 0, satellite INTEGER DEFAULT 0); """
-            cursor.execute(sql_table)
-            conn.commit()
-    except sqlite3.Error as exception:
-        logging.debug("create_DB: %s", exception)
+    pass
 
 
 def readpreferences() -> None:
     """Reads in preferences"""
     global mycall, myclass, mysection, power, rigctrlhost
     global rigctrlport, altpower, outdoors, notathome, satellite
-    try:
-        with sqlite3.connect(database) as conn:
-            cursor = conn.cursor()
-            cursor.execute("select * from preferences where id = 1")
-            pref = cursor.fetchall()
-            if len(pref) > 0:
-                for record in pref:
-                    (
-                        _,
-                        mycall,
-                        myclass,
-                        mysection,
-                        power,
-                        rigctrlhost,
-                        rigctrlport,
-                        altpower,
-                        outdoors,
-                        notathome,
-                        satellite,
-                    ) = record
-                    altpower = bool(altpower)
-                    outdoors = bool(outdoors)
-                    notathome = bool(notathome)
-                    satellite = bool(satellite)
-            else:
-                sql = (
-                    "INSERT INTO preferences"
-                    "(id, mycallsign, myclass, mysection, power, rigctrlhost, rigctrlport, altpower, outdoors, notathome, satellite) "
-                    f"VALUES(1,'{mycall}','{myclass}','{mysection}','{power}','{rigctrlhost}',{int(rigctrlport)},{int(altpower)},{int(outdoors)},{int(notathome)},{int(satellite)})"
-                )
-                cursor.execute(sql)
-                conn.commit()
-    except sqlite3.Error as exception:
-        logging.debug("readPreferences: %s", exception)
+    global preference
+    preference.readpreferences()
+
+    mycall = preference.preference["mycallsign"]
+    myclass = preference.preference["myclass"]
+    mysection = preference.preference["mysection"]
+    power = preference.preference["power"]
+    rigctrlhost = preference.preference["CAT_ip"]
+    rigctrlport = preference.preference["CAT_port"]
+    altpower = bool(preference.preference["altpower"])
+    outdoors = bool(preference.preference["outdoors"])
+    notathome = bool(preference.preference["notathome"])
+    satellite = bool(preference.preference["satellite"])
 
 
 def writepreferences() -> None:
     """Yup writes preferences to the preferences table"""
-    try:
-        with sqlite3.connect(database) as conn:
-            sql = (
-                "UPDATE preferences SET "
-                f"mycallsign = '{mycall}', "
-                f"myclass = '{myclass}', "
-                f"mysection = '{mysection}', "
-                f"power = '{power}', "
-                f"rigctrlhost = '{rigctrlhost}', "
-                f"rigctrlport = {int(rigctrlport)}, "
-                f"altpower = {int(altpower)}, "
-                f"outdoors = {int(outdoors)}, "
-                f"notathome = {int(notathome)} "
-                f"WHERE id = 1"
-            )
-            cur = conn.cursor()
-            cur.execute(sql)
-            conn.commit()
-    except Error as exception:
-        logging.debug("writepreferences: %s", exception)
+    preference.writepreferences()
 
 
 def log_contact(logme) -> None:
     """Inserts a contact into the db."""
-    try:
-        with sqlite3.connect(database) as conn:
-            sql = (
-                "INSERT INTO contacts(callsign, class, section, date_time, band, mode, power) "
-                "VALUES(?,?,?,datetime('now'),?,?,?)"
-            )
-            cur = conn.cursor()
-            cur.execute(sql, logme)
-            conn.commit()
-    except sqlite3.Error as exception:
-        logging.debug("log_contact: %s", exception)
-        displayinfo(exception)
+    database.log_contact(logme)
     workedSections()
     sections()
     stats()
@@ -529,15 +392,7 @@ def log_contact(logme) -> None:
 def delete_contact(contact) -> None:
     """Deletes a contact from the db."""
     if contact:
-        try:
-            with sqlite3.connect(database) as conn:
-                sql = f"delete from contacts where id={int(contact)}"
-                cur = conn.cursor()
-                cur.execute(sql)
-                conn.commit()
-        except sqlite3.Error as exception:
-            logging.debug("delete_contact: %s", exception)
-            displayinfo(exception)
+        database.delete_contact(contact)
         workedSections()
         sections()
         stats()
@@ -548,19 +403,7 @@ def delete_contact(contact) -> None:
 
 def change_contact(qso) -> None:
     """Updates an edited contact."""
-    try:
-        with sqlite3.connect(database) as conn:
-            sql = (
-                f"update contacts set callsign = '{qso[1]}', class = '{qso[2]}', "
-                f"section = '{qso[3]}', date_time = '{qso[4]}', band = '{qso[5]}', "
-                f"mode = '{qso[6]}', power = '{qso[7]}'  where id='{qso[0]}'"
-            )
-            cur = conn.cursor()
-            cur.execute(sql)
-            conn.commit()
-    except sqlite3.Error as exception:
-        logging.debug("change_contact: %s", exception)
-        displayinfo(exception)
+    database.change_contact(qso)
 
 
 def read_sections() -> None:
@@ -632,25 +475,16 @@ def stats() -> None:
     """calculates and displays the current statistics."""
     global bandmodemult
     y, x = stdscr.getyx()
-    with sqlite3.connect(database) as conn:
-        cursor = conn.cursor()
-        cursor.execute("select count(*) from contacts where mode = 'CW'")
-        cwcontacts = str(cursor.fetchone()[0])
-        cursor.execute("select count(*) from contacts where mode = 'PH'")
-        phonecontacts = str(cursor.fetchone()[0])
-        cursor.execute("select count(*) from contacts where mode = 'DI'")
-        digitalcontacts = str(cursor.fetchone()[0])
-        cursor.execute("select distinct band, mode from contacts")
-        bandmodemult = len(cursor.fetchall())
-        cursor.execute(
-            "SELECT count(*) FROM contacts "
-            "where datetime(date_time) >=datetime('now', '-15 Minutes')"
-        )
-        last15 = str(cursor.fetchone()[0])
-        cursor.execute(
-            "SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-1 Hours')"
-        )
-        lasthour = str(cursor.fetchone()[0])
+    (
+        cwcontacts,
+        phonecontacts,
+        digitalcontacts,
+        bandmodemult,
+        last15,
+        lasthour,
+        _,
+        _,
+    ) = database.stats()
     rectangle(stdscr, 0, 57, 7, 79)
     statslabel = "Score Stats"
     statslabeloffset = (25 / 2) - len(statslabel) / 2
@@ -672,19 +506,8 @@ def stats() -> None:
 
 def score() -> int:
     """generates current score, returns an int"""
-    global bandmodemult
-    qrpcheck()
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select count(*) as cw from contacts where mode = 'CW'")
-    cw = str(c.fetchone()[0])
-    c.execute("select count(*) as ph from contacts where mode = 'PH'")
-    ph = str(c.fetchone()[0])
-    c.execute("select count(*) as di from contacts where mode = 'DI'")
-    di = str(c.fetchone()[0])
-    c.execute("select distinct band, mode from contacts")
-    bandmodemult = len(c.fetchall())
-    conn.close()
+    global bandmodemult, qrp, highpower
+    cw, ph, di, bandmodemult, _, _, highpower, qrp = database.stats()
     score = (int(cw) * 2) + int(ph) + (int(di) * 2)
     if qrp:
         score = score * 4
@@ -703,41 +526,16 @@ def score() -> int:
 
 def qrpcheck():
     global qrp, highpower
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select count(*) as qrpc from contacts where mode = 'CW' and power > 5")
-    log = c.fetchall()
-    qrpc = list(log[0])[0]
-    c.execute("select count(*) as qrpp from contacts where mode = 'PH' and power > 10")
-    log = c.fetchall()
-    qrpp = list(log[0])[0]
-    c.execute("select count(*) as qrpd from contacts where mode = 'DI' and power > 10")
-    log = c.fetchall()
-    qrpd = list(log[0])[0]
-    c.execute("select count(*) as highpower from contacts where power > 100")
-    log = c.fetchall()
-    highpower = bool(list(log[0])[0])
-    conn.close()
-    qrp = not (qrpc + qrpp + qrpd)
+    _, _, _, _, _, _, highpower, qrp = database.stats()
 
 
 def getBandModeTally(band, mode):
-    conn = ""
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute(
-        "select count(*) as tally, MAX(power) as mpow from contacts "
-        f"where band = '{band}' AND mode ='{mode}'"
-    )
-    return c.fetchone()
+    return database.get_band_mode_tally(band, mode)
 
 
 def getbands():
     bandlist = []
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select DISTINCT band from contacts")
-    x = c.fetchall()
+    x = database.get_bands()
     if x:
         for count in x:
             bandlist.append(count[0])
@@ -776,10 +574,7 @@ def getState(section):
 
 def adif():
     logname = "WFD.adi"
-    with sqlite3.connect(database) as conn:
-        c = conn.cursor()
-        c.execute("select * from contacts order by date_time ASC")
-        log = c.fetchall()
+    log = database.fetch_all_contacts_asc()
     counter = 0
     grid = False
     with open(logname, "w") as f:
@@ -804,21 +599,8 @@ def adif():
             stdscr.refresh()
             grid = False
             name = False
-            try:
-                if qrzsession:
-                    payload = {"s": qrzsession, "callsign": hiscall}
-                    r = requests.get(qrzurl, params=payload, timeout=3.0)
-                    if r.status_code == 200:
-                        xmlData = BeautifulSoup(r.text, "xml")
-                        if xmlData.QRZDatabase.Callsign.grid:
-                            grid = xmlData.QRZDatabase.Callsign.grid.string
-                        name = (
-                            xmlData.QRZDatabase.Callsign.fname.string
-                            + " "
-                            + xmlData.QRZDatabase.Callsign.name.string
-                        )
-            except:
-                pass
+            if look_up:
+                grid, name, nickname, error_text = look_up.lookup(hiscall)
             print(
                 "<QSO_DATE:%s:d>%s"
                 % (len("".join(loggeddate.split("-"))), "".join(loggeddate.split("-"))),
@@ -899,83 +681,13 @@ def postcloudlog():
     global confData, hamdb_on, hamqth_session, qrzsession
     if not cloudlogapi:
         return
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select * from contacts order by id DESC")
-    q = c.fetchone()
-    conn.close()
+    q = database.fetch_last_contact()
     logid, hiscall, hisclass, hissection, datetime, band, mode, power = q
     grid = False
     name = False
     strippedcall = parsecallsign(hiscall)
-    if hamqth_session:
-        payload = {
-            "id": hamqth_session,
-            "callsign": strippedcall,
-            "prg": confData["hamqth"]["appname"],
-        }
-        r = requests.get(confData["hamqth"]["url"], params=payload)
-        if r.status_code == 200:
-            xmlData = BeautifulSoup(r.text, "xml")
-            try:
-                grid = xmlData.HamQTH.search.grid.string
-            except:
-                hamqth_session = reinithamqth()
-                r = requests.get(confData["hamqth"]["url"], params=payload)
-                xmlData = BeautifulSoup(r.text, "xml")
-                try:
-                    grid = xmlData.HamQTH.search.grid.string
-                except:
-                    grid = ""
-        try:
-            name = xmlData.HamQTH.search.adr_name.string
-        except:
-            name = ""
-        if len(grid) < 4 or len(grid) > 6:
-            grid = ""
-    if hamdb_on:
-        grid = ""
-        payload = strippedcall + "/xml/" + confData["hamdb"]["appname"]
-        r = requests.get(confData["hamdb"]["url"] + "/" + payload)
-        if r.status_code == 200:
-            xmlData = BeautifulSoup(r.text, "xml")
-            try:
-                grid = xmlData.hamdb.callsign.grid.string
-            except:
-                grid = ""
-        try:
-            name = "%s %s" % (
-                xmlData.hamdb.callsign.fname.string,
-                xmlData.find("name").string,
-            )
-        except:
-            name = ""
-        if len(grid) < 4 or len(grid) > 6:
-            grid = ""
-    if qrzsession:
-        payload = {"s": qrzsession, "callsign": strippedcall}
-        r = requests.get(qrzurl, params=payload, timeout=1.0)
-        if r.status_code == 200:
-            xmlData = BeautifulSoup(r.text, "xml")
-            try:
-                grid = xmlData.QRZDatabase.Callsign.grid.string
-            except:
-                qrzsession = reinitqrz()
-                r = requests.get(qrzurl, params=payload, timeout=1.0)
-                xmlData = BeautifulSoup(r.text, "xml")
-                try:
-                    grid = xmlData.QRZDatabase.Callsign.grid.string
-                except:
-                    grid = ""
-        try:
-            name = "%s %s" % (
-                xmlData.QRZDatabase.Callsign.fname.string,
-                xmlData.find("name").string,
-            )
-        except:
-            name = ""
-        if len(grid) < 4 or len(grid) > 6:
-            grid = ""
+    if look_up:
+        grid, name, nickname, error_text = look_up.lookup(strippedcall)
     if mode == "CW":
         rst = "599"
     else:
@@ -1010,24 +722,15 @@ def postcloudlog():
         adifq += "<GRIDSQUARE:%s>%s" % (len(grid), grid)
     if name:
         adifq += "<NAME:%s>%s" % (len(name), name)
-    adifq += "<COMMENT:14>ARRL-FIELD-DAY"
+    adifq += "<COMMENT:16>WINTER-FIELD-DAY"
     adifq += "<EOR>"
 
-    try:
-        if int(confData["cloudlog"]["station_id"]) > 0:
-            payload = {
-                "key": cloudlogapi,
-                "type": "adif",
-                "station_profile_id": confData["cloudlog"]["station_id"],
-                "string": adifq,
-            }
-    except:
-        payload = {"key": cloudlogapi, "type": "adif", "string": adifq}
+    payload = {"key": cloudlogapi, "type": "adif", "string": adifq}
 
     jsonData = dumps(payload)
     logging.debug(f"{jsonData}")
     qsoUrl = cloudlogurl + "/qso"
-    response = requests.post(qsoUrl, jsonData)
+    _ = requests.post(qsoUrl, jsonData)
 
 
 def cabrillo():
@@ -1077,20 +780,17 @@ def cabrillo():
         print("ADDRESS-POSTALCODE: ", end="\r\n", file=f)
         print("ADDRESS-COUNTRY: ", end="\r\n", file=f)
         print("EMAIL: ", end="\r\n", file=f)
-        with sqlite3.connect(database) as conn:
-            c = conn.cursor()
-            c.execute("select * from contacts order by date_time ASC")
-            log = c.fetchall()
-            for x in log:
-                _, hiscall, hisclass, hissection, datetime, band, mode, _ = x
-                loggeddate = datetime[:10]
-                loggedtime = datetime[11:13] + datetime[14:16]
-                print(
-                    f"QSO: {band}M {mode} {loggeddate} {loggedtime} {mycall} "
-                    f"{myclass} {mysection} {hiscall} {hisclass} {hissection}",
-                    end="\r\n",
-                    file=f,
-                )
+        log = database.fetch_all_contacts_asc()
+        for x in log:
+            _, hiscall, hisclass, hissection, datetime, band, mode, _ = x
+            loggeddate = datetime[:10]
+            loggedtime = datetime[11:13] + datetime[14:16]
+            print(
+                f"QSO: {band}M {mode} {loggeddate} {loggedtime} {mycall} "
+                f"{myclass} {mysection} {hiscall} {hisclass} {hissection}",
+                end="\r\n",
+                file=f,
+            )
         print("END-OF-LOG:", end="\r\n", file=f)
 
     generateBandModeTally()
@@ -1105,7 +805,7 @@ def cabrillo():
     window.refresh(0, 0, 12, 1, 20, 33)
     stdscr.move(oy, ox)
     adif()
-    writepreferences()
+    preference.writepreferences()
     statusline()
     stats()
 
@@ -1120,11 +820,7 @@ def logwindow():
     modefiller = "  "
     zerofiller = "000"
     contacts = curses.newpad(1000, 80)
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select * from contacts order by date_time desc")
-    log = c.fetchall()
-    conn.close()
+    log = database.fetch_all_contacts_desc()
     logNumber = 0
     for x in log:
         logid, hiscall, hisclass, hissection, datetime, band, mode, power = x
@@ -1178,15 +874,7 @@ def dupCheck(acall):
     oy, ox = stdscr.getyx()
     scpwindow = curses.newpad(1000, 33)
     rectangle(stdscr, 11, 0, 21, 34)
-
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute(
-        "select callsign, class, section, band, mode "
-        f"from contacts where callsign like '{acall}' order by band"
-    )
-    log = c.fetchall()
-    conn.close()
+    log = database.dup_check(acall)
     counter = 0
     for x in log:
         decorate = ""
@@ -1218,10 +906,7 @@ def displaySCP(matches):
 
 def workedSections():
     global wrkdsections
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select distinct section from contacts")
-    all_rows = c.fetchall()
+    all_rows = database.sections()
     wrkdsections = str(all_rows)
     wrkdsections = (
         wrkdsections.replace("('", "")
@@ -1448,6 +1133,9 @@ def statusline():
 
     if len(strband) < 4:
         strband += " "
+    hamdb_on = preference.preference["usehamdb"]
+    hamqth_session = preference.preference["usehamqth"]
+    qrzsession = preference.preference["useqrz"]
 
     stdscr.addstr(20, 35, " HamDB   HamQTH   ")
     stdscr.addstr(20, 42, YorN(hamdb_on), highlightBonus(hamdb_on))
@@ -1476,7 +1164,12 @@ def statusline():
     stdscr.addstr("Sat", highlightBonus(satellite))
     stdscr.addstr(23, 37, "Rig                     ")
     stdscr.addstr(
-        23, 41, rigctrlhost.lower() + ":" + str(rigctrlport), highlightBonus(rigonline)
+        23,
+        41,
+        preference.preference["CAT_ip"].lower()
+        + ":"
+        + str(preference.preference["CAT_port"]),
+        highlightBonus(True),
     )
 
     stdscr.move(y, x)
@@ -1492,6 +1185,7 @@ def setpower(p):
         p = "0"
     if int(p) > 0 and int(p) < 101:
         power = p
+        preference.preference["power"] = str(p)
         writepreferences()
         statusline()
     else:
@@ -1517,10 +1211,11 @@ def setfreq(f):
 
 
 def setcallsign(c):
-    global mycall
+    global mycall, preference
     regex = re.compile("^([0-9])?[A-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}$")
     if re.match(regex, str(c)):
         mycall = str(c)
+        preference.preference["mycallsign"] = mycall
         writepreferences()
         statusline()
     else:
@@ -1532,6 +1227,7 @@ def setclass(c):
     regex = re.compile("^[0-9]{1,2}[HhIiOo]$")
     if re.match(regex, str(c)):
         myclass = str(c)
+        preference.preference["myclass"] = myclass
         writepreferences()
         statusline()
     else:
@@ -1542,6 +1238,7 @@ def setsection(s):
     global mysection, sections
     if s and str(s) in validSections:
         mysection = str(s)
+        preference.preference["mysection"] = mysection
         writepreferences()
         statusline()
     else:
@@ -1551,6 +1248,7 @@ def setsection(s):
 def setrigctrlhost(o):
     global rigctrlhost
     rigctrlhost = str(o)
+    preference.preference["CAT_ip"] = rigctrlhost
     writepreferences()
     statusline()
 
@@ -1558,6 +1256,7 @@ def setrigctrlhost(o):
 def setrigctrlport(r):
     global rigctrlport
     rigctrlport = str(r)
+    preference.preference["CAT_port"] = int(rigctrlport)
     writepreferences()
     rigctrlport = int(r)
     statusline()
@@ -1570,6 +1269,7 @@ def claimAltPower():
     else:
         altpower = True
     setStatusMsg("Alt Power set to: " + str(altpower))
+    preference.preference["altpower"] = altpower
     writepreferences()
     statusline()
     stats()
@@ -1582,6 +1282,7 @@ def claimOutdoors():
     else:
         outdoors = True
     setStatusMsg("Outdoor bonus set to: " + str(outdoors))
+    preference.preference["outdoors"] = outdoors
     writepreferences()
     statusline()
     stats()
@@ -1594,6 +1295,7 @@ def claimNotHome():
     else:
         notathome = True
     setStatusMsg("Away bonus set to: " + str(notathome))
+    preference.preference["notathome"] = notathome
     writepreferences()
     statusline()
     stats()
@@ -1606,6 +1308,7 @@ def claimSatellite():
     else:
         satellite = True
     setStatusMsg("Satellite bonus set to: " + str(satellite))
+    preference.preference["satellite"] = satellite
     writepreferences()
     statusline()
     stats()
@@ -2019,11 +1722,7 @@ def editQSO(q):
         setStatusMsg("Must specify a contact number")
         return
     global qsoew, qso, quit
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select * from contacts where id=" + q)
-    log = c.fetchall()
-    conn.close()
+    log = database.contact_by_id(q)
     if not log:
         return
     qso = ["", "", "", "", "", "", "", ""]
@@ -2058,7 +1757,6 @@ def editQSO(q):
 def main(s) -> None:
     """It's the main loop."""
     global poll_time, stdscr, conn, rigonline
-    conn = create_DB()
     curses.start_color()
     curses.use_default_colors()
     if curses.can_change_color():
@@ -2079,7 +1777,6 @@ def main(s) -> None:
     sections()
     entry()
     logwindow()
-    readpreferences()
     stats()
     displayHelp(1)
     stdscr.refresh()
@@ -2108,82 +1805,50 @@ def main(s) -> None:
         if quit:
             break
         if datetime.datetime.now() > poll_time:
-            if rigonline == False:
-                check_radio()
-            else:
-                poll_radio()
-                poll_time = datetime.datetime.now() + datetime.timedelta(seconds=5)
+            poll_radio()
+            poll_time = datetime.datetime.now() + datetime.timedelta(seconds=5)
 
 
 if __name__ == "__main__":
+    database = DataBase("wfd.db")
+    preference = Preferences()
+    readpreferences()
+    look_up = None
+    cat_control = None
+    if preference.preference["useqrz"]:
+        look_up = QRZlookup(
+            preference.preference["qrzusername"], preference.preference["qrzpassword"]
+        )
+    if preference.preference["usehamdb"]:
+        look_up = HamDBlookup()
+    if preference.preference["usehamqth"]:
+        look_up = HamQTH(
+            preference.preference["hamqthusername"],
+            preference.preference["hamqthpassword"],
+        )
+    if preference.preference["useflrig"]:
+        cat_control = CAT(
+            "flrig", preference.preference["CAT_ip"], preference.preference["CAT_port"]
+        )
+    if preference.preference["userigctld"]:
+        cat_control = CAT(
+            "flrig", preference.preference["CAT_ip"], preference.preference["CAT_port"]
+        )
+
+    if preference.preference["cloudlog"]:
+        cloudlogapi = preference.preference["cloudlogapi"]
+        cloudlogurl = preference.preference["cloudlogurl"]
+
+        payload = "/validate/key=" + cloudlogapi
+        try:
+            result = requests.get(cloudlogurl + payload)
+
+            if result.status_code == 200 or result.status_code == 400:
+                cloudlog_on = True
+        except requests.exceptions.ConnectionError as exception:
+            logging.warning("cloudlog authentication: %s", exception)
+
     read_sections()
     read_scp()
-    if os.path.exists("./wfd.ini"):
-        confFile = "./wfd.ini"
-    elif os.path.exists(os.path.expanduser("~") + "/.config/wfd.ini"):
-        confFile = os.path.expanduser("~") + "/.config/wfd.ini"
-    elif os.path.exists("/usr/local/etc/wfd.ini"):
-        confFile = "/usr/local/etc/wfd.ini"
-    elif os.path.exists("/etc/wfd.ini"):
-        confFile = "/etc/wfd.ini"
-
-    logging.debug("confFile %s", confFile)
-
-    if confFile:
-        with open(confFile, "r", encoding="utf-8") as file_descriptor:
-            try:
-                confData = loads(file_descriptor.read())
-            except JSONDecodeError as exception:
-                logging.debug("%s", exception)
-
-        try:
-            if confData["cloudlog"]["enable"].lower() == "yes":
-
-                cloudlogapi = confData["cloudlog"]["apikey"]
-                cloudlogurl = confData["cloudlog"]["url"]
-
-                payload = "/validate/key=" + cloudlogapi
-                result = requests.get(cloudlogurl + payload)
-
-                if result.status_code == 200 or result.status_code == 400:
-                    cloudlog_on = True
-        except KeyError as exception:
-            logging.debug("KeyError: %s", exception)
-
-        try:
-            if confData["qrz"]["enable"].lower() == "yes":
-                logging.debug("Enabling qrz")
-                qrzurl = confData["qrz"]["url"]
-                qrzname = confData["qrz"]["username"]
-                qrzpass = confData["qrz"]["password"]
-
-                payload = {"username": qrzname, "password": qrzpass}
-                result = requests.get(qrzurl, params=payload, timeout=5.0)
-
-                if result.status_code == 200:
-                    xmlData = BeautifulSoup(result.text, "xml")
-                    if xmlData.QRZDatabase.Session.Key.string:
-                        qrzsession = xmlData.QRZDatabase.Session.Key.string
-        except KeyError as exception:
-            logging.debug("KeyError: %s", exception)
-
-        try:
-            if confData["hamdb"]["enable"].lower() == "yes":
-                hamdb_on = True
-        except KeyError as exception:
-            logging.debug("KeyError: %s", exception)
-
-        try:
-            if confData["hamqth"]["enable"].lower() == "yes":
-                payload = {
-                    "u": confData["hamqth"]["username"],
-                    "p": confData["hamqth"]["password"],
-                }
-                result = requests.get(confData["hamqth"]["url"], params=payload)
-                if result.status_code == 200:
-                    xmlData = BeautifulSoup(result.text, "xml")
-                    hamqth_session = xmlData.HamQTH.session.session_id.string
-        except KeyError as exception:
-            logging.debug("KeyError: %s", exception)
 
     wrapper(main)

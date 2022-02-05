@@ -58,6 +58,21 @@ class DataBase:
             except sqlite3.Error as exception:
                 logging.debug("DataBase delete_contact: %s", exception)
 
+    def change_contact(self, qso):
+        """Update an existing contact."""
+        try:
+            with sqlite3.connect(self.database) as conn:
+                sql = (
+                    f"update contacts set callsign = '{qso[1]}', class = '{qso[2]}', "
+                    f"section = '{qso[3]}', date_time = '{qso[4]}', band = '{qso[5]}', "
+                    f"mode = '{qso[6]}', power = '{qso[7]}'  where id='{qso[0]}'"
+                )
+                cur = conn.cursor()
+                cur.execute(sql)
+                conn.commit()
+        except sqlite3.Error as exception:
+            logging.debug("DataBase change_contact: %s", exception)
+
     def stats(self) -> tuple:
         """
         returns a tuple with some stats:
@@ -136,12 +151,26 @@ class DataBase:
             cursor.execute("select DISTINCT band from contacts")
             return cursor.fetchall()
 
-    def fetch_all_contacts(self) -> tuple:
+    def fetch_all_contacts_asc(self) -> tuple:
         """returns a tuple of all contacts in the database."""
         with sqlite3.connect(self.database) as conn:
             cursor = conn.cursor()
             cursor.execute("select * from contacts order by date_time ASC")
             return cursor.fetchall()
+
+    def fetch_all_contacts_desc(self) -> tuple:
+        """returns a tuple of all contacts in the database."""
+        with sqlite3.connect(self.database) as conn:
+            cursor = conn.cursor()
+            cursor.execute("select * from contacts order by date_time desc")
+            return cursor.fetchall()
+
+    def fetch_last_contact(self) -> tuple:
+        """returns a tuple of all contacts in the database."""
+        with sqlite3.connect(self.database) as conn:
+            cursor = conn.cursor()
+            cursor.execute("select * from contacts order by date_time desc")
+            return cursor.fetchone()
 
     def dup_check(self, acall: str) -> tuple:
         """returns a list of possible dups"""
