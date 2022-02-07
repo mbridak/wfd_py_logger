@@ -10,9 +10,9 @@ class Preferences:
     def __init__(self) -> None:
         """initialize preferences"""
         self.preference = {
-            "mycallsign": "",
-            "myclass": "",
-            "mysection": "",
+            "mycallsign": "YourCall",
+            "myclass": "Class",
+            "mysection": "Sect",
             "power": "0",
             "usehamdb": 0,
             "hamdburl": "https://api.hamdb.org",
@@ -48,7 +48,7 @@ class Preferences:
             with open(
                 "./wfd_preferences.json", "wt", encoding="utf-8"
             ) as file_descriptor:
-                file_descriptor.write(dumps(self.preference))
+                file_descriptor.write(dumps(self.preference, indent=4))
         except IOError as exception:
             logging.critical("writepreferences: %s", exception)
 
@@ -68,6 +68,6 @@ class Preferences:
                 with open(
                     "./wfd_preferences.json", "wt", encoding="utf-8"
                 ) as file_descriptor:
-                    file_descriptor.write(dumps(self.preference))
+                    file_descriptor.write(dumps(self.preference, indent=4))
         except IOError as exception:
             logging.critical("readpreferences: %s", exception)
