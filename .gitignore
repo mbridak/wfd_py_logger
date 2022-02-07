@@ -1,12 +1,8 @@
 
 WFDLOG.txt
-
 WFD_Curses.db
-
+wfd.db
 WFD.adi
-
-wfd_preferences.json
-
 Statistics.txt
 
 build/
