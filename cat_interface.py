@@ -199,9 +199,9 @@ class CAT:
 
     def __setpower_rigctld(self, power):
         if power.isnumeric() and int(power) >= 1 and int(power) <= 100:
-            rigCmd = bytes(f"L RFPOWER {str(float(power) / 100)}\n", "utf-8")
+            rig_cmd = bytes(f"L RFPOWER {str(float(power) / 100)}\n", "utf-8")
             try:
-                self.rigctrlsocket.send(rigCmd)
+                self.rigctrlsocket.send(rig_cmd)
                 _ = self.rigctrlsocket.recv(1024).decode().strip()
             except socket.error:
-                rigonline = False
+                self.rigctrlsocket = None
