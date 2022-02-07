@@ -9,7 +9,6 @@ class CAT:
 
     def __init__(self, interface: str, host: str, port: int) -> None:
         """initializes cat"""
-        self.rigctrlsocket = None
         self.server = None
         self.rigctrlsocket = None
         self.interface = interface.lower()
@@ -95,6 +94,32 @@ class CAT:
         self.__initialize_rigctrld()
         return ""
 
+    def get_power(self):
+        """Get power level from rig"""
+        if self.interface == "flrig":
+            return self.__getpower_flrig()
+        if self.interface == "rigctld":
+            return self.__getpower_rigctld()
+        return False
+
+    def __getpower_flrig(self):
+        try:
+            return self.server.rig.get_power()
+        except ConnectionRefusedError as exception:
+            logging.debug("getpower_flrig: %s", exception)
+            return ""
+
+    def __getpower_rigctld(self):
+        if self.rigctrlsocket:
+            try:
+                self.rigctrlsocket.settimeout(0.5)
+                self.rigctrlsocket.send(b"l RFPOWER\n")
+                return int(float(self.rigctrlsocket.recv(1024).decode().strip()) * 100)
+            except socket.error as exception:
+                logging.debug("getpower_rigctld: %s", exception)
+                self.rigctrlsocket = None
+            return ""
+
     def set_vfo(self, freq: str) -> bool:
         """Sets the radios vfo"""
         if self.interface == "flrig":
@@ -156,3 +181,27 @@ class CAT:
                 return False
         self.__initialize_rigctrld()
         return False
+
+    def set_power(self, power):
+        """Sets the radios power"""
+        if self.interface == "flrig":
+            return self.__setpower_flrig(power)
+        if self.interface == "rigctld":
+            return self.__setpower_rigctld(power)
+        return False
+
+    def __setpower_flrig(self, power):
+        try:
+            return self.server.rig.set_power(power)
+        except ConnectionRefusedError as exception:
+            logging.debug("setmode_flrig: %s", exception)
+            return False
+
+    def __setpower_rigctld(self, power):
+        if power.isnumeric() and int(power) >= 1 and int(power) <= 100:
+            rigCmd = bytes(f"L RFPOWER {str(float(power) / 100)}\n", "utf-8")
+            try:
+                self.rigctrlsocket.send(rigCmd)
+                _ = self.rigctrlsocket.recv(1024).decode().strip()
+            except socket.error:
+                rigonline = False

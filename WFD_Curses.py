@@ -48,7 +48,7 @@ cloudlogapi = False
 cloudlogurl = False
 cloudlog_on = False
 preference = None
-rigonline = True
+rigonline = False
 
 stdscr = curses.initscr()
 qsoew = 0
@@ -316,29 +316,21 @@ def send_radio(cmd: str, arg: str) -> None:
             else:
                 setStatusMsg("Specify frequency in Hz")
         elif cmd == "M":
-            rigCmd = bytes(f"{cmd} {arg} 0\n", "utf-8")
             cat_control.set_mode(arg)
         elif cmd == "P":
-            pass
-            # if arg.isnumeric() and int(arg) >= 1 and int(arg) <= 100:
-            #    rigCmd = bytes(f"L RFPOWER {str(float(arg) / 100)}\n", "utf-8")
-            #    try:
-            #        rigctrlsocket.send(rigCmd)
-            #        _ = rigctrlsocket.recv(1024).decode().strip()
-            #    except socket.error:
-            #        rigonline = False
-            # else:
-            #    setStatusMsg("Must be 1 <= Power <= 100")
+            if arg.isnumeric() and int(arg) >= 1 and int(arg) <= 100:
+                cat_control.set_power(arg)
     return
 
 
 def poll_radio() -> None:
     """Polls the state of the radio."""
     global oldfreq, oldmode, oldpwr, rigonline
-    if cat_control:
+    if cat_control is not None:
         newfreq = cat_control.get_vfo()
         newmode = cat_control.get_mode()
-        # rigctrlsocket.send(b"l RFPOWER\n")
+        newpwr = cat_control.get_power()
+        logging.info("F:%s M:%s P:%s", newfreq, newmode, newpwr)
         # newpwr = int(float(rigctrlsocket.recv(1024).decode().strip()) * 100)
         if newfreq != oldfreq or newmode != oldmode:  # or newpwr != oldpwr
             oldfreq = newfreq
@@ -409,7 +401,9 @@ def change_contact(qso) -> None:
 def read_sections() -> None:
     """Reads in ARRL section data into a list"""
     try:
-        with open(relpath("arrl_sect.dat"), "r") as fd:  # read section data
+        with open(
+            relpath("arrl_sect.dat"), "r", encoding="utf-8"
+        ) as fd:  # read section data
             while 1:
                 ln = fd.readline().strip()  # read a line and put in db
                 if not ln:
@@ -423,8 +417,8 @@ def read_sections() -> None:
                     for i in range(len(abbrev) - 1):
                         p = abbrev[: -i - 1]
                         secPartial[p] = 1
-                except ValueError as e:
-                    logging.debug(f"read_sections: Value error {e}")
+                except ValueError as exception:
+                    logging.debug("read_sections: Value error %s", exception)
     except IOError as exception:
         logging.debug("read_sections: IO Error %s", exception)
 
@@ -1151,7 +1145,7 @@ def statusline():
     stdscr.addstr(
         22,
         37,
-        " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ",
+        f" {mycall}|{myclass}|{mysection}|{power}w ",
         curses.A_REVERSE,
     )
     stdscr.addstr(22, 0, "Bonus")
@@ -1176,6 +1170,7 @@ def statusline():
 
 
 def setpower(p):
+    logging.info("setpower: %s%s", type(p), p)
     global power
     try:
         int(p)
@@ -1832,7 +1827,9 @@ if __name__ == "__main__":
         )
     if preference.preference["userigctld"]:
         cat_control = CAT(
-            "flrig", preference.preference["CAT_ip"], preference.preference["CAT_port"]
+            "rigctld",
+            preference.preference["CAT_ip"],
+            preference.preference["CAT_port"],
         )
 
     if preference.preference["cloudlog"]:
