@@ -28,7 +28,7 @@ class Preferences:
             "useflrig": 0,
             "CAT_ip": "localhost",
             "CAT_port": 12345,
-            "cloudlog": 1,
+            "cloudlog": 0,
             "cloudlogapi": "c01234567890123456789",
             "cloudlogurl": "https://www.cloudlog.com/Cloudlog/index.php/api",
             "cloudlogstationid": "",
