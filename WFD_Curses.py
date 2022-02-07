@@ -1841,7 +1841,7 @@ if __name__ == "__main__":
 
         payload = "/validate/key=" + cloudlogapi
         try:
-            result = requests.get(cloudlogurl + payload)
+            result = requests.get(cloudlogurl + payload, timeout=5)
 
             if result.status_code == 200 or result.status_code == 400:
                 cloudlog_on = True
