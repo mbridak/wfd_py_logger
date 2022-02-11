@@ -12,3 +12,4 @@ debug.log
 .vscode/
 wfd.ini
 *.pyc
+*.backup
