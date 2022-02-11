@@ -1,4 +1,4 @@
-"""library to handle cat control"""
+"""CAT interface abstraction"""
 import logging
 import socket
 import xmlrpc.client
@@ -8,7 +8,36 @@ class CAT:
     """CAT control rigctld or flrig"""
 
     def __init__(self, interface: str, host: str, port: int) -> None:
-        """initializes cat"""
+        """
+        Computer Aided Tranceiver abstraction class.
+        Offers a normalized rigctld or flrig interface.
+
+        Takes 3 inputs to setup the class.
+
+        A string defining the type of interface, either 'flrig' or 'rigctld'.
+
+        A string defining the host, example: 'localhost' or '127.0.0.1'
+
+        An interger defining the network port used.
+        Commonly 12345 for flrig, or 4532 for rigctld.
+
+        Exposed methods are:
+
+        get_vfo()
+
+        get_mode()
+
+        get_power()
+
+        set_vfo()
+
+        set_mode()
+
+        set_power()
+
+        A variable 'online' is set to True if no error was encountered,
+        otherwise False.
+        """
         self.server = None
         self.rigctrlsocket = None
         self.interface = interface.lower()
