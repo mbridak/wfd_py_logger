@@ -12,9 +12,9 @@ I decided to write this after the 2018 Winter Field Day when I couldn't find a s
 
 **A newer version based on PyQt5 can be found [here](https://github.com/mbridak/WinterFieldDayLogger)**.
 
-## What going on in the development branch.
+## Recent Changes
 
-After 3+ years of neglect for the curses version, it's in need of some TLC. It's been one large monolithic chunk of code from the start. I've decided to break it into manageable chunks (classes). 
+After 3+ years of neglect for the curses version, it was in need of some TLC. It's been one large monolithic chunk of code from the start. I've decided to break it into manageable chunks (classes). 
 
 So far we have:
 
@@ -23,9 +23,9 @@ So far we have:
 * lookup.py Abstraction class for QRZ, HamQTH and HamDB
 * preferences.py Decided to move all the preferences from the sqlite table and into a json file. This makes it easier to edit for the user and straight forward  to load and save.
 
-It will take awhile to bring all this into the program. But  it'll get there.
-
 [Russ K5TUX](https://lhspodcast.info/) has made several pull requests with new features. Which to be honest, shamed me into looking at the code again, and seeing the absolute horror show the layers of cruft and years of neglect has brought.
+
+So many hours/days have been spent on making the code more PEP8 compliant.
 
 ## Caveats
 This is a simple logger ment for single op, it's not usable for clubs.
