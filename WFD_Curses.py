@@ -325,7 +325,8 @@ def send_radio(cmd: str, arg: str) -> None:
 def poll_radio() -> None:
     """Polls the state of the radio."""
     global oldfreq, oldmode, cat_control  # pylint: disable=global-statement
-
+    if cat_control is None:
+        return
     if not cat_control.online:
         if preference.preference["useflrig"]:
             cat_control = CAT(
