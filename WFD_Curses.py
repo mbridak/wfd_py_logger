@@ -208,14 +208,6 @@ validSections = [
 freq = "000000000"
 band = "40"
 mode = "CW"
-# highpower = False
-# bandmodemult = 0
-# altpower = False
-# outdoors = False
-# satellite = False
-# cwcontacts = "0"
-# phonecontacts = "0"
-# digitalcontacts = "0"
 contacts = ""
 contactsOffset = 0
 logNumber = 0
@@ -230,7 +222,6 @@ hissection = ""
 hisclass = ""
 
 database = "WFD_Curses.db"
-# conn = ""
 wrkdsections = []
 scp = []
 secPartial = {}
@@ -973,7 +964,7 @@ def workedSection(section):
 
 def sectionsCol1():
     """display section column 1"""
-    rectangle(stdscr, 8, 35, 19, 43)
+    rectangle(stdscr, 8, 35, 21, 43)
     stdscr.addstr(8, 36, "   DX  ", curses.A_REVERSE)
     stdscr.addstr(9, 36, "   DX  ", workedSection("DX"))
     stdscr.addstr(10, 36, "   1   ", curses.A_REVERSE)
@@ -995,7 +986,7 @@ def sectionsCol1():
 
 def sectionsCol2():
     """display section column 2"""
-    rectangle(stdscr, 8, 44, 19, 52)
+    rectangle(stdscr, 8, 44, 21, 52)
     stdscr.addstr(8, 45, "   3   ", curses.A_REVERSE)
     stdscr.addstr(9, 45, "DE", workedSection("DE"))
     stdscr.addstr(9, 49, "MDC", workedSection("MDC"))
@@ -1192,16 +1183,13 @@ def statusline():
 
     if len(strband) < 4:
         strband += " "
-    hamdb_on = preference.preference["usehamdb"]
-    hamqth_session = preference.preference["usehamqth"]
-    qrzsession = preference.preference["useqrz"]
 
-    stdscr.addstr(20, 35, " HamDB   HamQTH   ")
-    stdscr.addstr(20, 42, YorN(hamdb_on), highlightBonus(hamdb_on))
-    stdscr.addstr(20, 51, YorN(hamqth_session), highlightBonus(hamqth_session))
-    stdscr.addstr(21, 35, " QRZ   Cloudlog   ")
-    stdscr.addstr(21, 40, YorN(qrzsession), highlightBonus(qrzsession))
-    stdscr.addstr(21, 51, YorN(cloudlog_on), highlightBonus(cloudlog_on))
+    # stdscr.addstr(20, 35, " HamDB   HamQTH   ")
+    # stdscr.addstr(20, 42, YorN(hamdb_on), highlightBonus(hamdb_on))
+    # stdscr.addstr(20, 51, YorN(hamqth_session), highlightBonus(hamqth_session))
+    # stdscr.addstr(21, 35, " QRZ   Cloudlog   ")
+    # stdscr.addstr(21, 40, YorN(qrzsession), highlightBonus(qrzsession))
+    # stdscr.addstr(21, 51, YorN(cloudlog_on), highlightBonus(cloudlog_on))
     stdscr.addstr(23, 0, "Band       Freq             Mode   ")
     stdscr.addstr(23, 5, strband.rjust(5), curses.A_REVERSE)
     stdscr.addstr(23, 16, strfreq, curses.A_REVERSE)
@@ -1224,15 +1212,21 @@ def statusline():
     stdscr.addstr("NotHome", highlightBonus(preference.preference["notathome"]))
     stdscr.addch(curses.ACS_VLINE)
     stdscr.addstr("Sat", highlightBonus(preference.preference["satellite"]))
-    stdscr.addstr(23, 37, "Rig                     ")
-    stdscr.addstr(
-        23,
-        41,
-        preference.preference["CAT_ip"].lower()
-        + ":"
-        + str(preference.preference["CAT_port"]),
-        highlightBonus(True),
-    )
+    stdscr.addstr(23, 37, "                        ")
+
+    if cat_control:
+        stdscr.addstr(
+            23, 37, cat_control.interface.ljust(7), highlightBonus(cat_control.online)
+        )
+
+    if preference.preference["usehamdb"]:
+        stdscr.addstr(23, 47, "HamDB", highlightBonus(not look_up.error))
+
+    if preference.preference["usehamqth"]:
+        stdscr.addstr(23, 47, "HamQTH", highlightBonus(look_up.session))
+
+    if preference.preference["useqrz"]:
+        stdscr.addstr(23, 47, "QRZ", highlightBonus(look_up.session))
 
     stdscr.move(y, x)
 
@@ -1369,43 +1363,25 @@ def claimSatellite():
     stats()
 
 
-def displayHelp(page):
-    """Needs Doc String"""
+def displayHelp():
+    """Display help menu"""
     rectangle(stdscr, 11, 0, 21, 34)
     wy, wx = stdscr.getyx()
-    if page == 1:
-        helplines = [
-            "Main Help Screen                 ",
-            "                                 ",
-            ".H this message  |.1 Outdoors    ",
-            ".0 rigctrl help  |.2 AltPwr      ",
-            ".Q quit program  |.3 AwayFromHome",
-            ".Kyourcall       |.4 Satellite   ",
-            ".Cyourclass      |.E### edit QSO ",
-            ".Syoursection    |.D### del QSO  ",
-            "[ESC] Abort Input|.L Generate Log",
-        ]
-    elif page == 2:
-        helplines = [
-            "Rig Control Help Screen          ",
-            "                                 ",
-            ".0 this message  |               ",
-            ".H main help     |               ",
-            ".Irighost        |.Rrigport      ",
-            ".Ffreq (in Hz)   |.Ppower (in W) ",
-            ".Mmode (eg USB)  |.Bband (eg 20) ",
-            "                                 ",
-            "                                 ",
-        ]
-    else:
-        helplines = [
-            "Help Screen                      ",
-            ".H Main Help Screen              ",
-            ".0 Rig Control Help Screen       ",
-        ]
+    help_screen = [
+        ".H this message  |.2 Outdoors    ",
+        ".Q quit program  |.3 AwayFromHome",
+        ".Kyourcall       |.4 Satellite   ",
+        ".Cyourclass      |.E### edit QSO ",
+        ".Syoursection    |.D### del QSO  ",
+        ".B## change bands|.L Generate Log",
+        ".M[CW,PH,DI] mode|               ",
+        ".P## change power|               ",
+        ".1 Alt Power     |[esc] abort inp",
+    ]
     stdscr.move(12, 1)
-    for count, line in enumerate(helplines):
+    for count, line in enumerate(help_screen):
         stdscr.addstr(12 + count, 1, line)
+        count = count + 1
     stdscr.move(wy, wx)
     stdscr.refresh()
 
@@ -1493,6 +1469,7 @@ def processcommand(cmd):
     if cmd[:1] == "P":  # Change Power
         if cat_control:
             send_radio(cmd[:1], cmd[1:])
+            setpower(cmd[1:])
         else:
             setpower(cmd[1:])
         return
@@ -1503,10 +1480,10 @@ def processcommand(cmd):
         editQSO(cmd[1:])
         return
     if cmd[:1] == "H":  # Print Help
-        displayHelp(1)
+        displayHelp()
         return
     if cmd[:1] == "0":  # Print Rig Control Help
-        displayHelp(2)
+        # displayHelp(2)
         return
     if cmd[:1] == "K":  # Set your Call Sign
         setcallsign(cmd[1:])
@@ -1669,7 +1646,7 @@ def edit_key(key):
         logwindow()
         sections()
         stats()
-        displayHelp(1)
+        displayHelp()
         entry()
         stdscr.move(9, 1)
         quitprogram = True
@@ -1684,7 +1661,7 @@ def edit_key(key):
         logwindow()
         sections()
         stats()
-        displayHelp(1)
+        displayHelp()
         entry()
         stdscr.move(9, 1)
         quitprogram = True
@@ -1842,7 +1819,7 @@ def main(s) -> None:
     entry()
     logwindow()
     stats()
-    displayHelp(1)
+    displayHelp()
     stdscr.refresh()
     stdscr.move(9, 1)
     while 1:
