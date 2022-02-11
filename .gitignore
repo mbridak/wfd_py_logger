@@ -1,13 +1,14 @@
 
 WFDLOG.txt
-
 WFD_Curses.db
-
+wfd.db
 WFD.adi
-
 Statistics.txt
 
 build/
 dist/
 debug
 debug.log
+.vscode/
+wfd.ini
+*.pyc

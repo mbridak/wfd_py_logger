@@ -1,21 +1,41 @@
 #!/usr/bin/env python3
+# pylint: disable=too-many-lines
+# pylint: disable=global-statement
+# pylint: disable=redefined-outer-name
+# pylint: disable=invalid-name
+"""
+Winter Field Day logger curses based.
+"""
 
-"""
-COLOR_BLACK	    Black
-COLOR_BLUE	    Blue
-COLOR_CYAN	    Cyan (light greenish blue)
-COLOR_GREEN	    Green
-COLOR_MAGENTA	Magenta (purplish red)
-COLOR_RED   	Red
-COLOR_WHITE 	White
-COLOR_YELLOW	Yellow
-"""
+# rows, cols = stdscr.getmaxyx()
+
+# COLOR_BLACK	    Black
+# COLOR_BLUE	    Blue
+# COLOR_CYAN	    Cyan (light greenish blue)
+# COLOR_GREEN	    Green
+# COLOR_MAGENTA	Magenta (purplish red)
+# COLOR_RED   	Red
+# COLOR_WHITE 	White
+# COLOR_YELLOW	Yellow
 
 import os
 import logging
 import datetime
+import curses
+import time
+import re
+import sys
+
 from pathlib import Path
-from bs4 import BeautifulSoup
+from curses.textpad import rectangle
+from curses import wrapper
+from json import dumps
+import requests
+from database import DataBase
+from preferences import Preferences
+from lookup import HamDBlookup, HamQTH, QRZlookup
+from cat_interface import CAT
+
 
 if Path("./debug").exists():
     logging.basicConfig(
@@ -27,113 +47,24 @@ if Path("./debug").exists():
     )
     logging.debug("Debug started")
 
-cloudLogOn = False
-qrzsession = False
-hamdbOn = False
-hamqthSession = False
-pollTime = datetime.datetime.now()
 
-try:
-    import json
-    import requests
-
-    confFile = os.path.expanduser("~") + "/.config/wfd.ini"
-
-    if os.path.exists(confFile):
-        fd = open(confFile)
-        try:
-            confData = json.load(fd)
-        except Exception as e:
-            logging.debug(f"{e}")
-        fd.close()
-    elif os.path.exists("/usr/local/etc/wfd.ini"):
-        fd = open("/usr/local/etc/wfd.ini")
-        try:
-            confData = json.load(fd)
-        except Exception as e:
-            logging.debug(f"{e}")
-        fd.close()
-    elif os.path.exists("/etc/wfd.ini"):
-        fd = open("/etc/wfd.ini")
-        try:
-            confData = json.load(fd)
-        except Exception as e:
-            logging.debug(f"{e}")
-        fd.close()
-
-    if confData["cloudlog"]["enable"].lower() == "yes":
-
-        cloudlogapi = confData["cloudlog"]["apikey"]
-        cloudlogurl = confData["cloudlog"]["url"]
-
-        payload = "/validate/key=" + cloudlogapi
-        r = requests.get(cloudlogurl + payload)
-
-        if r.status_code == 200 or r.status_code == 400:
-            cloudLogOn = True
-
-    if confData["qrz"]["enable"].lower() == "yes":
-
-        qrzurl = confData["qrz"]["url"]
-        qrzname = confData["qrz"]["username"]
-        qrzpass = confData["qrz"]["password"]
-
-        payload = {"username": qrzname, "password": qrzpass}
-        r = requests.get(qrzurl, params=payload, timeout=1.0)
-
-        if r.status_code == 200:
-            xmlData = BeautifulSoup(r.text, "xml")
-            if xmlData.QRZDatabase.Session.Key.string:
-                qrzsession = xmlData.QRZDatabase.Session.Key.string
-        else:
-            qrzsession = False
-
-    if confData["hamdb"]["enable"].lower() == "yes":
-        hamdbOn = True
-
-    if confData["hamqth"]["enable"].lower() == "yes":
-        payload = {
-            "u": confData["hamqth"]["username"],
-            "p": confData["hamqth"]["password"],
-        }
-        r = requests.get(confData["hamqth"]["url"], params=payload)
-        if r.status_code == 200:
-            xmlData = BeautifulSoup(r.text, "xml")
-            hamqthSession = xmlData.HamQTH.session.session_id.string
-        else:
-            hamqthSession = False
-
-except:
-    cloudlogapi = False
-    cloudlogurl = False
-    cloudLogOn = False
-    HamDbOn = False
-    qrz = False
-    qrzsession = False
-    hamqthSession = False
-
-import curses
-import time
-import sqlite3
-import socket
-import re
-import sys
-
-from pathlib import Path
-from curses.textpad import rectangle
-from curses import wrapper
-from sqlite3 import Error
+poll_time = datetime.datetime.now()
+cloudlogapi = False
+cloudlogurl = False
+cloudlog_on = False
+preference = None
+rigonline = False
 
 stdscr = curses.initscr()
 qsoew = 0
 qso = []
-quit = False
+quitprogram = False
 
-BackSpace = 263
-Escape = 27
-QuestionMark = 63
-EnterKey = 10
-Space = 32
+BACK_SPACE = 263
+ESCAPE = 27
+QUESTIONMARK = 63
+ENTERKEY = 10
+SPACE = 32
 
 modes = ("PH", "CW", "DI")
 bands = (
@@ -174,10 +105,10 @@ dfreqCW = {
     "160": "1.810",
     "80": "3.550",
     "60": "5.357",
-    "40": "7.070",
-    "30": "10.135",
-    "20": "14.080",
-    "17": "18.100",
+    "40": "7.025",
+    "30": "10.125",
+    "20": "14.025",
+    "17": "18.068",
     "15": "21.100",
     "12": "24.910",
     "10": "28.150",
@@ -274,30 +205,16 @@ validSections = [
     "PE",
 ]
 
-mycall = "YOURCALL"
-myclass = "CLASS"
-mysection = "SECT"
 freq = "000000000"
-power = "0"
 band = "40"
 mode = "CW"
-qrp = False
-highpower = False
-bandmodemult = 0
-altpower = False
-outdoors = False
-notathome = False
-satellite = False
-cwcontacts = "0"
-phonecontacts = "0"
-digitalcontacts = "0"
 contacts = ""
 contactsOffset = 0
 logNumber = 0
 kbuf = ""
 editbuf = ""
-maxFieldLength = [17, 5, 7, 20, 4, 3, 4]
-maxEditFieldLength = [10, 17, 5, 4, 20, 4, 3, 4, 10]
+MAXFIELDLENGTH = [17, 5, 7, 20, 4, 3, 4]
+MAXEDITFIELDLENGTH = [10, 17, 5, 4, 20, 4, 3, 4, 10]
 inputFieldFocus = 0
 editFieldFocus = 1
 hiscall = ""
@@ -305,7 +222,6 @@ hissection = ""
 hisclass = ""
 
 database = "WFD_Curses.db"
-conn = ""
 wrkdsections = []
 scp = []
 secPartial = {}
@@ -314,46 +230,24 @@ secState = {}
 oldfreq = "0"
 oldmode = ""
 oldpwr = 0
-rigctrlhost = "localhost"
-rigctrlport = 4532
-rigonline = False
-
-
-def reinithamqth():
-    global confData
-    payload = {"u": confData["hamqth"]["username"], "p": confData["hamqth"]["password"]}
-    r = requests.get(confData["hamqth"]["url"], params=payload)
-    if r.status_code == 200:
-        xmlData = BeautifulSoup(r.text, "xml")
-        hamqthSession = xmlData.HamQTH.session.session_id.string
-    else:
-        hamqthSession = False
-    return hamqthSession
-
-
-def reinitqrz():
-    global confData
-    payload = {"u": confData["qrz"]["username"], "p": confData["qrz"]["password"]}
-    r = requests.get(confData["qrz"]["url"], params=payload)
-    if r.status_code == 200:
-        xmlData = BeautifulSoup(r.text, "xml")
-        qrzsession = xmlData.QRZDatabase.Session.Key.string
-    else:
-        qrzsession = ""
-    return qrzsession
 
 
 def relpath(filename):
-    try:
-        base_path = sys._MEIPASS
-    except:
+    """
+    Checks to see if program has been packaged with pyinstaller.
+    If so base dir is in a temp folder.
+    """
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        base_path = getattr(sys, "_MEIPASS")
+    else:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, filename)
 
 
-def getband(freq):
-    if freq.isnumeric():
-        frequency = int(float(freq))
+def getband(the_freq) -> str:
+    """returns a string containing the band a frequency is on."""
+    if the_freq.isnumeric():
+        frequency = int(float(the_freq))
         if frequency >= 1800000 and frequency <= 2000000:
             return "160"
         if frequency >= 3500000 and frequency <= 4000000:
@@ -386,7 +280,8 @@ def getband(freq):
         return "OOB"
 
 
-def getmode(rigmode):
+def getmode(rigmode: str) -> str:
+    """converts the rigs mode into the contest mode."""
     if rigmode == "CW" or rigmode == "CWR":
         return "CW"
     if rigmode == "USB" or rigmode == "LSB" or rigmode == "FM" or rigmode == "AM":
@@ -394,167 +289,78 @@ def getmode(rigmode):
     return "DI"  # All else digital
 
 
-def sendRadio(cmd, arg):
-    global band, mode, freq, power, rigonline
-    rigCmd = bytes(cmd + " " + arg + "\n", "utf-8")
-    if rigonline:
+def send_radio(cmd: str, arg: str) -> None:
+    """sends commands to the radio"""
+    if cat_control:
         if cmd == "B" and mode == "CW":
             if arg in dfreqCW:
-                arg = "F " + str(dfreqCW[arg].replace(".", "")) + "000\n"
-                rigCmd = bytes(arg, "utf-8")
-                try:
-                    rigctrlsocket.send(rigCmd)
-                    rigCode = rigctrlsocket.recv(1024).decode().strip()
-                except:
-                    rigonline == False
+                cat_control.set_vfo(f"{str(dfreqCW[arg].replace('.', ''))}000\n")
             else:
                 setStatusMsg("Unknown band specified")
         elif cmd == "B":
             if arg in dfreqPH:
-                arg = "F " + str(dfreqPH[arg].replace(".", "")) + "000\n"
-                rigCmd = bytes(arg, "utf-8")
-                try:
-                    rigctrlsocket.send(rigCmd)
-                    rigCode = rigctrlsocket.recv(1024).decode().strip()
-                except:
-                    rigonline == False
+                cat_control.set_vfo(f"{str(dfreqPH[arg].replace('.', ''))}000\n")
         if cmd == "F":
             if arg.isnumeric() and int(arg) >= 1800000 and int(arg) <= 450000000:
-                try:
-                    rigctrlsocket.send(rigCmd)
-                    rigCode = rigctrlsocket.recv(1024).decode().strip()
-                except:
-                    rigonline == False
+                cat_control.set_vfo(f"{arg}")
             else:
                 setStatusMsg("Specify frequency in Hz")
         elif cmd == "M":
-            rigCmd = bytes(cmd + " " + arg + " 0\n", "utf-8")
-            try:
-                rigctrlsocket.send(rigCmd)
-                rigCode = rigctrlsocket.recv(1024).decode().strip()
-            except:
-                rigonline == False
+            cat_control.set_mode(arg)
         elif cmd == "P":
             if arg.isnumeric() and int(arg) >= 1 and int(arg) <= 100:
-                rigCmd = bytes("L RFPOWER " + str(float(arg) / 100) + "\n", "utf-8")
-                try:
-                    rigctrlsocket.send(rigCmd)
-                    rigCode = rigctrlsocket.recv(1024).decode().strip()
-                except:
-                    rigonline == False
-            else:
-                setStatusMsg("Must be 1 <= Power <= 100")
+                cat_control.set_power(arg)
     return
 
 
-def pollRadio():
-    global oldfreq, oldmode, oldpwr, rigctrlsocket, rigonline
-    if rigonline:
-        try:
-            rigctrlsocket.settimeout(3.0)
-            rigctrlsocket.send(b"f\n")
-            newfreq = rigctrlsocket.recv(1024).decode().strip()
-            rigctrlsocket.send(b"m\n")
-            newmode = rigctrlsocket.recv(1024).decode().strip().split()[0]
-            rigctrlsocket.send(b"l RFPOWER\n")
-            newpwr = int(float(rigctrlsocket.recv(1024).decode().strip()) * 100)
-            if newfreq != oldfreq or newmode != oldmode or newpwr != oldpwr:
-                oldfreq = newfreq
-                oldmode = newmode
-                oldpwr = newpwr
-                setband(str(getband(newfreq)))
-                setmode(str(getmode(newmode)))
-                setpower(str(newpwr))
-                setfreq(str(newfreq))
-        except Exception as e:
-            rigonline = False
+def poll_radio() -> None:
+    """Polls the state of the radio."""
+    global oldfreq, oldmode, cat_control  # pylint: disable=global-statement
+    if cat_control is None:
+        return
+    if not cat_control.online:
+        if preference.preference["useflrig"]:
+            cat_control = CAT(
+                "flrig",
+                preference.preference["CAT_ip"],
+                preference.preference["CAT_port"],
+            )
+        if preference.preference["userigctld"]:
+            cat_control = CAT(
+                "rigctld",
+                preference.preference["CAT_ip"],
+                preference.preference["CAT_port"],
+            )
+
+    if cat_control.online:
+        newfreq = cat_control.get_vfo()
+        newmode = cat_control.get_mode()
+        newpwr = cat_control.get_power()
+        logging.info("F:%s M:%s P:%s", newfreq, newmode, newpwr)
+        # newpwr = int(float(rigctrlsocket.recv(1024).decode().strip()) * 100)
+        if newfreq != oldfreq or newmode != oldmode:  # or newpwr != oldpwr
+            oldfreq = newfreq
+            oldmode = newmode
+            # oldpwr = newpwr
+            setband(str(getband(newfreq)))
+            setmode(str(getmode(newmode)))
+            # setpower(str(newpwr))
+            setfreq(str(newfreq))
 
 
-def checkRadio():
-    global rigctrlsocket, rigctrlhost, rigctrlport, rigonline
-    rigonline = True
-    try:
-        rigctrlsocket = socket.socket()
-        rigctrlsocket.settimeout(0.1)
-        rigctrlsocket.connect((rigctrlhost, int(rigctrlport)))
-    except ConnectionRefusedError:
-        logging.debug("checkRadio: ConnectionRefusedError")
-        rigonline = False
-    except BaseException as err:
-        logging.debug(f"checkRadio: {err}")
-        rigonline = False
+def readpreferences() -> None:
+    """Reads in preferences"""
+    preference.readpreferences()
 
 
-def create_DB():
-    """create a database and table if it does not exist"""
-    global conn
-    try:
-        with sqlite3.connect(database) as conn:
-            c = conn.cursor()
-            sql_table = """ CREATE TABLE IF NOT EXISTS contacts (id INTEGER PRIMARY KEY, callsign text NOT NULL, class text NOT NULL, section text NOT NULL, date_time text NOT NULL, band text NOT NULL, mode text NOT NULL, power INTEGER NOT NULL); """
-            c.execute(sql_table)
-            sql_table = """ CREATE TABLE IF NOT EXISTS preferences (id INTEGER, mycallsign TEXT DEFAULT 'YOURCALL', myclass TEXT DEFAULT 'YOURCLASS', mysection TEXT DEFAULT 'YOURSECTION', power TEXT DEFAULT '0', rigctrlhost TEXT default 'localhost', rigctrlport INTEGER DEFAULT 4532, altpower INTEGER DEFAULT 0, outdoors INTEGER DEFAULT 0, notathome INTEGER DEFAULT 0, satellite INTEGER DEFAULT 0); """
-            c.execute(sql_table)
-            conn.commit()
-    except Error as e:
-        logging.debug(f"create_DB: {e}")
+def writepreferences() -> None:
+    """Yup writes preferences to the preferences table"""
+    preference.writepreferences()
 
 
-def readpreferences():
-    global mycall, myclass, mysection, power, rigctrlhost, rigctrlport, altpower, outdoors, notathome, satellite
-    try:
-        with sqlite3.connect(database) as conn:
-            c = conn.cursor()
-            c.execute("select * from preferences where id = 1")
-            pref = c.fetchall()
-            if len(pref) > 0:
-                for x in pref:
-                    (
-                        _,
-                        mycall,
-                        myclass,
-                        mysection,
-                        power,
-                        rigctrlhost,
-                        rigctrlport,
-                        altpower,
-                        outdoors,
-                        notathome,
-                        satellite,
-                    ) = x
-                    altpower = bool(altpower)
-                    outdoors = bool(outdoors)
-                    notathome = bool(notathome)
-                    satellite = bool(satellite)
-            else:
-                sql = f"INSERT INTO preferences(id, mycallsign, myclass, mysection, power, rigctrlhost, rigctrlport, altpower, outdoors, notathome, satellite) VALUES(1,'{mycall}','{myclass}','{mysection}','{power}','{rigctrlhost}',{int(rigctrlport)},{int(altpower)},{int(outdoors)},{int(notathome)},{int(satellite)})"
-                c.execute(sql)
-                conn.commit()
-    except Error as e:
-        logging.debug(f"readPreferences: {e}")
-
-
-def writepreferences():
-    try:
-        with sqlite3.connect(database) as conn:
-            sql = f"UPDATE preferences SET mycallsign = '{mycall}', myclass = '{myclass}', mysection = '{mysection}', power = '{power}', rigctrlhost = '{rigctrlhost}', rigctrlport = {int(rigctrlport)}, altpower = {int(altpower)}, outdoors = {int(outdoors)}, notathome = {int(notathome)} WHERE id = 1"
-            cur = conn.cursor()
-            cur.execute(sql)
-            conn.commit()
-    except Error as e:
-        logging.debug(f"writepreferences: {e}")
-
-
-def log_contact(logme):
-    try:
-        with sqlite3.connect(database) as conn:
-            sql = "INSERT INTO contacts(callsign, class, section, date_time, band, mode, power) VALUES(?,?,?,datetime('now'),?,?,?)"
-            cur = conn.cursor()
-            cur.execute(sql, logme)
-            conn.commit()
-    except Error as e:
-        logging.debug(f"log_contact: {e}")
-        displayinfo(e)
+def log_contact(logme) -> None:
+    """Inserts a contact into the db."""
+    database.log_contact(logme)
     workedSections()
     sections()
     stats()
@@ -562,17 +368,10 @@ def log_contact(logme):
     postcloudlog()
 
 
-def delete_contact(contact):
+def delete_contact(contact) -> None:
+    """Deletes a contact from the db."""
     if contact:
-        try:
-            with sqlite3.connect(database) as conn:
-                sql = f"delete from contacts where id={int(contact)}"
-                cur = conn.cursor()
-                cur.execute(sql)
-                conn.commit()
-        except Error as e:
-            logging.debug(f"delete_contact: {e}")
-            displayinfo(e)
+        database.delete_contact(contact)
         workedSections()
         sections()
         stats()
@@ -581,101 +380,89 @@ def delete_contact(contact):
         setStatusMsg("Must specify a contact number")
 
 
-def change_contact(qso):
-    try:
-        with sqlite3.connect(database) as conn:
-            sql = f"update contacts set callsign = '{qso[1]}', class = '{qso[2]}', section = '{qso[3]}', date_time = '{qso[4]}', band = '{qso[5]}', mode = '{qso[6]}', power = '{qso[7]}'  where id='{qso[0]}'"
-            cur = conn.cursor()
-            cur.execute(sql)
-            conn.commit()
-    except Error as e:
-        logging.debug(f"change_contact: {e}")
-        displayinfo(e)
+def change_contact(__qso) -> None:
+    """Updates an edited contact."""
+    database.change_contact(__qso)
 
 
-def readSections():
+def read_sections() -> None:
+    """Reads in ARRL section data into a list"""
     try:
-        with open(relpath("arrl_sect.dat"), "r") as fd:  # read section data
+        with open(
+            relpath("arrl_sect.dat"), "r", encoding="utf-8"
+        ) as file_descriptor:  # read section data
             while 1:
-                ln = fd.readline().strip()  # read a line and put in db
-                if not ln:
+                line = file_descriptor.readline().strip()  # read a line and put in db
+                if not line:
                     break
-                if ln[0] == "#":
+                if line[0] == "#":
                     continue
                 try:
-                    sec, st, canum, abbrev, name = str.split(ln, None, 4)
+                    _, state, canum, abbrev, name = str.split(line, None, 4)
                     secName[abbrev] = abbrev + " " + name + " " + canum
-                    secState[abbrev] = st
+                    secState[abbrev] = state
                     for i in range(len(abbrev) - 1):
                         p = abbrev[: -i - 1]
                         secPartial[p] = 1
-                except ValueError as e:
-                    logging.debug(f"readSections: Value error {e}")
-    except IOError as e:
-        logging.debug(f"readSections: IO Error {e}")
+                except ValueError as value_exception:
+                    logging.debug("read_sections: Value error %s", value_exception)
+    except IOError as exception:
+        logging.debug("read_sections: IO Error %s", exception)
 
 
-def sectionCheck(sec):
+def section_check(sec: str) -> None:
+    """checks if a string is part of a section name"""
     if sec == "":
         sec = "^"
     seccheckwindow = curses.newpad(20, 33)
     rectangle(stdscr, 11, 0, 21, 34)
-    x = list(secName.keys())
-    xx = list(filter(lambda y: y.startswith(sec), x))
+    list_of_keys = list(secName.keys())
+    matches = list(filter(lambda y: y.startswith(sec), list_of_keys))
     count = 0
-    for xxx in xx:
-        seccheckwindow.addstr(count, 1, secName[xxx])
+    for match in matches:
+        seccheckwindow.addstr(count, 1, secName[match])
         count += 1
     stdscr.refresh()
     seccheckwindow.refresh(0, 0, 12, 1, 20, 33)
 
 
-readSections()
+def read_scp() -> list:
+    """reads in the super check partion data into a list"""
+    with open(relpath("MASTER.SCP"), "r", encoding="utf-8") as file_descriptor:
+        lines = file_descriptor.readlines()
+    return list(map(lambda x: x.strip(), lines))
 
 
-def readSCP():
-    global scp
-    with open(relpath("MASTER.SCP")) as f:
-        scp = f.readlines()
-    scp = list(map(lambda x: x.strip(), scp))
-
-
-readSCP()
-
-
-def superCheck(acall):
+def super_check(acall: str) -> list:
+    """returns a list of matches for acall against known contesters."""
     return list(filter(lambda x: x.startswith(acall), scp))
 
 
-def contacts():
-    global stdscr
+def contacts_label():
+    """
+    all it does is centers a string to create a label for a window...
+    why is this it's own function?
+    I'm sure there is a reason. I just don't remember.
+    """
     rectangle(stdscr, 0, 0, 7, 55)
     contactslabel = "Recent Contacts"
     contactslabeloffset = (49 / 2) - len(contactslabel) / 2
     stdscr.addstr(0, int(contactslabeloffset), contactslabel)
 
 
-def stats():
-    global bandmodemult
+def stats() -> None:
+    """calculates and displays the current statistics."""
     y, x = stdscr.getyx()
-    with sqlite3.connect(database) as conn:
-        c = conn.cursor()
-        c.execute("select count(*) from contacts where mode = 'CW'")
-        cwcontacts = str(c.fetchone()[0])
-        c.execute("select count(*) from contacts where mode = 'PH'")
-        phonecontacts = str(c.fetchone()[0])
-        c.execute("select count(*) from contacts where mode = 'DI'")
-        digitalcontacts = str(c.fetchone()[0])
-        c.execute("select distinct band, mode from contacts")
-        bandmodemult = len(c.fetchall())
-        c.execute(
-            "SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-15 Minutes')"
-        )
-        last15 = str(c.fetchone()[0])
-        c.execute(
-            "SELECT count(*) FROM contacts where datetime(date_time) >=datetime('now', '-1 Hours')"
-        )
-        lasthour = str(c.fetchone()[0])
+    (
+        cwcontacts,
+        phonecontacts,
+        digitalcontacts,
+        _,
+        last15,
+        lasthour,
+        _,
+        _,
+    ) = database.stats()
     rectangle(stdscr, 0, 57, 7, 79)
     statslabel = "Score Stats"
     statslabeloffset = (25 / 2) - len(statslabel) / 2
@@ -695,72 +482,34 @@ def stats():
     stdscr.move(y, x)
 
 
-def score():
-    global bandmodemult
-    qrpcheck()
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select count(*) as cw from contacts where mode = 'CW'")
-    cw = str(c.fetchone()[0])
-    c.execute("select count(*) as ph from contacts where mode = 'PH'")
-    ph = str(c.fetchone()[0])
-    c.execute("select count(*) as di from contacts where mode = 'DI'")
-    di = str(c.fetchone()[0])
-    c.execute("select distinct band, mode from contacts")
-    bandmodemult = len(c.fetchall())
-    conn.close()
-    score = (int(cw) * 2) + int(ph) + (int(di) * 2)
+def score() -> int:
+    """generates current score, returns an int"""
+    cw, ph, di, bandmodemult, _, _, highpower, qrp = database.stats()
+    __score = (int(cw) * 2) + int(ph) + (int(di) * 2)
     if qrp:
-        score = score * 4
-    elif not (highpower):
-        score = score * 2
-    score = score * bandmodemult
-    score = (
-        score
-        + (500 * altpower)
-        + (500 * outdoors)
-        + (500 * notathome)
-        + (500 * satellite)
+        __score = __score * 4
+    elif not highpower:
+        __score = __score * 2
+    __score = __score * bandmodemult
+    __score = (
+        __score
+        + (500 * preference.preference["altpower"])
+        + (500 * preference.preference["outdoors"])
+        + (500 * preference.preference["notathome"])
+        + (500 * preference.preference["satellite"])
     )
-    return score
-
-
-def qrpcheck():
-    global qrp, highpower
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select count(*) as qrpc from contacts where mode = 'CW' and power > 5")
-    log = c.fetchall()
-    qrpc = list(log[0])[0]
-    c.execute("select count(*) as qrpp from contacts where mode = 'PH' and power > 10")
-    log = c.fetchall()
-    qrpp = list(log[0])[0]
-    c.execute("select count(*) as qrpd from contacts where mode = 'DI' and power > 10")
-    log = c.fetchall()
-    qrpd = list(log[0])[0]
-    c.execute("select count(*) as highpower from contacts where power > 100")
-    log = c.fetchall()
-    highpower = bool(list(log[0])[0])
-    conn.close()
-    qrp = not (qrpc + qrpp + qrpd)
+    return __score
 
 
 def getBandModeTally(band, mode):
-    conn = ""
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute(
-        f"select count(*) as tally, MAX(power) as mpow from contacts where band = '{band}' AND mode ='{mode}'"
-    )
-    return c.fetchone()
+    """Needs Doc String"""
+    return database.get_band_mode_tally(band, mode)
 
 
 def getbands():
+    """Needs Doc String"""
     bandlist = []
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select DISTINCT band from contacts")
-    x = c.fetchall()
+    x = database.get_bands()
     if x:
         for count in x:
             bandlist.append(count[0])
@@ -769,9 +518,10 @@ def getbands():
 
 
 def generateBandModeTally():
+    """Needs Doc String"""
     blist = getbands()
     bmtfn = "Statistics.txt"
-    with open(bmtfn, "w") as f:
+    with open(bmtfn, "w", encoding="utf-8") as f:
         print("\t\tCW\tPWR\tDI\tPWR\tPH\tPWR", end="\r\n", file=f)
         print("-" * 60, end="\r\n", file=f)
         for b in bands:
@@ -787,29 +537,28 @@ def generateBandModeTally():
                 print("-" * 60, end="\r\n", file=f)
 
 
-def getState(section):
+def get_state(section):
+    """returns the state of a section"""
     try:
         state = secState[section]
         if state != "--":
             return state
-    except:
+    except IndexError:
         return False
     return False
 
 
 def adif():
+    """generates an ADIF file from your contacts"""
     logname = "WFD.adi"
-    with sqlite3.connect(database) as conn:
-        c = conn.cursor()
-        c.execute("select * from contacts order by date_time ASC")
-        log = c.fetchall()
+    log = database.fetch_all_contacts_asc()
     counter = 0
     grid = False
-    with open(logname, "w") as f:
-        print("<ADIF_VER:5>2.2.0", end="\r\n", file=f)
-        print("<EOH>", end="\r\n", file=f)
-        for x in log:
-            _, hiscall, hisclass, hissection, datetime, band, mode, _ = x
+    with open(logname, "w", encoding="utf-8") as file_descriptor:
+        print("<ADIF_VER:5>2.2.0", end="\r\n", file=file_descriptor)
+        print("<EOH>", end="\r\n", file=file_descriptor)
+        for contact in log:
+            _, hiscall, hisclass, hissection, datetime, band, mode, _ = contact
             if mode == "DI":
                 mode = "RTTY"
             if mode == "PH":
@@ -827,73 +576,80 @@ def adif():
             stdscr.refresh()
             grid = False
             name = False
-            try:
-                if qrzsession:
-                    payload = {"s": qrzsession, "callsign": hiscall}
-                    r = requests.get(qrzurl, params=payload, timeout=3.0)
-                    if r.status_code == 200:
-                        xmlData = BeautifulSoup(r.text, "xml")
-                        if xmlData.QRZDatabase.Callsign.grid:
-                            grid = xmlData.QRZDatabase.Callsign.grid.string
-                        name = (
-                            xmlData.QRZDatabase.Callsign.fname.string
-                            + " "
-                            + xmlData.QRZDatabase.Callsign.name.string
-                        )
-            except:
-                pass
+            if look_up:
+                grid, name, _, _ = look_up.lookup(hiscall)
             print(
-                "<QSO_DATE:%s:d>%s"
-                % (len("".join(loggeddate.split("-"))), "".join(loggeddate.split("-"))),
+                f"<QSO_DATE:{len(''.join(loggeddate.split('-')))}:d>"
+                f"{''.join(loggeddate.split('-'))}",
                 end="\r\n",
-                file=f,
+                file=file_descriptor,
             )
-            print("<TIME_ON:%s>%s" % (len(loggedtime), loggedtime), end="\r\n", file=f)
             print(
-                "<CALL:%s>%s" % (len(hiscall), hiscall),
+                f"<TIME_ON:{len(loggedtime)}>{loggedtime}",
                 end="\r\n",
-                file=open(logname, "a"),
+                file=file_descriptor,
             )
             print(
-                "<MODE:%s>%s" % (len(mode), mode), end="\r\n", file=open(logname, "a")
+                f"<CALL:{len(hiscall)}>{hiscall}",
+                end="\r\n",
+                file=file_descriptor,
             )
-            print("<BAND:%s>%s" % (len(band + "M"), band + "M"), end="\r\n", file=f)
+            print(f"<MODE:{len(mode)}>{mode}", end="\r\n", file=file_descriptor)
+            print(
+                f"<BAND:{len(band)+1}>{band}M",
+                end="\r\n",
+                file=file_descriptor,
+            )
             try:
                 print(
-                    "<FREQ:%s>%s" % (len(dfreqPH[band]), dfreqPH[band]),
+                    f"<FREQ:{len(dfreqPH[band])}>{dfreqPH[band]}",
                     end="\r\n",
-                    file=f,
+                    file=file_descriptor,
                 )
-            except:
+            except IndexError:
                 pass
-            print("<RST_SENT:%s>%s" % (len(rst), rst), end="\r\n", file=f)
-            print("<RST_RCVD:%s>%s" % (len(rst), rst), end="\r\n", file=f)
+            print(f"<RST_SENT:{len(rst)}>{rst}", end="\r\n", file=file_descriptor)
+            print(f"<RST_RCVD:{len(rst)}>{rst}", end="\r\n", file=file_descriptor)
+            mcas = f"{preference.preference['myclass']} {preference.preference['mysection']}"
             print(
-                "<STX_STRING:%s>%s"
-                % (len(myclass + " " + mysection), myclass + " " + mysection),
+                f"<STX_STRING:{len(mcas)}>{mcas}",
                 end="\r\n",
-                file=f,
+                file=file_descriptor,
             )
+            hcas = f"{hisclass} {hissection}"
             print(
-                "<SRX_STRING:%s>%s"
-                % (len(hisclass + " " + hissection), hisclass + " " + hissection),
+                f"<SRX_STRING:{len(hcas)}>{hcas}",
                 end="\r\n",
-                file=f,
+                file=file_descriptor,
             )
             print(
-                "<ARRL_SECT:%s>%s" % (len(hissection), hissection), end="\r\n", file=f
+                f"<ARRL_SECT:{len(hissection)}>{hissection}",
+                end="\r\n",
+                file=file_descriptor,
             )
-            print("<CLASS:%s>%s" % (len(hisclass), hisclass), end="\r\n", file=f)
-            state = getState(hissection)
+            print(
+                f"<CLASS:{len(hisclass)}>{hisclass}",
+                end="\r\n",
+                file=file_descriptor,
+            )
+            state = get_state(hissection)
             if state:
-                print("<STATE:%s>%s" % (len(state), state), end="\r\n", file=f)
+                print(
+                    f"<STATE:{len(state)}>{state}",
+                    end="\r\n",
+                    file=file_descriptor,
+                )
             if grid:
-                print("<GRIDSQUARE:%s>%s" % (len(grid), grid), end="\r\n", file=f)
+                print(
+                    f"<GRIDSQUARE:{len(grid)}>{grid}",
+                    end="\r\n",
+                    file=file_descriptor,
+                )
             if name:
-                print("<NAME:%s>%s" % (len(name), name), end="\r\n", file=f)
-            print("<COMMENT:19>WINTER-FIELD-DAY", end="\r\n", file=f)
-            print("<EOR>", end="\r\n", file=f)
-            print("", end="\r\n", file=f)
+                print(f"<NAME:{len(name)}>{name}", end="\r\n", file=file_descriptor)
+            print("<COMMENT:19>WINTER-FIELD-DAY", end="\r\n", file=file_descriptor)
+            print("<EOR>", end="\r\n", file=file_descriptor)
+            print("", end="\r\n", file=file_descriptor)
     yy, xx = stdscr.getyx()
     stdscr.move(15, 1)
     stdscr.addstr("Done.                     ")
@@ -902,9 +658,10 @@ def adif():
 
 
 def parsecallsign(callsign):
+    """it parses a callsign"""
     try:
         callelements = callsign.split("/")
-    except:
+    except AttributeError:
         return callsign
     if len(callelements) == 3:
         return callelements[1]
@@ -919,201 +676,153 @@ def parsecallsign(callsign):
 
 
 def postcloudlog():
-    global confData, hamdbOn, hamqthSession, qrzsession
+    """posts a contact to cloudlog"""
     if not cloudlogapi:
         return
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select * from contacts order by id DESC")
-    q = c.fetchone()
-    conn.close()
-    logid, hiscall, hisclass, hissection, datetime, band, mode, power = q
+    q = database.fetch_last_contact()
+    _, hiscall, hisclass, hissection, datetime, band, mode, _ = q
     grid = False
     name = False
     strippedcall = parsecallsign(hiscall)
-    if hamqthSession:
-        payload = {
-            "id": hamqthSession,
-            "callsign": strippedcall,
-            "prg": confData["hamqth"]["appname"],
-        }
-        r = requests.get(confData["hamqth"]["url"], params=payload)
-        if r.status_code == 200:
-            xmlData = BeautifulSoup(r.text, "xml")
-            try:
-                grid = xmlData.HamQTH.search.grid.string
-            except:
-                hamqthSession = reinithamqth()
-                r = requests.get(confData["hamqth"]["url"], params=payload)
-                xmlData = BeautifulSoup(r.text, "xml")
-                try:
-                    grid = xmlData.HamQTH.search.grid.string
-                except:
-                    grid = ""
-        try:
-            name = xmlData.HamQTH.search.adr_name.string
-        except:
-            name = ""
-        if len(grid) < 4 or len(grid) > 6:
-            grid = ""
-    if hamdbOn:
-        grid = ""
-        payload = strippedcall + "/xml/" + confData["hamdb"]["appname"]
-        r = requests.get(confData["hamdb"]["url"] + "/" + payload)
-        if r.status_code == 200:
-            xmlData = BeautifulSoup(r.text, "xml")
-            try:
-                grid = xmlData.hamdb.callsign.grid.string
-            except:
-                grid = ""
-        try:
-            name = "%s %s" % (
-                xmlData.hamdb.callsign.fname.string,
-                xmlData.find("name").string,
-            )
-        except:
-            name = ""
-        if len(grid) < 4 or len(grid) > 6:
-            grid = ""
-    if qrzsession:
-        payload = {"s": qrzsession, "callsign": strippedcall}
-        r = requests.get(qrzurl, params=payload, timeout=1.0)
-        if r.status_code == 200:
-            xmlData = BeautifulSoup(r.text, "xml")
-            try:
-                grid = xmlData.QRZDatabase.Callsign.grid.string
-            except:
-                qrzsession = reinitqrz()
-                r = requests.get(qrzurl, params=payload, timeout=1.0)
-                xmlData = BeautifulSoup(r.text, "xml")
-                try:
-                    grid = xmlData.QRZDatabase.Callsign.grid.string
-                except:
-                    grid = ""
-        try:
-            name = "%s %s" % (
-                xmlData.QRZDatabase.Callsign.fname.string,
-                xmlData.find("name").string,
-            )
-        except:
-            name = ""
-        if len(grid) < 4 or len(grid) > 6:
-            grid = ""
+    if look_up:
+        grid, name, _, _ = look_up.lookup(strippedcall)
     if mode == "CW":
         rst = "599"
     else:
         rst = "59"
     loggeddate = datetime[:10]
     loggedtime = datetime[11:13] + datetime[14:16]
-    adifq = "<QSO_DATE:%s:d>%s" % (
-        len("".join(loggeddate.split("-"))),
-        "".join(loggeddate.split("-")),
+    adifq = (
+        f"<QSO_DATE:{len(''.join(loggeddate.split('-')))}:d>{''.join(loggeddate.split('-'))}"
+        f"<TIME_ON:{len(loggedtime)}>{loggedtime}"
+        f"<CALL:{len(hiscall)}>{hiscall}"
+        f"<MODE:{len(mode)}>{mode}"
+        f"<BAND:{len(band + 'M')}>{band + 'M'}"
+        f"<FREQ:{len(dfreqPH[band])}>{dfreqPH[band]}"
+        f"<RST_SENT:{len(rst)}>{rst}"
+        f"<RST_RCVD:{len(rst)}>{rst}"
     )
-    adifq += "<TIME_ON:%s>%s" % (len(loggedtime), loggedtime)
-    adifq += "<CALL:%s>%s" % (len(hiscall), hiscall)
-    adifq += "<MODE:%s>%s" % (len(mode), mode)
-    adifq += "<BAND:%s>%s" % (len(band + "M"), band + "M")
-    adifq += "<FREQ:%s>%s" % (len(dfreqPH[band]), dfreqPH[band])
-    adifq += "<RST_SENT:%s>%s" % (len(rst), rst)
-    adifq += "<RST_RCVD:%s>%s" % (len(rst), rst)
-    adifq += "<STX_STRING:%s>%s" % (
-        len(myclass + " " + mysection),
-        myclass + " " + mysection,
+    value2 = preference.preference["myclass"] + " " + preference.preference["mysection"]
+    value1 = len(value2)
+    adifq += (
+        f"<STX_STRING:{value1}>{value2}"
+        f"<SRX_STRING:{len(hisclass + ' ' + hissection)}>{hisclass + ' ' + hissection}"
+        f"<ARRL_SECT:{len(hissection)}>{hissection}"
+        f"<CLASS:{len(hisclass)}>{hisclass}"
     )
-    adifq += "<SRX_STRING:%s>%s" % (
-        len(hisclass + " " + hissection),
-        hisclass + " " + hissection,
-    )
-    adifq += "<ARRL_SECT:%s>%s" % (len(hissection), hissection)
-    adifq += "<CLASS:%s>%s" % (len(hisclass), hisclass)
-    state = getState(hissection)
+    state = get_state(hissection)
     if state:
-        adifq += "<STATE:%s>%s" % (len(state), state)
+        adifq += f"<STATE:{len(state)}>{state}"
     if grid:
-        adifq += "<GRIDSQUARE:%s>%s" % (len(grid), grid)
+        adifq += f"<GRIDSQUARE:{len(grid)}>{grid}"
     if name:
-        adifq += "<NAME:%s>%s" % (len(name), name)
-    adifq += "<COMMENT:14>ARRL-FIELD-DAY"
-    adifq += "<EOR>"
+        adifq += f"<NAME:{len(name)}>{name}"
+    adifq += "<COMMENT:16>WINTER-FIELD-DAY" "<EOR>"
 
-    try:
-        if int(confData["cloudlog"]["station_id"]) > 0:
-            payload = {
-                "key": cloudlogapi,
-                "type": "adif",
-                "station_profile_id": confData["cloudlog"]["station_id"],
-                "string": adifq,
-            }
-    except:
-        payload = {"key": cloudlogapi, "type": "adif", "string": adifq}
+    payload = {"key": cloudlogapi, "type": "adif", "string": adifq}
 
-    jsonData = json.dumps(payload)
-    logging.debug(f"{jsonData}")
+    jsonData = dumps(payload)
+    logging.debug(jsonData)
     qsoUrl = cloudlogurl + "/qso"
-    response = requests.post(qsoUrl, jsonData)
+    _ = requests.post(qsoUrl, jsonData)
 
 
 def cabrillo():
-
+    """generates a cabrillo log"""
     bonuses = 0
-
     catpower = ""
+    _, _, _, _, _, _, highpower, qrp = database.stats()
     if qrp:
         catpower = "QRP"
     elif highpower:
         catpower = "HIGH"
     else:
         catpower = "LOW"
-    with open("WFDLOG.txt", "w", encoding="ascii") as f:
-        print("START-OF-LOG: 3.0", end="\r\n", file=f)
-        print("CREATED-BY: K6GTE Winter Field Day Logger", end="\r\n", file=f)
-        print("CONTEST: WFD", end="\r\n", file=f)
-        print("CALLSIGN:", mycall, end="\r\n", file=f)
-        print("LOCATION:", end="\r\n", file=f)
-        print("ARRL-SECTION:", mysection, end="\r\n", file=f)
-        print("CATEGORY:", myclass, end="\r\n", file=f)
-        print("CATEGORY-POWER: " + catpower, end="\r\n", file=f)
-        if altpower:
+    with open("WFDLOG.txt", "w", encoding="ascii") as file_descriptor:
+        print("START-OF-LOG: 3.0", end="\r\n", file=file_descriptor)
+        print(
+            "CREATED-BY: K6GTE Winter Field Day Logger",
+            end="\r\n",
+            file=file_descriptor,
+        )
+        print("CONTEST: WFD", end="\r\n", file=file_descriptor)
+        print(
+            "CALLSIGN:",
+            preference.preference["mycallsign"],
+            end="\r\n",
+            file=file_descriptor,
+        )
+        print("LOCATION:", end="\r\n", file=file_descriptor)
+        print(
+            "ARRL-SECTION:",
+            preference.preference["mysection"],
+            end="\r\n",
+            file=file_descriptor,
+        )
+        print(
+            "CATEGORY:",
+            preference.preference["myclass"],
+            end="\r\n",
+            file=file_descriptor,
+        )
+        print("CATEGORY-POWER: " + catpower, end="\r\n", file=file_descriptor)
+        if preference.preference["altpower"]:
             print(
-                "SOAPBOX: 500 points for not using commercial power", end="\r\n", file=f
+                "SOAPBOX: 500 points for not using commercial power",
+                end="\r\n",
+                file=file_descriptor,
             )
             bonuses = bonuses + 500
-        if outdoors:
-            print("SOAPBOX: 500 points for setting up outdoors", end="\r\n", file=f)
-            bonuses = bonuses + 500
-        if notathome:
+        if preference.preference["outdoors"]:
             print(
-                "SOAPBOX: 500 points for setting up away from home", end="\r\n", file=f
+                "SOAPBOX: 500 points for setting up outdoors",
+                end="\r\n",
+                file=file_descriptor,
             )
             bonuses = bonuses + 500
-        if satellite:
-            print("SOAPBOX: 500 points for working satellite", end="\r\n", file=f)
+        if preference.preference["notathome"]:
+            print(
+                "SOAPBOX: 500 points for setting up away from home",
+                end="\r\n",
+                file=file_descriptor,
+            )
             bonuses = bonuses + 500
-        print(f"SOAPBOX: BONUS Total {bonuses}", end="\r\n", file=f)
+        if preference.preference["satellite"]:
+            print(
+                "SOAPBOX: 500 points for working satellite",
+                end="\r\n",
+                file=file_descriptor,
+            )
+            bonuses = bonuses + 500
+        print(f"SOAPBOX: BONUS Total {bonuses}", end="\r\n", file=file_descriptor)
 
-        print(f"CLAIMED-SCORE: {score()}", end="\r\n", file=f)
-        print(f"OPERATORS:{mycall}", end="\r\n", file=f)
-        print("NAME: ", end="\r\n", file=f)
-        print("ADDRESS: ", end="\r\n", file=f)
-        print("ADDRESS-CITY: ", end="\r\n", file=f)
-        print("ADDRESS-STATE: ", end="\r\n", file=f)
-        print("ADDRESS-POSTALCODE: ", end="\r\n", file=f)
-        print("ADDRESS-COUNTRY: ", end="\r\n", file=f)
-        print("EMAIL: ", end="\r\n", file=f)
-        with sqlite3.connect(database) as conn:
-            c = conn.cursor()
-            c.execute("select * from contacts order by date_time ASC")
-            log = c.fetchall()
-            for x in log:
-                _, hiscall, hisclass, hissection, datetime, band, mode, _ = x
-                loggeddate = datetime[:10]
-                loggedtime = datetime[11:13] + datetime[14:16]
-                print(
-                    f"QSO: {band}M {mode} {loggeddate} {loggedtime} {mycall} {myclass} {mysection} {hiscall} {hisclass} {hissection}",
-                    end="\r\n",
-                    file=f,
-                )
-        print("END-OF-LOG:", end="\r\n", file=f)
+        print(f"CLAIMED-SCORE: {score()}", end="\r\n", file=file_descriptor)
+        print(
+            f"OPERATORS:{preference.preference['mycallsign']}",
+            end="\r\n",
+            file=file_descriptor,
+        )
+        print("NAME: ", end="\r\n", file=file_descriptor)
+        print("ADDRESS: ", end="\r\n", file=file_descriptor)
+        print("ADDRESS-CITY: ", end="\r\n", file=file_descriptor)
+        print("ADDRESS-STATE: ", end="\r\n", file=file_descriptor)
+        print("ADDRESS-POSTALCODE: ", end="\r\n", file=file_descriptor)
+        print("ADDRESS-COUNTRY: ", end="\r\n", file=file_descriptor)
+        print("EMAIL: ", end="\r\n", file=file_descriptor)
+        log = database.fetch_all_contacts_asc()
+        for x in log:
+            _, hiscall, hisclass, hissection, datetime, band, mode, _ = x
+            loggeddate = datetime[:10]
+            loggedtime = datetime[11:13] + datetime[14:16]
+            print(
+                f"QSO: {band}M {mode} {loggeddate} {loggedtime} "
+                f"{preference.preference['mycallsign']} "
+                f"{preference.preference['myclass']} "
+                f"{preference.preference['mysection']} {hiscall} {hisclass} {hissection}",
+                end="\r\n",
+                file=file_descriptor,
+            )
+        print("END-OF-LOG:", end="\r\n", file=file_descriptor)
 
     generateBandModeTally()
 
@@ -1127,36 +836,30 @@ def cabrillo():
     window.refresh(0, 0, 12, 1, 20, 33)
     stdscr.move(oy, ox)
     adif()
-    writepreferences()
+    preference.writepreferences()
     statusline()
     stats()
 
 
 def logwindow():
+    """updates the log window with contacts"""
     global contacts, contactsOffset, logNumber
     contactsOffset = 0  # clears scroll position
-    callfiller = "          "
-    classfiller = "   "
-    sectfiller = "   "
-    bandfiller = "   "
-    modefiller = "  "
-    zerofiller = "000"
     contacts = curses.newpad(1000, 80)
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select * from contacts order by date_time desc")
-    log = c.fetchall()
-    conn.close()
+    log = database.fetch_all_contacts_desc()
     logNumber = 0
-    for x in log:
-        logid, hiscall, hisclass, hissection, datetime, band, mode, power = x
-        logid = zerofiller[: -len(str(logid))] + str(logid)
-        hiscall = hiscall + callfiller[: -len(hiscall)]
-        hisclass = hisclass + classfiller[: -len(hisclass)]
-        hissection = hissection + sectfiller[: -len(hissection)]
-        band = band + sectfiller[: -len(band)]
-        mode = mode + modefiller[: -len(mode)]
-        logline = f"{logid} {hiscall} {hisclass} {hissection} {datetime} {band} {mode} {power}"
+    for contact in log:
+        logid, hiscall, hisclass, hissection, datetime, band, mode, power = contact
+        logline = (
+            f"{str(logid).rjust(3,'0')} "
+            f"{hiscall.ljust(10)} "
+            f"{hisclass.rjust(3)} "
+            f"{hissection.rjust(3)} "
+            f"{datetime} "
+            f"{band.rjust(3)} "
+            f"{mode.rjust(2)} "
+            f"{power}"
+        )
         contacts.addstr(logNumber, 0, logline)
         logNumber += 1
     stdscr.refresh()
@@ -1164,7 +867,8 @@ def logwindow():
 
 
 def logup():
-    global contacts, contactsOffset, logNumber
+    """scroll the log up"""
+    global contactsOffset
     contactsOffset += 1
     if contactsOffset > (logNumber - 6):
         contactsOffset = logNumber - 6
@@ -1172,7 +876,8 @@ def logup():
 
 
 def logpagedown():
-    global contacts, contactsOffset, logNumber
+    """scroll the log down"""
+    global contactsOffset
     contactsOffset += 10
     if contactsOffset > (logNumber - 6):
         contactsOffset = logNumber - 6
@@ -1180,7 +885,8 @@ def logpagedown():
 
 
 def logpageup():
-    global contacts, contactsOffset
+    """scroll the log up by a page"""
+    global contactsOffset
     contactsOffset -= 10
     if contactsOffset < 0:
         contactsOffset = 0
@@ -1188,7 +894,8 @@ def logpageup():
 
 
 def logdown():
-    global contacts, contactsOffset
+    """scroll the log down py a page"""
+    global contactsOffset
     contactsOffset -= 1
     if contactsOffset < 0:
         contactsOffset = 0
@@ -1196,22 +903,16 @@ def logdown():
 
 
 def dupCheck(acall):
-    global hisclass, hissection
+    """check for duplicates"""
+    # global hisclass, hissection
     oy, ox = stdscr.getyx()
     scpwindow = curses.newpad(1000, 33)
     rectangle(stdscr, 11, 0, 21, 34)
-
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute(
-        f"select callsign, class, section, band, mode from contacts where callsign like '{acall}' order by band"
-    )
-    log = c.fetchall()
-    conn.close()
+    log = database.dup_check(acall)
     counter = 0
-    for x in log:
+    for contact in log:
         decorate = ""
-        hiscall, hisclass, hissection, hisband, hismode = x
+        hiscall, _, _, hisband, hismode = contact
         if hisband == band and hismode == mode:
             decorate = curses.color_pair(1)
             curses.flash()
@@ -1226,6 +927,7 @@ def dupCheck(acall):
 
 
 def displaySCP(matches):
+    """show super check partial matches"""
     scpwindow = curses.newpad(1000, 33)
     rectangle(stdscr, 11, 0, 21, 34)
     for x in matches:
@@ -1238,11 +940,9 @@ def displaySCP(matches):
 
 
 def workedSections():
+    """gets the worked sections"""
     global wrkdsections
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select distinct section from contacts")
-    all_rows = c.fetchall()
+    all_rows = database.sections()
     wrkdsections = str(all_rows)
     wrkdsections = (
         wrkdsections.replace("('", "")
@@ -1254,6 +954,7 @@ def workedSections():
 
 
 def workedSection(section):
+    """highlights the worked sections"""
     if section in wrkdsections:
         # return curses.A_BOLD
         return curses.color_pair(1)
@@ -1262,7 +963,8 @@ def workedSection(section):
 
 
 def sectionsCol1():
-    rectangle(stdscr, 8, 35, 19, 43)
+    """display section column 1"""
+    rectangle(stdscr, 8, 35, 21, 43)
     stdscr.addstr(8, 36, "   DX  ", curses.A_REVERSE)
     stdscr.addstr(9, 36, "   DX  ", workedSection("DX"))
     stdscr.addstr(10, 36, "   1   ", curses.A_REVERSE)
@@ -1283,7 +985,8 @@ def sectionsCol1():
 
 
 def sectionsCol2():
-    rectangle(stdscr, 8, 44, 19, 52)
+    """display section column 2"""
+    rectangle(stdscr, 8, 44, 21, 52)
     stdscr.addstr(8, 45, "   3   ", curses.A_REVERSE)
     stdscr.addstr(9, 45, "DE", workedSection("DE"))
     stdscr.addstr(9, 49, "MDC", workedSection("MDC"))
@@ -1305,6 +1008,7 @@ def sectionsCol2():
 
 
 def sectionsCol3():
+    """display section column 3"""
     rectangle(stdscr, 8, 53, 21, 61)
     stdscr.addstr(8, 54, "   5   ", curses.A_REVERSE)
     stdscr.addstr(9, 54, "AR", workedSection("AR"))
@@ -1329,6 +1033,7 @@ def sectionsCol3():
 
 
 def sectionsCol4():
+    """display section column 4"""
     rectangle(stdscr, 8, 62, 21, 70)
     stdscr.addstr(8, 63, "   7   ", curses.A_REVERSE)
     stdscr.addstr(9, 63, "AK", workedSection("AK"))
@@ -1352,6 +1057,7 @@ def sectionsCol4():
 
 
 def sectionsCol5():
+    """display section column 5"""
     rectangle(stdscr, 8, 71, 21, 79)
     stdscr.addstr(8, 72, "   0   ", curses.A_REVERSE)
     stdscr.addstr(9, 72, "CO", workedSection("CO"))
@@ -1379,6 +1085,7 @@ def sectionsCol5():
 
 
 def sections():
+    """display all the sections"""
     workedSections()
     sectionsCol1()
     sectionsCol2()
@@ -1389,6 +1096,7 @@ def sections():
 
 
 def entry():
+    """draws the main input fields"""
     rectangle(stdscr, 8, 0, 10, 18)
     stdscr.addstr(8, 1, "CALL")
     rectangle(stdscr, 8, 19, 10, 25)
@@ -1398,6 +1106,7 @@ def entry():
 
 
 def clearentry():
+    """clears the main input fields"""
     global inputFieldFocus, hiscall, hissection, hisclass, kbuf
     hiscall = ""
     hissection = ""
@@ -1410,6 +1119,7 @@ def clearentry():
 
 
 def YorN(boolean):
+    """returns y or n"""
     if boolean:
         return "Y"
     else:
@@ -1417,6 +1127,7 @@ def YorN(boolean):
 
 
 def highlightBonus(bonus):
+    """returns a highlight color pair if true"""
     if bonus:
         return curses.color_pair(1)
     else:
@@ -1424,6 +1135,7 @@ def highlightBonus(bonus):
 
 
 def setStatusMsg(msg):
+    """displays a status message"""
     oy, ox = stdscr.getyx()
     window = curses.newpad(10, 33)
     rectangle(stdscr, 11, 0, 21, 34)
@@ -1434,6 +1146,7 @@ def setStatusMsg(msg):
 
 
 def statusline():
+    """displays a status line..."""
     y, x = stdscr.getyx()
     now = datetime.datetime.now().isoformat(" ")[5:19].replace("-", "/")
     utcnow = datetime.datetime.utcnow().isoformat(" ")[5:19].replace("-", "/")
@@ -1441,14 +1154,15 @@ def statusline():
     try:
         stdscr.addstr(22, 62, "LOC " + now)
         stdscr.addstr(23, 62, "UTC " + utcnow)
-    except curses.error as e:
-        pass
+    except curses.error:
+        # curses will throw an error if printing to the last cell in the bottom right
+        pass  # pylint: disable=bare-except
 
     strfreq = freq.rjust(9)
     strfreq = f"{strfreq[0:3]}.{strfreq[3:6]}.{strfreq[6:9]}"
 
     strband = band
-    if band == None or band == "None":
+    if band is None or band == "None":
         strband = "OOB"
 
     if strband == "222":
@@ -1470,12 +1184,12 @@ def statusline():
     if len(strband) < 4:
         strband += " "
 
-    stdscr.addstr(20, 35, " HamDB   HamQTH   ")
-    stdscr.addstr(20, 42, YorN(hamdbOn), highlightBonus(hamdbOn))
-    stdscr.addstr(20, 51, YorN(hamqthSession), highlightBonus(hamqthSession))
-    stdscr.addstr(21, 35, " QRZ   Cloudlog   ")
-    stdscr.addstr(21, 40, YorN(qrzsession), highlightBonus(qrzsession))
-    stdscr.addstr(21, 51, YorN(cloudLogOn), highlightBonus(cloudLogOn))
+    # stdscr.addstr(20, 35, " HamDB   HamQTH   ")
+    # stdscr.addstr(20, 42, YorN(hamdb_on), highlightBonus(hamdb_on))
+    # stdscr.addstr(20, 51, YorN(hamqth_session), highlightBonus(hamqth_session))
+    # stdscr.addstr(21, 35, " QRZ   Cloudlog   ")
+    # stdscr.addstr(21, 40, YorN(qrzsession), highlightBonus(qrzsession))
+    # stdscr.addstr(21, 51, YorN(cloudlog_on), highlightBonus(cloudlog_on))
     stdscr.addstr(23, 0, "Band       Freq             Mode   ")
     stdscr.addstr(23, 5, strband.rjust(5), curses.A_REVERSE)
     stdscr.addstr(23, 16, strfreq, curses.A_REVERSE)
@@ -1484,35 +1198,53 @@ def statusline():
     stdscr.addstr(
         22,
         37,
-        " " + mycall + "|" + myclass + "|" + mysection + "|" + power + "w ",
+        f" {preference.preference['mycallsign']}|"
+        f"{preference.preference['myclass']}|"
+        f"{preference.preference['mysection']}|"
+        f"{preference.preference['power']}w ",
         curses.A_REVERSE,
     )
     stdscr.addstr(22, 0, "Bonus")
-    stdscr.addstr(22, 6, "AltPwr", highlightBonus(altpower))
+    stdscr.addstr(22, 6, "AltPwr", highlightBonus(preference.preference["altpower"]))
     stdscr.addch(curses.ACS_VLINE)
-    stdscr.addstr("Outdoor", highlightBonus(outdoors))
+    stdscr.addstr("Outdoor", highlightBonus(preference.preference["outdoors"]))
     stdscr.addch(curses.ACS_VLINE)
-    stdscr.addstr("NotHome", highlightBonus(notathome))
+    stdscr.addstr("NotHome", highlightBonus(preference.preference["notathome"]))
     stdscr.addch(curses.ACS_VLINE)
-    stdscr.addstr("Sat", highlightBonus(satellite))
-    stdscr.addstr(23, 37, "Rig                     ")
-    stdscr.addstr(
-        23, 41, rigctrlhost.lower() + ":" + str(rigctrlport), highlightBonus(rigonline)
-    )
+    stdscr.addstr("Sat", highlightBonus(preference.preference["satellite"]))
+    stdscr.addstr(23, 37, "                        ")
+
+    if cat_control:
+        stdscr.addstr(
+            23, 37, cat_control.interface.ljust(7), highlightBonus(cat_control.online)
+        )
+
+    if preference.preference["usehamdb"]:
+        stdscr.addstr(23, 46, "HamDB", highlightBonus(not look_up.error))
+
+    if preference.preference["usehamqth"]:
+        stdscr.addstr(23, 46, "HamQTH", highlightBonus(look_up.session))
+
+    if preference.preference["useqrz"]:
+        stdscr.addstr(23, 46, "QRZ", highlightBonus(look_up.session))
+
+    if preference.preference["cloudlog"]:
+        stdscr.addstr(23, 53, "CloudLog", highlightBonus(cloudlog_on))
 
     stdscr.move(y, x)
 
 
 def setpower(p):
-    global power
+    """I'm assuming it sets the power"""
+    logging.info("setpower: %s%s", type(p), p)
     try:
         int(p)
-    except:
+    except ValueError:
         p = "0"
     if p is None or p == "":
         p = "0"
     if int(p) > 0 and int(p) < 101:
-        power = p
+        preference.preference["power"] = str(p)
         writepreferences()
         statusline()
     else:
@@ -1520,28 +1252,31 @@ def setpower(p):
 
 
 def setband(b):
+    """Needs Doc String"""
     global band
     band = b
     statusline()
 
 
 def setmode(m):
+    """Needs Doc String"""
     global mode
     mode = m
     statusline()
 
 
 def setfreq(f):
+    """Needs Doc String"""
     global freq
     freq = f
     statusline()
 
 
 def setcallsign(c):
-    global mycall
-    regex = re.compile("^([0-9])?[A-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}$")
+    """Needs Doc String"""
+    regex = re.compile(r"^([0-9])?[A-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}$")
     if re.match(regex, str(c)):
-        mycall = str(c)
+        preference.preference["mycallsign"] = str(c)
         writepreferences()
         statusline()
     else:
@@ -1549,10 +1284,10 @@ def setcallsign(c):
 
 
 def setclass(c):
-    global myclass
-    regex = re.compile("^[0-9]{1,2}[HhIiOo]$")
+    """Needs Doc String"""
+    regex = re.compile(r"^[0-9]{1,2}[HhIiOo]$")
     if re.match(regex, str(c)):
-        myclass = str(c)
+        preference.preference["myclass"] = str(c)
         writepreferences()
         statusline()
     else:
@@ -1560,9 +1295,9 @@ def setclass(c):
 
 
 def setsection(s):
-    global mysection, sections
+    """validates users section"""
     if s and str(s) in validSections:
-        mysection = str(s)
+        preference.preference["mysection"] = str(s)
         writepreferences()
         statusline()
     else:
@@ -1570,111 +1305,92 @@ def setsection(s):
 
 
 def setrigctrlhost(o):
-    global rigctrlhost
-    rigctrlhost = str(o)
+    """Needs Doc String"""
+    preference.preference["CAT_ip"] = str(o)
     writepreferences()
     statusline()
 
 
 def setrigctrlport(r):
-    global rigctrlport
-    rigctrlport = str(r)
+    """Needs Doc String"""
+    preference.preference["CAT_port"] = int(str(r))
     writepreferences()
-    rigctrlport = int(r)
     statusline()
 
 
 def claimAltPower():
-    global altpower
-    if altpower:
-        altpower = False
+    """Needs Doc String"""
+    if preference.preference["altpower"]:
+        preference.preference["altpower"] = False
     else:
-        altpower = True
-    setStatusMsg("Alt Power set to: " + str(altpower))
+        preference.preference["altpower"] = True
+    setStatusMsg("Alt Power set to: " + str(preference.preference["altpower"]))
     writepreferences()
     statusline()
     stats()
 
 
 def claimOutdoors():
-    global outdoors
-    if outdoors:
-        outdoors = False
+    """Needs Doc String"""
+    if preference.preference["outdoors"]:
+        preference.preference["outdoors"] = False
     else:
-        outdoors = True
-    setStatusMsg("Outdoor bonus set to: " + str(outdoors))
+        preference.preference["outdoors"] = True
+    setStatusMsg("Outdoor bonus set to: " + str(preference.preference["outdoors"]))
     writepreferences()
     statusline()
     stats()
 
 
 def claimNotHome():
-    global notathome
-    if notathome:
-        notathome = False
+    """Needs Doc String"""
+    if preference.preference["notathome"]:
+        preference.preference["notathome"] = False
     else:
-        notathome = True
-    setStatusMsg("Away bonus set to: " + str(notathome))
+        preference.preference["notathome"] = True
+    setStatusMsg("Away bonus set to: " + str(preference.preference["notathome"]))
     writepreferences()
     statusline()
     stats()
 
 
 def claimSatellite():
-    global satellite
-    if satellite:
-        satellite = False
+    """Needs Doc String"""
+    if preference.preference["satellite"]:
+        preference.preference["satellite"] = False
     else:
-        satellite = True
-    setStatusMsg("Satellite bonus set to: " + str(satellite))
+        preference.preference["satellite"] = True
+    setStatusMsg("Satellite bonus set to: " + str(preference.preference["satellite"]))
     writepreferences()
     statusline()
     stats()
 
 
-def displayHelp(page):
+def displayHelp():
+    """Display help menu"""
     rectangle(stdscr, 11, 0, 21, 34)
     wy, wx = stdscr.getyx()
-    if page == 1:
-        help = [
-            "Main Help Screen                 ",
-            "                                 ",
-            ".H this message  |.1 Outdoors    ",
-            ".0 rigctrl help  |.2 AltPwr      ",
-            ".Q quit program  |.3 AwayFromHome",
-            ".Kyourcall       |.4 Satellite   ",
-            ".Cyourclass      |.E### edit QSO ",
-            ".Syoursection    |.D### del QSO  ",
-            "[ESC] Abort Input|.L Generate Log",
-        ]
-    elif page == 2:
-        help = [
-            "Rig Control Help Screen          ",
-            "                                 ",
-            ".0 this message  |               ",
-            ".H main help     |               ",
-            ".Irighost        |.Rrigport      ",
-            ".Ffreq (in Hz)   |.Ppower (in W) ",
-            ".Mmode (eg USB)  |.Bband (eg 20) ",
-            "                                 ",
-            "                                 ",
-        ]
-    else:
-        help = [
-            "Help Screen                      ",
-            ".H Main Help Screen              ",
-            ".0 Rig Control Help Screen       ",
-        ]
+    help_screen = [
+        ".H this message  |.2 Outdoors    ",
+        ".Q quit program  |.3 AwayFromHome",
+        ".Kyourcall       |.4 Satellite   ",
+        ".Cyourclass      |.E### edit QSO ",
+        ".Syoursection    |.D### del QSO  ",
+        ".B## change bands|.L Generate Log",
+        ".M[CW,PH,DI] mode|               ",
+        ".P## change power|               ",
+        ".1 Alt Power     |[esc] abort inp",
+    ]
     stdscr.move(12, 1)
-    count = 0
-    for x in help:
-        stdscr.addstr(12 + count, 1, x)
+    for count, line in enumerate(help_screen):
+        stdscr.addstr(12 + count, 1, line)
         count = count + 1
     stdscr.move(wy, wx)
     stdscr.refresh()
 
 
 def displayinfo(info):
+    """Needs Doc String"""
     y, x = stdscr.getyx()
     stdscr.move(20, 1)
     stdscr.addstr(info)
@@ -1683,6 +1399,7 @@ def displayinfo(info):
 
 
 def displayLine():
+    """Needs Doc String"""
     filler = "                        "
     line = kbuf + filler[: -len(kbuf)]
     stdscr.move(9, 1)
@@ -1692,6 +1409,7 @@ def displayLine():
 
 
 def displayInputField(field):
+    """Needs Doc String"""
     filler = "                 "
     if field == 0:
         filler = "                 "
@@ -1713,18 +1431,19 @@ def displayInputField(field):
 
 
 def processcommand(cmd):
-    global band, mode, power, quit, rigonline
+    """Needs Doc String"""
+    global quitprogram
     cmd = cmd[1:].upper()
-    if cmd == "Q":  # Quit
-        quit = True
+    if cmd == "Q":  # quitprogram
+        quitprogram = True
         return
     if cmd[:1] == "F":  # Set Radio Frequency
-        sendRadio(cmd[:1], cmd[1:])
+        send_radio(cmd[:1], cmd[1:])
         return
     if cmd[:1] == "B":  # Change Band
         if cmd[1:] and cmd[1:] in bands:
-            if rigonline:
-                sendRadio(cmd[:1], cmd[1:])
+            if cat_control:
+                send_radio(cmd[:1], cmd[1:])
                 return
             else:
                 setband(cmd[1:])
@@ -1732,7 +1451,7 @@ def processcommand(cmd):
             setStatusMsg("Specify valid band")
         return
     if cmd[:1] == "M":  # Change Mode
-        if rigonline == False:
+        if not cat_control:
             if cmd[1:] == "CW" or cmd[1:] == "PH" or cmd[1:] == "DI":
                 setmode(cmd[1:])
             else:
@@ -1746,13 +1465,14 @@ def processcommand(cmd):
                 or cmd[1:] == "AM"
                 or cmd[1:] == "FM"
             ):
-                sendRadio(cmd[:1], cmd[1:])
+                send_radio(cmd[:1], cmd[1:])
             else:
                 setStatusMsg("Must be AM, FM, CW, *SB, RTTY")
         return
     if cmd[:1] == "P":  # Change Power
-        if rigonline:
-            sendRadio(cmd[:1], cmd[1:])
+        if cat_control:
+            send_radio(cmd[:1], cmd[1:])
+            setpower(cmd[1:])
         else:
             setpower(cmd[1:])
         return
@@ -1763,10 +1483,10 @@ def processcommand(cmd):
         editQSO(cmd[1:])
         return
     if cmd[:1] == "H":  # Print Help
-        displayHelp(1)
+        displayHelp()
         return
     if cmd[:1] == "0":  # Print Rig Control Help
-        displayHelp(2)
+        # displayHelp(2)
         return
     if cmd[:1] == "K":  # Set your Call Sign
         setcallsign(cmd[1:])
@@ -1779,10 +1499,9 @@ def processcommand(cmd):
         return
     if cmd[:1] == "I":  # Set rigctld host
         regex1 = re.compile("localhost")
-        regex2 = re.compile("[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
+        regex2 = re.compile(r"[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
         if re.match(regex1, cmd[1:].lower()) or re.match(regex2, cmd[1:].lower()):
             setrigctrlhost(cmd[1:])
-            rigonline = False
         else:
             setStatusMsg("Must be IP or localhost")
         return
@@ -1794,7 +1513,6 @@ def processcommand(cmd):
             and int(cmd[1:]) < 65536
         ):
             setrigctrlport(cmd[1:])
-            rigonline = False
         else:
             setStatusMsg("Must be 1024 <= Port <= 65535")
         return
@@ -1818,8 +1536,9 @@ def processcommand(cmd):
 
 
 def proc_key(key):
+    """Needs Doc String"""
     global inputFieldFocus, hiscall, hissection, hisclass, kbuf
-    if key == 9 or key == Space:
+    if key == 9 or key == SPACE:
         inputFieldFocus += 1
         if inputFieldFocus > 2:
             inputFieldFocus = 0
@@ -1840,18 +1559,18 @@ def proc_key(key):
             kbuf = hissection  # load current section into buffer
             stdscr.addstr(kbuf)
         return
-    elif key == BackSpace:
+    elif key == BACK_SPACE:
         if kbuf != "":
             kbuf = kbuf[0:-1]
             if inputFieldFocus == 0 and len(kbuf) < 3:
-                displaySCP(superCheck("^"))
+                displaySCP(super_check("^"))
             if inputFieldFocus == 0 and len(kbuf) > 2:
-                displaySCP(superCheck(kbuf))
+                displaySCP(super_check(kbuf))
             if inputFieldFocus == 2:
-                sectionCheck(kbuf)
+                section_check(kbuf)
         displayInputField(inputFieldFocus)
         return
-    elif key == EnterKey:
+    elif key == ENTERKEY:
         if inputFieldFocus == 0:
             hiscall = kbuf
         elif inputFieldFocus == 1:
@@ -1868,41 +1587,45 @@ def proc_key(key):
             "^(([0-9])?[A-z]{1,2}[0-9]/)?[A-Za-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}(/[A-Za-z0-9]{1,3})?$"
         )
         if re.match(isCall, hiscall):
-            contact = (hiscall, hisclass, hissection, band, mode, int(power))
+            contact = (
+                hiscall,
+                hisclass,
+                hissection,
+                band,
+                mode,
+                int(preference.preference["power"]),
+            )
             log_contact(contact)
             clearentry()
         else:
             setStatusMsg("Must be valid call sign")
         return
-    elif key == Escape:
+    elif key == ESCAPE:
         clearentry()
         return
-    elif key == Space:
+    elif key == SPACE:
         return
     elif key == 258:  # key down
         logup()
-        pass
     elif key == 259:  # key up
         logdown()
-        pass
     elif key == 338:  # page down
         logpagedown()
-        pass
     elif key == 339:  # page up
         logpageup()
-        pass
     elif curses.ascii.isascii(key):
-        if len(kbuf) < maxFieldLength[inputFieldFocus]:
+        if len(kbuf) < MAXFIELDLENGTH[inputFieldFocus]:
             kbuf = kbuf.upper() + chr(key).upper()
             if inputFieldFocus == 0 and len(kbuf) > 2:
-                displaySCP(superCheck(kbuf))
+                displaySCP(super_check(kbuf))
             if inputFieldFocus == 2 and len(kbuf) > 0:
-                sectionCheck(kbuf)
+                section_check(kbuf)
     displayInputField(inputFieldFocus)
 
 
 def edit_key(key):
-    global editFieldFocus, qso, quit
+    """Needs Doc String"""
+    global editFieldFocus, quitprogram
     if key == 9:
         editFieldFocus += 1
         if editFieldFocus > 7:
@@ -1910,12 +1633,12 @@ def edit_key(key):
         qsoew.move(editFieldFocus, 10)  # move focus to call field
         qsoew.addstr(qso[editFieldFocus])
         return
-    elif key == BackSpace:
+    elif key == BACK_SPACE:
         if qso[editFieldFocus] != "":
             qso[editFieldFocus] = qso[editFieldFocus][0:-1]
         displayEditField(editFieldFocus)
         return
-    elif key == EnterKey:
+    elif key == ENTERKEY:
         change_contact(qso)
         qsoew.erase()
         stdscr.clear()
@@ -1926,12 +1649,12 @@ def edit_key(key):
         logwindow()
         sections()
         stats()
-        displayHelp(1)
+        displayHelp()
         entry()
         stdscr.move(9, 1)
-        quit = True
+        quitprogram = True
         return
-    elif key == Escape:
+    elif key == ESCAPE:
         qsoew.erase()
         stdscr.clear()
         rectangle(stdscr, 0, 0, 7, 55)
@@ -1941,12 +1664,12 @@ def edit_key(key):
         logwindow()
         sections()
         stats()
-        displayHelp(1)
+        displayHelp()
         entry()
         stdscr.move(9, 1)
-        quit = True
+        quitprogram = True
         return
-    elif key == Space:
+    elif key == SPACE:
         return
     elif key == 258:  # arrow down
         editFieldFocus += 1
@@ -1963,14 +1686,14 @@ def edit_key(key):
         qsoew.addstr(qso[editFieldFocus])
         return
     elif curses.ascii.isascii(key):
-        # displayinfo("eff:"+str(editFieldFocus)+" mefl:"+str(maxEditFieldLength[editFieldFocus]))
-        if len(qso[editFieldFocus]) < maxEditFieldLength[editFieldFocus]:
+        # displayinfo("eff:"+str(editFieldFocus)+" mefl:"+str(MAXEDITFIELDLENGTH[editFieldFocus]))
+        if len(qso[editFieldFocus]) < MAXEDITFIELDLENGTH[editFieldFocus]:
             qso[editFieldFocus] = qso[editFieldFocus].upper() + chr(key).upper()
     displayEditField(editFieldFocus)
 
 
 def displayEditField(field):
-    global qso
+    """Needs Doc String"""
     filler = "                 "
     if field == 1:
         filler = "                 "
@@ -1989,7 +1712,8 @@ def displayEditField(field):
 
 
 def EditClickedQSO(line):
-    global qsoew, qso, quit
+    """Needs Doc String"""
+    global qsoew, qso, quitprogram
     record = (
         contacts.instr((line - 1) + contactsOffset, 0, 55)
         .decode("utf-8")
@@ -2030,21 +1754,18 @@ def EditClickedQSO(line):
             edit_key(c)
         else:
             time.sleep(0.1)
-        if quit:
-            quit = False
+        if quitprogram:
+            quitprogram = False
             break
 
 
 def editQSO(q):
-    if q == False or q == "":
+    """Needs Doc String"""
+    if q is False or q == "":
         setStatusMsg("Must specify a contact number")
         return
-    global qsoew, qso, quit
-    conn = sqlite3.connect(database)
-    c = conn.cursor()
-    c.execute("select * from contacts where id=" + q)
-    log = c.fetchall()
-    conn.close()
+    global qsoew, qso, quitprogram
+    log = database.contact_by_id(q)
     if not log:
         return
     qso = ["", "", "", "", "", "", "", ""]
@@ -2071,14 +1792,15 @@ def editQSO(q):
             edit_key(c)
         else:
             time.sleep(0.1)
-        if quit:
-            quit = False
+        if quitprogram:
+            quitprogram = False
             break
 
 
-def main(s):
-    global pollTime, stdscr, conn, rigonline
-    conn = create_DB()
+def main(s) -> None:
+    """It's the main loop."""
+    logging.debug("main: %s", s)
+    global poll_time
     curses.start_color()
     curses.use_default_colors()
     if curses.can_change_color():
@@ -2095,13 +1817,12 @@ def main(s):
     curses.mousemask(curses.ALL_MOUSE_EVENTS)
     stdscr.attrset(curses.color_pair(0))
     stdscr.clear()
-    contacts()
+    contacts_label()
     sections()
     entry()
     logwindow()
-    readpreferences()
     stats()
-    displayHelp(1)
+    displayHelp()
     stdscr.refresh()
     stdscr.move(9, 1)
     while 1:
@@ -2120,20 +1841,58 @@ def main(s):
                     EditClickedQSO(y)
             except curses.error:
                 pass
-            pass
         elif ch != -1:
             proc_key(ch)
         else:
             time.sleep(0.1)
-        if quit:
+        if quitprogram:
             break
-        if datetime.datetime.now() > pollTime:
-            if rigonline == False:
-                checkRadio()
-            else:
-                pollRadio()
-                pollTime = datetime.datetime.now()+datetime.timedelta(seconds=5)
+        if datetime.datetime.now() > poll_time:
+            poll_radio()
+            poll_time = datetime.datetime.now() + datetime.timedelta(seconds=1)
 
 
 if __name__ == "__main__":
+    database = DataBase("wfd.db")
+    preference = Preferences()
+    readpreferences()
+    look_up = None
+    cat_control = None
+    if preference.preference["useqrz"]:
+        look_up = QRZlookup(
+            preference.preference["qrzusername"], preference.preference["qrzpassword"]
+        )
+    if preference.preference["usehamdb"]:
+        look_up = HamDBlookup()
+    if preference.preference["usehamqth"]:
+        look_up = HamQTH(
+            preference.preference["hamqthusername"],
+            preference.preference["hamqthpassword"],
+        )
+    if preference.preference["useflrig"]:
+        cat_control = CAT(
+            "flrig", preference.preference["CAT_ip"], preference.preference["CAT_port"]
+        )
+    if preference.preference["userigctld"]:
+        cat_control = CAT(
+            "rigctld",
+            preference.preference["CAT_ip"],
+            preference.preference["CAT_port"],
+        )
+
+    if preference.preference["cloudlog"]:
+        __payload = "/validate/key=" + preference.preference["cloudlogapi"]
+        try:
+            result = requests.get(
+                preference.preference["cloudlogurl"] + __payload, timeout=5
+            )
+
+            if result.status_code == 200 or result.status_code == 400:
+                cloudlog_on = True
+        except requests.exceptions.ConnectionError as exception:
+            logging.warning("cloudlog authentication: %s", exception)
+
+    read_sections()
+    scp = read_scp()
+
     wrapper(main)
