@@ -1220,13 +1220,16 @@ def statusline():
         )
 
     if preference.preference["usehamdb"]:
-        stdscr.addstr(23, 47, "HamDB", highlightBonus(not look_up.error))
+        stdscr.addstr(23, 46, "HamDB", highlightBonus(not look_up.error))
 
     if preference.preference["usehamqth"]:
-        stdscr.addstr(23, 47, "HamQTH", highlightBonus(look_up.session))
+        stdscr.addstr(23, 46, "HamQTH", highlightBonus(look_up.session))
 
     if preference.preference["useqrz"]:
-        stdscr.addstr(23, 47, "QRZ", highlightBonus(look_up.session))
+        stdscr.addstr(23, 46, "QRZ", highlightBonus(look_up.session))
+
+    if preference.preference["cloudlog"]:
+        stdscr.addstr(23, 53, "CloudLog", highlightBonus(cloudlog_on))
 
     stdscr.move(y, x)
 
