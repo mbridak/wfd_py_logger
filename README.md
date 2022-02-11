@@ -32,6 +32,9 @@ This is a simple logger ment for single op, it's not usable for clubs.
 
 **A newer version based on PyQt5 can be found [here](https://github.com/mbridak/WinterFieldDayLogger)**.
 
+## Initial Setup
+Before running you may want to edit the `wfd_preferences.json` file. It has settings for rigcontrol, callsign lookup and cloudlog integration.
+
 ## Commands:
 Commands start with a period character in the callsign field and are immediately followed by any information needed by the command.
 
@@ -55,9 +58,6 @@ Commands start with a period character in the callsign field and are immediately
 ```
 
 After the command is entered press the TAB key to execute it.
-
-## Initial Setup
-When run for the first time, you will need to set your callsign, class, section, band, mode and power used for the contacts.
 
 So when I initially start the program I would enter the following:
 
@@ -83,20 +83,48 @@ Okay you've made a contact. Enter the call in the call field. As you type it in,
 
 ## Features
 
-#### Radio Polling via rigctld
-If you run rigctld on the computer that you are logging from, the radio will be polled for band/mode updates automatically. There is an indicator at the bottom of the logging window to indicate polling status. Dim if no connection or timeout, and highlighted if all okay.
+#### Radio Polling via rigctld or flrig
+Be sure to edit the json file referenced in the Initial Setup section. Place a `1` next to your preferred CAT method. and fill in the CAT_ip and CAT_port fields.
+
+##### flrig:
+
+    "userigctld": 0,
+    "useflrig": 1,
+    "CAT_ip": "localhost",
+    "CAT_port": 12345,
+
+##### rigctld:
+
+    "userigctld": 1,
+    "useflrig": 0,
+    "CAT_ip": "localhost",
+    "CAT_port": 4532,
+
+The radio will be polled for band/mode updates automatically. There is an indicator at the bottom of the logging window to indicate polling status. Dim if no connection or timeout, and highlighted if all okay.
 
 ![Alt text](pics/rigctld.png)
 
-#### Cloudlog and QRZ API's
-If you use either Cloudlog logging or QRZ lookup you can edit the lines in FieldDayLogger.py shown below to enable.
-```
-    cloudlogapi="cl12345678901234567890"
-    cloudlogurl="http://www.yoururl.com/Cloudlog/index.php/api/qso"
-    qrzname="w1aw"
-    qrzpass="secret"
-```
-I know this is an utter crap way of doing this and it needs to be moved to the sql database and a dialog created to edit the info... But... It's much easier to tell you to edit the file...
+#### QRZ, HamQTH, HamDB
+If you are going to use a callsign lookup service, you can edit the lines in the wfd_preference.json shown below.
+
+    "usehamdb": 0,
+    "hamdburl": "https://api.hamdb.org",
+    "useqrz": 0,
+    "qrzusername": "",
+    "qrzpassword": "",
+    "qrzurl": "https://xmldata.qrz.com/xml/134",
+    "usehamqth": 0,
+    "hamqthusername": "",
+    "hamqthpassword": "",
+    "hamqthurl": "",
+
+#### Cloudlog
+If you wish to have your contacts pushed to cloudlog, edit the lines in the wfd_preference.json shown below.
+
+    "cloudlog": 0,
+    "cloudlogapi": "c01234567890123456789",
+    "cloudlogurl": "https://www.cloudlog.com/Cloudlog/index.php/api",
+    "cloudlogstationid": "",
 
 #### Editing an existing contact
 Use the Up/Down arrow keys or PageUp/PageDown to scroll the contact into view. Your mouse scroll wheel may work as well. Double left click on the contact to edit, or use the '.E' command. Use the TAB or Up/Down arrow keys to move between fields. Backspace to erase and retype what you need.
