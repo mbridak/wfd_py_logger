@@ -17,7 +17,7 @@ class HamDBlookup:
 
     def __init__(self) -> None:
         self.url = "https://api.hamdb.org/"
-        self.error = None
+        self.error = False
 
     def lookup(self, call: str) -> tuple:
         """
@@ -30,6 +30,7 @@ class HamDBlookup:
         nickname = False
         query_result = requests.get(self.url + call + "/xml/wfd_logger", timeout=3.0)
         if query_result.status_code == 200:
+            self.error = False
             root = bs(query_result.text, "html.parser")
             if root.messages.find("status"):
                 error_text = root.messages.status.text
@@ -47,6 +48,7 @@ class HamDBlookup:
                 if root.callsign.find("nickname"):
                     nickname = root.callsign.nickname.text
         else:
+            self.error = True
             error_text = str(query_result.status_code)
         logging.info("HamDB-lookup: %s %s %s %s", grid, name, nickname, error_text)
         return grid, name, nickname, error_text
@@ -126,6 +128,7 @@ class QRZlookup:
                         self.qrzurl, params=payload, timeout=3.0
                     )
             grid, name, nickname, error_text = self.parse_lookup(query_result)
+        logging.info("QRZ-lookup: %s %s %s %s", grid, name, nickname, error_text)
         return grid, name, nickname, error_text
 
     def parse_lookup(self, query_result):
@@ -215,6 +218,7 @@ class HamQTH:
                                 self.url, params=payload, timeout=10.0
                             )
             grid, name, nickname, error_text = self.parse_lookup(query_result)
+        logging.info("HamDB-lookup: %s %s %s %s", grid, name, nickname, error_text)
         return grid, name, nickname, error_text
 
     def parse_lookup(self, query_result) -> tuple:
