@@ -26,11 +26,13 @@ import time
 import re
 import sys
 
+from math import degrees, radians, sin, cos, atan2, sqrt, asin, pi
 from pathlib import Path
 from curses.textpad import rectangle
 from curses import wrapper
 from json import dumps
 import requests
+import threading
 from database import DataBase
 from preferences import Preferences
 from lookup import HamDBlookup, HamQTH, QRZlookup
@@ -232,6 +234,95 @@ oldmode = ""
 oldpwr = 0
 
 
+def lazy_lookup(acall):
+    grid, name, _, _ = look_up.lookup(acall)
+    dist = 0
+    berg = 0
+    if grid:
+        dist = distance("dm13at", grid)
+        berg = bearing("dm13at", grid)
+    displayinfo(f"{name} {grid} {round(dist)}km {round(berg)}deg")
+    logging.debug("lazy lookup:%s %s", grid, name)
+
+
+def gridtolatlon(maiden: str) -> tuple[float, float]:
+    maiden = str(maiden).strip().upper()
+
+    N = len(maiden)
+    if not 8 >= N >= 2 and N % 2 == 0:
+        return 0, 0
+
+    lon = (ord(maiden[0]) - 65) * 20 - 180
+    lat = (ord(maiden[1]) - 65) * 10 - 90
+
+    if N >= 4:
+        lon += (ord(maiden[2]) - 48) * 2
+        lat += ord(maiden[3]) - 48
+
+    if N >= 6:
+        lon += (ord(maiden[4]) - 65) / 12 + 1 / 24
+        lat += (ord(maiden[5]) - 65) / 24 + 1 / 48
+
+    if N >= 8:
+        lon += (ord(maiden[6])) * 5.0 / 600
+        lat += (ord(maiden[7])) * 2.5 / 600
+
+    return lat, lon
+
+
+def distance(grid1: str, grid2: str) -> float:
+    """
+    Takes two maidenhead gridsquares and returns the distance between the two in kilometers.
+    """
+    lat1, lon1 = gridtolatlon(grid1)
+    lat2, lon2 = gridtolatlon(grid2)
+
+    bearing = atan2(
+        sin(lon2 - lon1) * cos(lat2),
+        cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(lon2 - lon1),
+    )
+    bearing = degrees(bearing)
+    bearing = (bearing + 360) % 360
+
+    return haversine(lon1, lat1, lon2, lat2)
+
+
+def bearing(grid1: str, grid2: str) -> float:
+    lat1, lon1 = gridtolatlon(grid1)
+    lat2, lon2 = gridtolatlon(grid2)
+    lat1 = radians(lat1)
+    lon1 = radians(lon1)
+    lat2 = radians(lat2)
+    lon2 = radians(lon2)
+    londelta = lon2 - lon1
+    y = sin(londelta) * cos(lat2)
+    x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(londelta)
+    brng = atan2(y, x)
+    brng *= 180 / pi
+
+    if brng < 0:
+        brng += 360
+
+    return brng
+
+
+def haversine(lon1, lat1, lon2, lat2):
+    """
+    Calculate the great circle distance in kilometers between two points
+    on the earth (specified in decimal degrees)
+    """
+    # convert degrees to radians
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+
+    # haversine formula
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+    c = 2 * asin(sqrt(a))
+    r = 6372.8  # Radius of earth in kilometers.
+    return c * r
+
+
 def relpath(filename):
     """
     Checks to see if program has been packaged with pyinstaller.
@@ -303,6 +394,7 @@ def send_radio(cmd: str, arg: str) -> None:
         if cmd == "F":
             if arg.isnumeric() and int(arg) >= 1800000 and int(arg) <= 450000000:
                 cat_control.set_vfo(f"{arg}")
+                setfreq(f"{arg}")
             else:
                 setStatusMsg("Specify frequency in Hz")
         elif cmd == "M":
@@ -1184,12 +1276,6 @@ def statusline():
     if len(strband) < 4:
         strband += " "
 
-    # stdscr.addstr(20, 35, " HamDB   HamQTH   ")
-    # stdscr.addstr(20, 42, YorN(hamdb_on), highlightBonus(hamdb_on))
-    # stdscr.addstr(20, 51, YorN(hamqth_session), highlightBonus(hamqth_session))
-    # stdscr.addstr(21, 35, " QRZ   Cloudlog   ")
-    # stdscr.addstr(21, 40, YorN(qrzsession), highlightBonus(qrzsession))
-    # stdscr.addstr(21, 51, YorN(cloudlog_on), highlightBonus(cloudlog_on))
     stdscr.addstr(23, 0, "Band       Freq             Mode   ")
     stdscr.addstr(23, 5, strband.rjust(5), curses.A_REVERSE)
     stdscr.addstr(23, 16, strfreq, curses.A_REVERSE)
@@ -1265,7 +1351,7 @@ def setmode(m):
     statusline()
 
 
-def setfreq(f):
+def setfreq(f: str) -> None:
     """Needs Doc String"""
     global freq
     freq = f
@@ -1550,6 +1636,8 @@ def proc_key(key):
         if inputFieldFocus == 1:
             hiscall = kbuf  # store any input to previous field
             dupCheck(hiscall)
+            x = threading.Thread(target=lazy_lookup, args=(hiscall,), daemon=True)
+            x.start()
             stdscr.move(9, 20)  # move focus to class field
             kbuf = hisclass  # load current class into buffer
             stdscr.addstr(kbuf)
