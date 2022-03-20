@@ -1951,14 +1951,15 @@ if __name__ == "__main__":
     cat_control = None
     if preference.preference["useqrz"]:
         look_up = QRZlookup(
-            preference.preference["qrzusername"], preference.preference["qrzpassword"]
+            preference.preference["lookupusername"],
+            preference.preference["lookuppassword"],
         )
     if preference.preference["usehamdb"]:
         look_up = HamDBlookup()
     if preference.preference["usehamqth"]:
         look_up = HamQTH(
-            preference.preference["hamqthusername"],
-            preference.preference["hamqthpassword"],
+            preference.preference["lookupusername"],
+            preference.preference["lookuppassword"],
         )
     if preference.preference["useflrig"]:
         cat_control = CAT(
