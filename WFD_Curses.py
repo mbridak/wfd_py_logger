@@ -240,7 +240,7 @@ oldmode = ""
 oldpwr = 0
 
 
-def lazy_lookup(acall):
+def lazy_lookup(acall: str) -> None:
     """looks up a callsign for name, gridsquare, distance and bearing"""
     grid, name, _, _ = look_up.lookup(acall)
     dist = 0
@@ -315,7 +315,7 @@ def bearing(grid1: str, grid2: str) -> float:
     return brng
 
 
-def haversine(lon1, lat1, lon2, lat2):
+def haversine(lon1: str, lat1: str, lon2: str, lat2: str) -> float:
     """
     Calculate the great circle distance in kilometers between two points
     on the earth (specified in decimal degrees)
@@ -332,7 +332,7 @@ def haversine(lon1, lat1, lon2, lat2):
     return c * r
 
 
-def relpath(filename):
+def relpath(filename: str) -> str:
     """
     Checks to see if program has been packaged with pyinstaller.
     If so base dir is in a temp folder.
@@ -382,9 +382,9 @@ def getband(the_freq) -> str:
 
 def getmode(rigmode: str) -> str:
     """converts the rigs mode into the contest mode."""
-    if rigmode == "CW" or rigmode == "CWR":
+    if rigmode in ("CW", "CWR"):
         return "CW"
-    if rigmode == "USB" or rigmode == "LSB" or rigmode == "FM" or rigmode == "AM":
+    if rigmode in ("USB", "LSB", "FM", "AM"):
         return "PH"
     return "DI"  # All else digital
 
@@ -766,14 +766,12 @@ def parsecallsign(callsign):
         return callsign
     if len(callelements) == 3:
         return callelements[1]
-    elif len(callelements) == 2:
+    if len(callelements) == 2:
         regex = re.compile("^([0-9])?[A-Za-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}$")
         if re.match(regex, callelements[0]):
             return callelements[0]
-        else:
-            return callelements[1]
-    else:
-        return callsign
+        return callelements[1]
+    return callsign
 
 
 def postcloudlog():
@@ -1059,8 +1057,7 @@ def workedSection(section):
     if section in wrkdsections:
         # return curses.A_BOLD
         return curses.color_pair(1)
-    else:
-        return curses.A_DIM
+    return curses.A_DIM
 
 
 def sectionsCol1():
@@ -1223,16 +1220,14 @@ def YorN(boolean):
     """returns y or n"""
     if boolean:
         return "Y"
-    else:
-        return "N"
+    return "N"
 
 
 def highlightBonus(bonus):
     """returns a highlight color pair if true"""
     if bonus:
         return curses.color_pair(1)
-    else:
-        return curses.A_DIM
+    return curses.A_DIM
 
 
 def setStatusMsg(msg):
@@ -1540,8 +1535,7 @@ def processcommand(cmd):
             if cat_control:
                 send_radio(cmd[:1], cmd[1:])
                 return
-            else:
-                setband(cmd[1:])
+            setband(cmd[1:])
         else:
             setStatusMsg("Specify valid band")
         return
@@ -1730,12 +1724,12 @@ def edit_key(key):
         qsoew.move(editFieldFocus, 10)  # move focus to call field
         qsoew.addstr(qso[editFieldFocus])
         return
-    elif key == BACK_SPACE:
+    if key == BACK_SPACE:
         if qso[editFieldFocus] != "":
             qso[editFieldFocus] = qso[editFieldFocus][0:-1]
         displayEditField(editFieldFocus)
         return
-    elif key == ENTERKEY:
+    if key == ENTERKEY:
         change_contact(qso)
         qsoew.erase()
         stdscr.clear()
@@ -1751,7 +1745,7 @@ def edit_key(key):
         stdscr.move(9, 1)
         quitprogram = True
         return
-    elif key == ESCAPE:
+    if key == ESCAPE:
         qsoew.erase()
         stdscr.clear()
         rectangle(stdscr, 0, 0, 7, 55)
@@ -1766,23 +1760,23 @@ def edit_key(key):
         stdscr.move(9, 1)
         quitprogram = True
         return
-    elif key == SPACE:
+    if key == SPACE:
         return
-    elif key == 258:  # arrow down
+    if key == 258:  # arrow down
         editFieldFocus += 1
         if editFieldFocus > 7:
             editFieldFocus = 1
         qsoew.move(editFieldFocus, 10)  # move focus to call field
         qsoew.addstr(qso[editFieldFocus])
         return
-    elif key == 259:  # arrow up
+    if key == 259:  # arrow up
         editFieldFocus -= 1
         if editFieldFocus < 1:
             editFieldFocus = 7
         qsoew.move(editFieldFocus, 10)  # move focus to call field
         qsoew.addstr(qso[editFieldFocus])
         return
-    elif curses.ascii.isascii(key):
+    if curses.ascii.isascii(key):
         # displayinfo("eff:"+str(editFieldFocus)+" mefl:"+str(MAXEDITFIELDLENGTH[editFieldFocus]))
         if len(qso[editFieldFocus]) < MAXEDITFIELDLENGTH[editFieldFocus]:
             qso[editFieldFocus] = qso[editFieldFocus].upper() + chr(key).upper()
