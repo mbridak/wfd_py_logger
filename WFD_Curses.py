@@ -31,8 +31,9 @@ from pathlib import Path
 from curses.textpad import rectangle
 from curses import wrapper
 from json import dumps
-import requests
 import threading
+
+import requests
 from database import DataBase
 from preferences import Preferences
 from lookup import HamDBlookup, HamQTH, QRZlookup
@@ -240,6 +241,7 @@ oldpwr = 0
 
 
 def lazy_lookup(acall):
+    """looks up a callsign for name, gridsquare, distance and bearing"""
     grid, name, _, _ = look_up.lookup(acall)
     dist = 0
     berg = 0
@@ -251,6 +253,7 @@ def lazy_lookup(acall):
 
 
 def gridtolatlon(maiden: str) -> tuple[float, float]:
+    """gridsquare to latitude and longitude"""
     maiden = str(maiden).strip().upper()
 
     N = len(maiden)
@@ -293,6 +296,7 @@ def distance(grid1: str, grid2: str) -> float:
 
 
 def bearing(grid1: str, grid2: str) -> float:
+    """Return bearing to contact given two gridsquares"""
     lat1, lon1 = gridtolatlon(grid1)
     lat2, lon2 = gridtolatlon(grid2)
     lat1 = radians(lat1)
