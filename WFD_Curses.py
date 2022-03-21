@@ -242,14 +242,15 @@ oldpwr = 0
 
 def lazy_lookup(acall: str) -> None:
     """looks up a callsign for name, gridsquare, distance and bearing"""
-    grid, name, _, _ = look_up.lookup(acall)
-    dist = 0
-    berg = 0
-    if grid:
-        dist = distance("dm13at", grid)
-        berg = bearing("dm13at", grid)
-    displayinfo(f"{name} {grid} {round(dist)}km {round(berg)}deg")
-    logging.debug("lazy lookup:%s %s", grid, name)
+    if acall != "":
+        grid, name, _, _ = look_up.lookup(acall)
+        dist = 0
+        berg = 0
+        if grid:
+            dist = distance("dm13at", grid)
+            berg = bearing("dm13at", grid)
+        displayinfo(f"{name} {grid} {round(dist)}km {round(berg)}deg")
+        logging.debug("lazy lookup:%s %s", grid, name)
 
 
 def gridtolatlon(maiden: str) -> tuple[float, float]:
