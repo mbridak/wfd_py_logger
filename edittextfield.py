@@ -40,11 +40,11 @@ class EditTextField:
                 self.textfield[: self.cursor_position]
                 + self.textfield[self.cursor_position + 1 :]
             )
-        if isalnum(character):
+        if isalnum(character) or character == ord("."):
             if len(self.textfield) < self.max_length:
                 self.textfield = (
                     f"{self.textfield[:self.cursor_position]}"
-                    f"{chr(character)}"
+                    f"{chr(character).upper()}"
                     f"{self.textfield[self.cursor_position:]}"
                 )
                 self.cursor_position += 1
@@ -77,3 +77,10 @@ class EditTextField:
     def set_cursor_position(self, position: int) -> None:
         """set cursor position"""
         self.cursor_position = position
+
+    def get_focus(self):
+        """redisplay textfield, move cursor to end"""
+        self.screen.addstr(self.position_y, self.position_x, " " * self.max_length)
+        self.screen.addstr(self.position_y, self.position_x, self.textfield)
+        self.set_cursor_position(len(self.textfield))
+        self.screen.move(self.position_y, self.position_x + self.cursor_position)
