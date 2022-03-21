@@ -38,6 +38,7 @@ from database import DataBase
 from preferences import Preferences
 from lookup import HamDBlookup, HamQTH, QRZlookup
 from cat_interface import CAT
+from edittextfield import EditTextField
 
 
 if Path("./debug").exists():
@@ -249,7 +250,8 @@ def lazy_lookup(acall: str) -> None:
         if grid:
             dist = distance("dm13at", grid)
             berg = bearing("dm13at", grid)
-        displayinfo(f"{name} {grid} {round(dist)}km {round(berg)}deg")
+        displayinfo(f"{name}", line=1)
+        displayinfo(f"{grid} {round(dist)}km {round(berg)}deg")
         logging.debug("lazy lookup:%s %s", grid, name)
 
 
@@ -514,6 +516,7 @@ def read_sections() -> None:
 
 def section_check(sec: str) -> None:
     """checks if a string is part of a section name"""
+    oy, ox = stdscr.getyx()
     if sec == "":
         sec = "^"
     seccheckwindow = curses.newpad(20, 33)
@@ -526,6 +529,7 @@ def section_check(sec: str) -> None:
         count += 1
     stdscr.refresh()
     seccheckwindow.refresh(0, 0, 12, 1, 20, 33)
+    stdscr.move(oy, ox)
 
 
 def read_scp() -> list:
@@ -1028,6 +1032,7 @@ def dupCheck(acall):
 
 def displaySCP(matches):
     """show super check partial matches"""
+    oy, ox = stdscr.getyx()
     scpwindow = curses.newpad(1000, 33)
     rectangle(stdscr, 11, 0, 21, 34)
     for x in matches:
@@ -1037,6 +1042,7 @@ def displaySCP(matches):
         scpwindow.addstr(str(x) + " ")
     stdscr.refresh()
     scpwindow.refresh(0, 0, 12, 1, 20, 33)
+    stdscr.move(oy, ox)
 
 
 def workedSections():
@@ -1212,6 +1218,9 @@ def clearentry():
     hisclass = ""
     kbuf = ""
     inputFieldFocus = 0
+    hissection_field.set_text("")
+    hisclass_field.set_text("")
+    hiscall_field.set_text("")
     displayInputField(2)
     displayInputField(1)
     displayInputField(0)
@@ -1480,10 +1489,10 @@ def displayHelp():
     stdscr.refresh()
 
 
-def displayinfo(info):
-    """Needs Doc String"""
+def displayinfo(info, line=2):
+    """Displays a line of text at the bottom of the info window"""
     y, x = stdscr.getyx()
-    stdscr.move(20, 1)
+    stdscr.move(18 + line, 1)
     stdscr.addstr(info)
     stdscr.move(y, x)
     stdscr.refresh()
@@ -1626,49 +1635,37 @@ def processcommand(cmd):
 
 
 def proc_key(key):
-    """Needs Doc String"""
+    """Processes key presses"""
     global inputFieldFocus, hiscall, hissection, hisclass, kbuf
+    input_field = [hiscall_field, hisclass_field, hissection_field]
     if key == 9 or key == SPACE:
         inputFieldFocus += 1
         if inputFieldFocus > 2:
             inputFieldFocus = 0
-        if inputFieldFocus == 0:
-            hissection = kbuf  # store any input to previous field
-            stdscr.move(9, 1)  # move focus to call field
-            kbuf = hiscall  # load current call into buffer
-            stdscr.addstr(kbuf)
-        if inputFieldFocus == 1:
-            hiscall = kbuf  # store any input to previous field
-            dupCheck(hiscall)
-            x = threading.Thread(target=lazy_lookup, args=(hiscall,), daemon=True)
-            x.start()
-            stdscr.move(9, 20)  # move focus to class field
-            kbuf = hisclass  # load current class into buffer
-            stdscr.addstr(kbuf)
-        if inputFieldFocus == 2:
-            hisclass = kbuf  # store any input to previous field
-            stdscr.move(9, 27)  # move focus to section field
-            kbuf = hissection  # load current section into buffer
-            stdscr.addstr(kbuf)
+        if inputFieldFocus == 0:  # cllsign input
+            hissection = hissection_field.text()
+            hiscall_field.get_focus()
+        if inputFieldFocus == 1:  # class input
+            if hiscall != hiscall_field.text():
+                if len(hiscall_field.text()) > 2:
+                    dupCheck(hiscall_field.text())
+                    x = threading.Thread(
+                        target=lazy_lookup, args=(hiscall_field.text(),), daemon=True
+                    )
+                    x.start()
+                hiscall = hiscall_field.text()
+            hisclass_field.get_focus()
+        if inputFieldFocus == 2:  # section input
+            hisclass = hisclass_field.text()
+            hissection_field.get_focus()
         return
-    elif key == BACK_SPACE:
-        if kbuf != "":
-            kbuf = kbuf[0:-1]
-            if inputFieldFocus == 0 and len(kbuf) < 3:
-                displaySCP(super_check("^"))
-            if inputFieldFocus == 0 and len(kbuf) > 2:
-                displaySCP(super_check(kbuf))
-            if inputFieldFocus == 2:
-                section_check(kbuf)
-        displayInputField(inputFieldFocus)
-        return
-    elif key == ENTERKEY:
+    if key == ENTERKEY:
         if inputFieldFocus == 0:
-            hiscall = kbuf
+            hiscall = hiscall_field.text()
         elif inputFieldFocus == 1:
-            hisclass = kbuf
+            hisclass = hisclass_field.text()
         elif inputFieldFocus == 2:
-            hissection = kbuf
+            hissection = hissection_field.text()
         if hiscall[:1] == ".":  # process command
             processcommand(hiscall)
             clearentry()
@@ -1692,27 +1689,45 @@ def proc_key(key):
         else:
             setStatusMsg("Must be valid call sign")
         return
-    elif key == ESCAPE:
+    if key == ESCAPE:
         clearentry()
         return
-    elif key == SPACE:
-        return
-    elif key == 258:  # key down
+    if key == 258:  # key down
         logup()
-    elif key == 259:  # key up
+        return
+    if key == 259:  # key up
         logdown()
-    elif key == 338:  # page down
+        return
+    if key == 338:  # page down
         logpagedown()
-    elif key == 339:  # page up
+        return
+    if key == 339:  # page up
         logpageup()
-    elif curses.ascii.isascii(key):
-        if len(kbuf) < MAXFIELDLENGTH[inputFieldFocus]:
-            kbuf = kbuf.upper() + chr(key).upper()
-            if inputFieldFocus == 0 and len(kbuf) > 2:
-                displaySCP(super_check(kbuf))
-            if inputFieldFocus == 2 and len(kbuf) > 0:
-                section_check(kbuf)
-    displayInputField(inputFieldFocus)
+        return
+    input_field[inputFieldFocus].getchar(key)
+    if inputFieldFocus == 0 and len(hiscall_field.text()) > 2:
+        displaySCP(super_check(hiscall_field.text()))
+    if inputFieldFocus == 2:
+        section_check(hissection_field.text())
+    # elif key == BACK_SPACE:
+    #     if kbuf != "":
+    #         kbuf = kbuf[0:-1]
+    #         if inputFieldFocus == 0 and len(kbuf) < 3:
+    #             displaySCP(super_check("^"))
+    #         if inputFieldFocus == 0 and len(kbuf) > 2:
+    #             displaySCP(super_check(kbuf))
+    #         if inputFieldFocus == 2:
+    #             section_check(kbuf)
+    #     displayInputField(inputFieldFocus)
+    #     return
+    # elif curses.ascii.isascii(key):
+    #     if len(kbuf) < MAXFIELDLENGTH[inputFieldFocus]:
+    #         kbuf = kbuf.upper() + chr(key).upper()
+    #         if inputFieldFocus == 0 and len(kbuf) > 2:
+    #             displaySCP(super_check(kbuf))
+    #         if inputFieldFocus == 2 and len(kbuf) > 0:
+    #             section_check(kbuf)
+    # displayInputField(inputFieldFocus)
 
 
 def edit_key(key):
@@ -1987,5 +2002,8 @@ if __name__ == "__main__":
 
     read_sections()
     scp = read_scp()
+    hiscall_field = EditTextField(stdscr, y=9, x=1)
+    hisclass_field = EditTextField(stdscr, y=9, x=20, length=4)
+    hissection_field = EditTextField(stdscr, y=9, x=27, length=7)
 
     wrapper(main)
