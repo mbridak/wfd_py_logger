@@ -243,7 +243,7 @@ oldpwr = 0
 
 def lazy_lookup(acall: str) -> None:
     """looks up a callsign for name, gridsquare, distance and bearing"""
-    if acall != "":
+    if acall != "" and not look_up is None:
         grid, name, _, _ = look_up.lookup(acall)
         dist = 0
         berg = 0
@@ -1647,7 +1647,7 @@ def proc_key(key):
             hiscall_field.get_focus()
         if inputFieldFocus == 1:  # class input
             if hiscall != hiscall_field.text():
-                if len(hiscall_field.text()) > 2:
+                if len(hiscall_field.text()) > 2 and hiscall_field.text()[:1] != ".":
                     dupCheck(hiscall_field.text())
                     x = threading.Thread(
                         target=lazy_lookup, args=(hiscall_field.text(),), daemon=True
