@@ -22,18 +22,17 @@ So far we have:
 * database.py well... does database stuff.
 * lookup.py Abstraction class for QRZ, HamQTH and HamDB
 * preferences.py Decided to move all the preferences from the sqlite table and into a json file. This makes it easier to edit for the user and straight forward  to load and save.
+* edittextfield.py A slightly better than nothing at all Class to handle entering text... You guessed it. In a field.
 
 [Russ K5TUX](https://lhspodcast.info/) has made several pull requests with new features. Which to be honest, shamed me into looking at the code again, and seeing the absolute horror show the layers of cruft and years of neglect has brought.
 
 So many hours/days have been spent on making the code more PEP8 compliant.
 
 ## Caveats
-This is a simple logger ment for single op, it's not usable for clubs.
-
-**A newer version based on PyQt5 can be found [here](https://github.com/mbridak/WinterFieldDayLogger)**.
+This is a simple logger meant for a single op, it's not usable for clubs. There's no networking between logging machines etc.
 
 ## Initial Setup
-Before running you may want to edit the `wfd_preferences.json` file. It has settings for rigcontrol, callsign lookup and cloudlog integration.
+Before running you will want to edit the `wfd_preferences.json` file. It has settings for rigcontrol, callsign lookup and Cloudlog integration.
 
 ## Commands:
 Commands start with a period character in the callsign field and are immediately followed by any information needed by the command.
@@ -107,16 +106,11 @@ The radio will be polled for band/mode updates automatically. There is an indica
 #### QRZ, HamQTH, HamDB
 If you are going to use a callsign lookup service, you can edit the lines in the wfd_preference.json shown below.
 
-    "usehamdb": 0,
-    "hamdburl": "https://api.hamdb.org",
+	"usehamdb": 0,
     "useqrz": 0,
-    "qrzusername": "",
-    "qrzpassword": "",
-    "qrzurl": "https://xmldata.qrz.com/xml/134",
     "usehamqth": 0,
-    "hamqthusername": "",
-    "hamqthpassword": "",
-    "hamqthurl": "",
+    "lookupusername": "",
+    "lookuppassword": "",
 
 #### Cloudlog
 If you wish to have your contacts pushed to cloudlog, edit the lines in the wfd_preference.json shown below.
