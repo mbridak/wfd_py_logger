@@ -1709,25 +1709,6 @@ def proc_key(key):
         displaySCP(super_check(hiscall_field.text()))
     if inputFieldFocus == 2:
         section_check(hissection_field.text())
-    # elif key == BACK_SPACE:
-    #     if kbuf != "":
-    #         kbuf = kbuf[0:-1]
-    #         if inputFieldFocus == 0 and len(kbuf) < 3:
-    #             displaySCP(super_check("^"))
-    #         if inputFieldFocus == 0 and len(kbuf) > 2:
-    #             displaySCP(super_check(kbuf))
-    #         if inputFieldFocus == 2:
-    #             section_check(kbuf)
-    #     displayInputField(inputFieldFocus)
-    #     return
-    # elif curses.ascii.isascii(key):
-    #     if len(kbuf) < MAXFIELDLENGTH[inputFieldFocus]:
-    #         kbuf = kbuf.upper() + chr(key).upper()
-    #         if inputFieldFocus == 0 and len(kbuf) > 2:
-    #             displaySCP(super_check(kbuf))
-    #         if inputFieldFocus == 2 and len(kbuf) > 0:
-    #             section_check(kbuf)
-    # displayInputField(inputFieldFocus)
 
 
 def edit_key(key):
