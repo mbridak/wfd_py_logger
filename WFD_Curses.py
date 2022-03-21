@@ -65,7 +65,8 @@ if height < 24 or width < 80:
     print("Terminal size needs to be at least 80x24")
     curses.endwin()
     sys.exit()
-qsoew = 0
+qsoew = None
+qso_edit_fields = None
 qso = []
 quitprogram = False
 
@@ -1712,21 +1713,23 @@ def proc_key(key):
 
 
 def edit_key(key):
-    """Needs Doc String"""
+    """While editing qso record, control is passed here to process key presses."""
     global editFieldFocus, quitprogram
     if key == 9:
         editFieldFocus += 1
-        if editFieldFocus > 7:
+        if editFieldFocus > 8:
             editFieldFocus = 1
-        qsoew.move(editFieldFocus, 10)  # move focus to call field
-        qsoew.addstr(qso[editFieldFocus])
+        qso_edit_fields[editFieldFocus - 1].get_focus()
         return
-    if key == BACK_SPACE:
-        if qso[editFieldFocus] != "":
-            qso[editFieldFocus] = qso[editFieldFocus][0:-1]
-        displayEditField(editFieldFocus)
-        return
+
     if key == ENTERKEY:
+        qso[1] = qso_edit_fields[0].text()
+        qso[2] = qso_edit_fields[1].text()
+        qso[3] = qso_edit_fields[2].text()
+        qso[4] = f"{qso_edit_fields[3].text()} {qso_edit_fields[4].text()}"
+        qso[5] = qso_edit_fields[5].text()
+        qso[6] = qso_edit_fields[6].text()
+        qso[7] = qso_edit_fields[7].text()
         change_contact(qso)
         qsoew.erase()
         stdscr.clear()
@@ -1757,27 +1760,20 @@ def edit_key(key):
         stdscr.move(9, 1)
         quitprogram = True
         return
-    if key == SPACE:
-        return
     if key == 258:  # arrow down
         editFieldFocus += 1
-        if editFieldFocus > 7:
+        if editFieldFocus > 8:
             editFieldFocus = 1
-        qsoew.move(editFieldFocus, 10)  # move focus to call field
-        qsoew.addstr(qso[editFieldFocus])
+        qso_edit_fields[editFieldFocus - 1].get_focus()
         return
     if key == 259:  # arrow up
         editFieldFocus -= 1
         if editFieldFocus < 1:
-            editFieldFocus = 7
-        qsoew.move(editFieldFocus, 10)  # move focus to call field
-        qsoew.addstr(qso[editFieldFocus])
+            editFieldFocus = 8
+        qso_edit_fields[editFieldFocus - 1].get_focus()
         return
-    if curses.ascii.isascii(key):
-        # displayinfo("eff:"+str(editFieldFocus)+" mefl:"+str(MAXEDITFIELDLENGTH[editFieldFocus]))
-        if len(qso[editFieldFocus]) < MAXEDITFIELDLENGTH[editFieldFocus]:
-            qso[editFieldFocus] = qso[editFieldFocus].upper() + chr(key).upper()
-    displayEditField(editFieldFocus)
+
+    qso_edit_fields[editFieldFocus - 1].getchar(key)
 
 
 def displayEditField(field):
@@ -1799,9 +1795,10 @@ def displayEditField(field):
     qsoew.refresh()
 
 
-def EditClickedQSO(line):
-    """Needs Doc String"""
-    global qsoew, qso, quitprogram
+def EditClickedQSO(line: int) -> None:
+    """Control is passed here when a contact in the log window is double clicked."""
+    global qsoew, qso, quitprogram, qso_edit_fields, editFieldFocus
+    editFieldFocus = 1
     record = (
         contacts.instr((line - 1) + contactsOffset, 0, 55)
         .decode("utf-8")
@@ -1824,15 +1821,49 @@ def EditClickedQSO(line):
     qsoew.keypad(True)
     qsoew.nodelay(True)
     qsoew.box()
-    qsoew.addstr(1, 1, "Call   : " + qso[1])
-    qsoew.addstr(2, 1, "Class  : " + qso[2])
-    qsoew.addstr(3, 1, "Section: " + qso[3])
-    qsoew.addstr(4, 1, "At     : " + qso[4])
-    qsoew.addstr(5, 1, "Band   : " + qso[5])
-    qsoew.addstr(6, 1, "Mode   : " + qso[6])
-    qsoew.addstr(7, 1, "Powers : " + qso[7])
+
+    qso_edit_field_1 = EditTextField(qsoew, 1, 10, 14)
+    qso_edit_field_2 = EditTextField(qsoew, 2, 10, 3)
+    qso_edit_field_3 = EditTextField(qsoew, 3, 10, 3)
+    qso_edit_field_4 = EditTextField(qsoew, 4, 10, 10)
+    qso_edit_field_5 = EditTextField(qsoew, 4, 21, 8)
+    qso_edit_field_6 = EditTextField(qsoew, 5, 10, 3)
+    qso_edit_field_7 = EditTextField(qsoew, 6, 10, 2)
+    qso_edit_field_8 = EditTextField(qsoew, 7, 10, 3)
+
+    qso_edit_field_1.set_text(record[1])
+    qso_edit_field_2.set_text(record[2])
+    qso_edit_field_3.set_text(record[3])
+    qso_edit_field_4.set_text(record[4])
+    qso_edit_field_5.set_text(record[5])
+    qso_edit_field_6.set_text(record[6])
+    qso_edit_field_7.set_text(record[7])
+    qso_edit_field_8.set_text(str(record[8]))
+
+    qso_edit_fields = [
+        qso_edit_field_1,
+        qso_edit_field_2,
+        qso_edit_field_3,
+        qso_edit_field_4,
+        qso_edit_field_5,
+        qso_edit_field_6,
+        qso_edit_field_7,
+        qso_edit_field_8,
+    ]
+
+    qsoew.addstr(1, 1, "Call   : ")
+    qsoew.addstr(2, 1, "Class  : ")
+    qsoew.addstr(3, 1, "Section: ")
+    qsoew.addstr(4, 1, "At     : ")
+    qsoew.addstr(5, 1, "Band   : ")
+    qsoew.addstr(6, 1, "Mode   : ")
+    qsoew.addstr(7, 1, "Powers : ")
     qsoew.addstr(8, 1, "[Enter] to save          [Esc] to exit")
-    displayEditField(1)
+
+    for displayme in qso_edit_fields:
+        displayme.get_focus()
+    qso_edit_fields[0].get_focus()
+
     while 1:
         statusline()
         stdscr.refresh()
@@ -1848,11 +1879,11 @@ def EditClickedQSO(line):
 
 
 def editQSO(q):
-    """Needs Doc String"""
+    """Control is passed here when a .E command is used to edit a contact."""
     if q is False or q == "":
         setStatusMsg("Must specify a contact number")
         return
-    global qsoew, qso, quitprogram
+    global qsoew, qso, quitprogram, qso_edit_fields, editFieldFocus
     log = database.contact_by_id(q)
     if not log:
         return
@@ -1862,15 +1893,49 @@ def editQSO(q):
     qsoew.keypad(True)
     qsoew.nodelay(True)
     qsoew.box()
-    qsoew.addstr(1, 1, "Call   : " + qso[1])
-    qsoew.addstr(2, 1, "Class  : " + qso[2])
-    qsoew.addstr(3, 1, "Section: " + qso[3])
-    qsoew.addstr(4, 1, "At     : " + qso[4])
-    qsoew.addstr(5, 1, "Band   : " + qso[5])
-    qsoew.addstr(6, 1, "Mode   : " + qso[6])
-    qsoew.addstr(7, 1, "Powers : " + str(qso[7]))
+    editFieldFocus = 1
+    qso_edit_field_1 = EditTextField(qsoew, 1, 10, 14)
+    qso_edit_field_2 = EditTextField(qsoew, 2, 10, 3)
+    qso_edit_field_3 = EditTextField(qsoew, 3, 10, 3)
+    qso_edit_field_4 = EditTextField(qsoew, 4, 10, 10)
+    qso_edit_field_5 = EditTextField(qsoew, 4, 21, 8)
+    qso_edit_field_6 = EditTextField(qsoew, 5, 10, 3)
+    qso_edit_field_7 = EditTextField(qsoew, 6, 10, 2)
+    qso_edit_field_8 = EditTextField(qsoew, 7, 10, 3)
+
+    qso_edit_field_1.set_text(log[0][1])
+    qso_edit_field_2.set_text(log[0][2])
+    qso_edit_field_3.set_text(log[0][3])
+    dt = log[0][4].split()
+    qso_edit_field_4.set_text(dt[0])
+    qso_edit_field_5.set_text(dt[1])
+    qso_edit_field_6.set_text(log[0][5])
+    qso_edit_field_7.set_text(log[0][6])
+    qso_edit_field_8.set_text(str(log[0][7]))
+
+    qso_edit_fields = [
+        qso_edit_field_1,
+        qso_edit_field_2,
+        qso_edit_field_3,
+        qso_edit_field_4,
+        qso_edit_field_5,
+        qso_edit_field_6,
+        qso_edit_field_7,
+        qso_edit_field_8,
+    ]
+
+    qsoew.addstr(1, 1, "Call   : ")
+    qsoew.addstr(2, 1, "Class  : ")
+    qsoew.addstr(3, 1, "Section: ")
+    qsoew.addstr(4, 1, "At     : ")
+    qsoew.addstr(5, 1, "Band   : ")
+    qsoew.addstr(6, 1, "Mode   : ")
+    qsoew.addstr(7, 1, "Powers : ")
     qsoew.addstr(8, 1, "[Enter] to save          [Esc] to exit")
-    displayEditField(1)
+
+    for displayme in qso_edit_fields:
+        displayme.get_focus()
+    qso_edit_fields[0].get_focus()
     while 1:
         statusline()
         stdscr.refresh()
