@@ -1776,25 +1776,6 @@ def edit_key(key):
     qso_edit_fields[editFieldFocus - 1].getchar(key)
 
 
-def displayEditField(field):
-    """Needs Doc String"""
-    filler = "                 "
-    if field == 1:
-        filler = "                 "
-    elif field == 2:
-        filler = "     "
-    elif field == 3:
-        filler = "       "
-    qsoew.move(field, 10)
-    if qso[field] == "":
-        qsoew.addstr(filler)
-    else:
-        line = qso[field] + filler[: -len(qso[field])]
-        qsoew.addstr(line.upper())
-    qsoew.move(field, len(qso[field]) + 10)
-    qsoew.refresh()
-
-
 def EditClickedQSO(line: int) -> None:
     """Control is passed here when a contact in the log window is double clicked."""
     global qsoew, qso, quitprogram, qso_edit_fields, editFieldFocus
