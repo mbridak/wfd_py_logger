@@ -256,7 +256,7 @@ def lazy_lookup(acall: str) -> None:
         logging.debug("lazy lookup:%s %s", grid, name)
 
 
-def gridtolatlon(maiden: str) -> tuple[float, float]:
+def gridtolatlon(maiden: str):
     """gridsquare to latitude and longitude"""
     maiden = str(maiden).strip().upper()
 
