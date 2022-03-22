@@ -1637,7 +1637,7 @@ def processcommand(cmd):
 
 def proc_key(key):
     """Processes key presses"""
-    global inputFieldFocus, hiscall, hissection, hisclass, kbuf
+    global inputFieldFocus, hiscall, hissection, hisclass
     input_field = [hiscall_field, hisclass_field, hissection_field]
     if key == 9 or key == SPACE:
         inputFieldFocus += 1
