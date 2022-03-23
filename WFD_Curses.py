@@ -1220,11 +1220,11 @@ def clearentry():
     kbuf = ""
     inputFieldFocus = 0
     hissection_field.set_text("")
+    hissection_field.get_focus()
     hisclass_field.set_text("")
+    hisclass_field.get_focus()
     hiscall_field.set_text("")
-    displayInputField(2)
-    displayInputField(1)
-    displayInputField(0)
+    hiscall_field.get_focus()
 
 
 def YorN(boolean):
@@ -1496,38 +1496,6 @@ def displayinfo(info, line=2):
     stdscr.move(18 + line, 1)
     stdscr.addstr(info)
     stdscr.move(y, x)
-    stdscr.refresh()
-
-
-def displayLine():
-    """Needs Doc String"""
-    filler = "                        "
-    line = kbuf + filler[: -len(kbuf)]
-    stdscr.move(9, 1)
-    stdscr.addstr(line)
-    stdscr.move(9, len(kbuf) + 1)
-    stdscr.refresh()
-
-
-def displayInputField(field):
-    """Needs Doc String"""
-    filler = "                 "
-    if field == 0:
-        filler = "                 "
-        y = 1
-    elif field == 1:
-        filler = "     "
-        y = 20
-    elif field == 2:
-        filler = "       "
-        y = 27
-    stdscr.move(9, y)
-    if kbuf == "":
-        stdscr.addstr(filler)
-    else:
-        line = kbuf + filler[: -len(kbuf)]
-        stdscr.addstr(line.upper())
-    stdscr.move(9, len(kbuf) + y)
     stdscr.refresh()
 
 
