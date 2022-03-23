@@ -197,7 +197,7 @@ class HamQTH:
         payload = {"u": self.username, "p": self.password}
         try:
             query_result = requests.get(self.url, params=payload, timeout=10.0)
-        except requests.exceptions.Timeout as exception:
+        except requests.exceptions.Timeout:
             self.error = True
             return
         logging.info("hamqth-getsession:%s", query_result.status_code)
