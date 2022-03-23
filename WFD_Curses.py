@@ -39,6 +39,7 @@ from preferences import Preferences
 from lookup import HamDBlookup, HamQTH, QRZlookup
 from cat_interface import CAT
 from edittextfield import EditTextField
+from settings import SettingsScreen
 
 
 if Path("./debug").exists():
@@ -65,6 +66,7 @@ if height < 24 or width < 80:
     print("Terminal size needs to be at least 80x24")
     curses.endwin()
     sys.exit()
+settings_screen = None
 qsoew = None
 qso_edit_fields = None
 qso = []
@@ -1472,20 +1474,19 @@ def displayHelp():
     rectangle(stdscr, 11, 0, 21, 34)
     wy, wx = stdscr.getyx()
     help_screen = [
-        ".H this message  |.2 Outdoors    ",
-        ".Q quit program  |.3 AwayFromHome",
-        ".Kyourcall       |.4 Satellite   ",
-        ".Cyourclass      |.E### edit QSO ",
-        ".Syoursection    |.D### del QSO  ",
-        ".B## change bands|.L Generate Log",
-        ".M[CW,PH,DI] mode|               ",
-        ".P## change power|               ",
-        ".1 Alt Power     |[esc] abort inp",
+        ".H Prints this message",
+        ".Q quits the program",
+        ".S Settings menu",
+        ".E### Edit Log entry ",
+        ".D### Delte Log entry  ",
+        ".B## Change operating band",
+        ".M[CW,PH,DI] Change mode logged",
+        ".P## Change power logged",
+        ".L Generate Logs",
     ]
     stdscr.move(12, 1)
     for count, line in enumerate(help_screen):
         stdscr.addstr(12 + count, 1, line)
-        count = count + 1
     stdscr.move(wy, wx)
     stdscr.refresh()
 
@@ -1501,8 +1502,64 @@ def displayinfo(info, line=2):
 
 def processcommand(cmd):
     """Needs Doc String"""
-    global quitprogram
+    global quitprogram, look_up, cat_control
     cmd = cmd[1:].upper()
+    if cmd == "S":
+        editsettings = SettingsScreen(preference.preference)
+        changes = editsettings.show()
+        if changes:
+            preference.preference = changes
+            preference.writepreferences()
+            look_up = None
+            cat_control = None
+            if preference.preference["useqrz"]:
+                look_up = QRZlookup(
+                    preference.preference["lookupusername"],
+                    preference.preference["lookuppassword"],
+                )
+            if preference.preference["usehamdb"]:
+                look_up = HamDBlookup()
+            if preference.preference["usehamqth"]:
+                look_up = HamQTH(
+                    preference.preference["lookupusername"],
+                    preference.preference["lookuppassword"],
+                )
+            if preference.preference["useflrig"]:
+                cat_control = CAT(
+                    "flrig",
+                    preference.preference["CAT_ip"],
+                    preference.preference["CAT_port"],
+                )
+            if preference.preference["userigctld"]:
+                cat_control = CAT(
+                    "rigctld",
+                    preference.preference["CAT_ip"],
+                    preference.preference["CAT_port"],
+                )
+
+            if preference.preference["cloudlog"]:
+                __payload = "/validate/key=" + preference.preference["cloudlogapi"]
+                try:
+                    result = requests.get(
+                        preference.preference["cloudlogurl"] + __payload, timeout=5
+                    )
+
+                    if result.status_code == 200 or result.status_code == 400:
+                        cloudlog_on = True
+                except requests.exceptions.ConnectionError as exception:
+                    logging.warning("cloudlog authentication: %s", exception)
+        stdscr.clear()
+        rectangle(stdscr, 0, 0, 7, 55)
+        contactslabel = "Recent Contacts"
+        contactslabeloffset = (49 / 2) - len(contactslabel) / 2
+        stdscr.addstr(0, int(contactslabeloffset), contactslabel)
+        logwindow()
+        sections()
+        stats()
+        displayHelp()
+        entry()
+        stdscr.move(9, 1)
+        return
     if cmd == "Q":  # quitprogram
         quitprogram = True
         return
@@ -1552,18 +1609,6 @@ def processcommand(cmd):
         return
     if cmd[:1] == "H":  # Print Help
         displayHelp()
-        return
-    if cmd[:1] == "0":  # Print Rig Control Help
-        # displayHelp(2)
-        return
-    if cmd[:1] == "K":  # Set your Call Sign
-        setcallsign(cmd[1:])
-        return
-    if cmd[:1] == "C":  # Set your class
-        setclass(cmd[1:])
-        return
-    if cmd[:1] == "S":  # Set your section
-        setsection(cmd[1:])
         return
     if cmd[:1] == "I":  # Set rigctld host
         regex1 = re.compile("localhost")
