@@ -10,9 +10,9 @@ class Preferences:
     def __init__(self) -> None:
         """initialize preferences"""
         self.preference = {
-            "mycallsign": "YourCall",
-            "myclass": "Class",
-            "mysection": "Sect",
+            "mycallsign": "",
+            "myclass": "",
+            "mysection": "",
             "power": "0",
             "usehamdb": 0,
             "useqrz": 0,
@@ -39,7 +39,6 @@ class Preferences:
         """
         try:
             logging.info("writepreferences:")
-            # home = os.path.expanduser("~")
             with open(
                 "./wfd_preferences.json", "wt", encoding="utf-8"
             ) as file_descriptor:
@@ -53,7 +52,6 @@ class Preferences:
         """
         logging.info("readpreferences:")
         try:
-            # home = os.path.expanduser("~")
             if os.path.exists("./wfd_preferences.json"):
                 with open(
                     "./wfd_preferences.json", "rt", encoding="utf-8"
