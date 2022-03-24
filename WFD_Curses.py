@@ -54,6 +54,8 @@ if Path("./debug").exists():
 
 
 poll_time = datetime.datetime.now()
+look_up = None
+cat_control = None
 cloudlogapi = False
 cloudlogurl = False
 cloudlog_on = False
@@ -217,6 +219,16 @@ validSections = [
     "PE",
 ]
 
+contactlookup = {
+    "call": "",
+    "grid": "",
+    "bearing": "",
+    "name": "",
+    "nickname": "",
+    "error": "",
+    "distance": "",
+}
+
 freq = "000000000"
 band = "40"
 mode = "CW"
@@ -232,6 +244,7 @@ editFieldFocus = 1
 hiscall = ""
 hissection = ""
 hisclass = ""
+mygrid = ""
 
 database = "WFD_Curses.db"
 wrkdsections = []
@@ -244,18 +257,52 @@ oldmode = ""
 oldpwr = 0
 
 
-def lazy_lookup(acall: str) -> None:
-    """looks up a callsign for name, gridsquare, distance and bearing"""
-    if acall != "" and not look_up is None:
-        grid, name, _, _ = look_up.lookup(acall)
-        dist = 0
-        berg = 0
-        if grid:
-            dist = distance("dm13at", grid)
-            berg = bearing("dm13at", grid)
-        displayinfo(f"{name}", line=1)
-        displayinfo(f"{grid} {round(dist)}km {round(berg)}deg")
-        logging.debug("lazy lookup:%s %s", grid, name)
+def clearcontactlookup():
+    """clearout the contact lookup"""
+    contactlookup["call"] = ""
+    contactlookup["grid"] = ""
+    contactlookup["name"] = ""
+    contactlookup["nickname"] = ""
+    contactlookup["error"] = ""
+    contactlookup["distance"] = ""
+    contactlookup["bearing"] = ""
+
+
+def lookupmygrid():
+    """lookup my own gridsquare"""
+    global mygrid
+    if look_up:
+        mygrid, _, _, _ = look_up.lookup(preference.preference["mycallsign"])
+        logging.info("my grid: %s", mygrid)
+
+
+def lazy_lookup(acall: str):
+    """El Lookup De Lazy"""
+    if look_up:
+        if acall == contactlookup["call"]:
+            return
+
+        contactlookup["call"] = acall
+        (
+            contactlookup["grid"],
+            contactlookup["name"],
+            contactlookup["nickname"],
+            contactlookup["error"],
+        ) = look_up.lookup(acall)
+        if contactlookup["name"] == "NOT_FOUND NOT_FOUND":
+            contactlookup["name"] = "NOT_FOUND"
+        if contactlookup["grid"] == "NOT_FOUND":
+            contactlookup["grid"] = ""
+        if contactlookup["grid"] and mygrid:
+            contactlookup["distance"] = distance(mygrid, contactlookup["grid"])
+            contactlookup["bearing"] = bearing(mygrid, contactlookup["grid"])
+            displayinfo(f"{contactlookup['name']}", line=1)
+            displayinfo(
+                f"{contactlookup['grid']} "
+                f"{round(contactlookup['distance'])}km "
+                f"{round(contactlookup['bearing'])}deg"
+            )
+        logging.info("%s", contactlookup)
 
 
 def gridtolatlon(maiden: str):
@@ -458,6 +505,13 @@ def poll_radio() -> None:
 def readpreferences() -> None:
     """Reads in preferences"""
     preference.readpreferences()
+    register_services()
+    if look_up and preference.preference["mycallsign"] != "":
+        _thethread = threading.Thread(
+            target=lookupmygrid,
+            daemon=True,
+        )
+        _thethread.start()
 
 
 def writepreferences() -> None:
@@ -661,13 +715,22 @@ def adif():
     """generates an ADIF file from your contacts"""
     logname = "WFD.adi"
     log = database.fetch_all_contacts_asc()
-    counter = 0
-    grid = False
     with open(logname, "w", encoding="utf-8") as file_descriptor:
         print("<ADIF_VER:5>2.2.0", end="\r\n", file=file_descriptor)
         print("<EOH>", end="\r\n", file=file_descriptor)
         for contact in log:
-            _, hiscall, hisclass, hissection, datetime, band, mode, _ = contact
+            (
+                _,
+                hiscall,
+                hisclass,
+                hissection,
+                datetime,
+                band,
+                mode,
+                _,
+                grid,
+                name,
+            ) = contact
             if mode == "DI":
                 mode = "RTTY"
             if mode == "PH":
@@ -678,15 +741,6 @@ def adif():
                 rst = "59"
             loggeddate = datetime[:10]
             loggedtime = datetime[11:13] + datetime[14:16]
-            yy, xx = stdscr.getyx()
-            stdscr.move(15, 1)
-            stdscr.addstr(f"QRZ Gridsquare Lookup: {counter}")
-            stdscr.move(yy, xx)
-            stdscr.refresh()
-            grid = False
-            name = False
-            if look_up:
-                grid, name, _, _ = look_up.lookup(hiscall)
             print(
                 f"<QSO_DATE:{len(''.join(loggeddate.split('-')))}:d>"
                 f"{''.join(loggeddate.split('-'))}",
@@ -787,12 +841,9 @@ def postcloudlog():
     if not cloudlogapi:
         return
     q = database.fetch_last_contact()
-    _, hiscall, hisclass, hissection, datetime, band, mode, _ = q
-    grid = False
-    name = False
-    strippedcall = parsecallsign(hiscall)
-    if look_up:
-        grid, name, _, _ = look_up.lookup(strippedcall)
+    _, hiscall, hisclass, hissection, datetime, band, mode, _, grid, name = q
+    # Doesn't appear to be used
+    # strippedcall = parsecallsign(hiscall)
     if mode == "CW":
         rst = "599"
     else:
@@ -956,7 +1007,18 @@ def logwindow():
     log = database.fetch_all_contacts_desc()
     logNumber = 0
     for contact in log:
-        logid, hiscall, hisclass, hissection, datetime, band, mode, power = contact
+        (
+            logid,
+            hiscall,
+            hisclass,
+            hissection,
+            datetime,
+            band,
+            mode,
+            power,
+            _,
+            _,
+        ) = contact
         logline = (
             f"{str(logid).rjust(3,'0')} "
             f"{hiscall.ljust(10)} "
@@ -1012,6 +1074,13 @@ def logdown():
 def dupCheck(acall):
     """check for duplicates"""
     # global hisclass, hissection
+    if not contactlookup["call"] and look_up:
+        _thethread = threading.Thread(
+            target=lazy_lookup,
+            args=(acall,),
+            daemon=True,
+        )
+        _thethread.start()
     oy, ox = stdscr.getyx()
     scpwindow = curses.newpad(1000, 33)
     rectangle(stdscr, 11, 0, 21, 34)
@@ -1375,98 +1444,98 @@ def setfreq(f: str) -> None:
     statusline()
 
 
-def setcallsign(c):
-    """Needs Doc String"""
-    regex = re.compile(r"^([0-9])?[A-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}$")
-    if re.match(regex, str(c)):
-        preference.preference["mycallsign"] = str(c)
-        writepreferences()
-        statusline()
-    else:
-        setStatusMsg("Must be valid call sign")
+# def setcallsign(c):
+#     """Needs Doc String"""
+#     regex = re.compile(r"^([0-9])?[A-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}$")
+#     if re.match(regex, str(c)):
+#         preference.preference["mycallsign"] = str(c)
+#         writepreferences()
+#         statusline()
+#     else:
+#         setStatusMsg("Must be valid call sign")
 
 
-def setclass(c):
-    """Needs Doc String"""
-    regex = re.compile(r"^[0-9]{1,2}[HhIiOo]$")
-    if re.match(regex, str(c)):
-        preference.preference["myclass"] = str(c)
-        writepreferences()
-        statusline()
-    else:
-        setStatusMsg("Must be valid station class")
+# def setclass(c):
+#     """Needs Doc String"""
+#     regex = re.compile(r"^[0-9]{1,2}[HhIiOo]$")
+#     if re.match(regex, str(c)):
+#         preference.preference["myclass"] = str(c)
+#         writepreferences()
+#         statusline()
+#     else:
+#         setStatusMsg("Must be valid station class")
 
 
-def setsection(s):
-    """validates users section"""
-    if s and str(s) in validSections:
-        preference.preference["mysection"] = str(s)
-        writepreferences()
-        statusline()
-    else:
-        setStatusMsg("Must be valid section")
+# def setsection(s):
+#     """validates users section"""
+#     if s and str(s) in validSections:
+#         preference.preference["mysection"] = str(s)
+#         writepreferences()
+#         statusline()
+#     else:
+#         setStatusMsg("Must be valid section")
 
 
-def setrigctrlhost(o):
-    """Needs Doc String"""
-    preference.preference["CAT_ip"] = str(o)
-    writepreferences()
-    statusline()
+# def setrigctrlhost(o):
+#     """Needs Doc String"""
+#     preference.preference["CAT_ip"] = str(o)
+#     writepreferences()
+#     statusline()
 
 
-def setrigctrlport(r):
-    """Needs Doc String"""
-    preference.preference["CAT_port"] = int(str(r))
-    writepreferences()
-    statusline()
+# def setrigctrlport(r):
+#     """Needs Doc String"""
+#     preference.preference["CAT_port"] = int(str(r))
+#     writepreferences()
+#     statusline()
 
 
-def claimAltPower():
-    """Needs Doc String"""
-    if preference.preference["altpower"]:
-        preference.preference["altpower"] = False
-    else:
-        preference.preference["altpower"] = True
-    setStatusMsg("Alt Power set to: " + str(preference.preference["altpower"]))
-    writepreferences()
-    statusline()
-    stats()
+# def claimAltPower():
+#     """Needs Doc String"""
+#     if preference.preference["altpower"]:
+#         preference.preference["altpower"] = False
+#     else:
+#         preference.preference["altpower"] = True
+#     setStatusMsg("Alt Power set to: " + str(preference.preference["altpower"]))
+#     writepreferences()
+#     statusline()
+#     stats()
 
 
-def claimOutdoors():
-    """Needs Doc String"""
-    if preference.preference["outdoors"]:
-        preference.preference["outdoors"] = False
-    else:
-        preference.preference["outdoors"] = True
-    setStatusMsg("Outdoor bonus set to: " + str(preference.preference["outdoors"]))
-    writepreferences()
-    statusline()
-    stats()
+# def claimOutdoors():
+#     """Needs Doc String"""
+#     if preference.preference["outdoors"]:
+#         preference.preference["outdoors"] = False
+#     else:
+#         preference.preference["outdoors"] = True
+#     setStatusMsg("Outdoor bonus set to: " + str(preference.preference["outdoors"]))
+#     writepreferences()
+#     statusline()
+#     stats()
 
 
-def claimNotHome():
-    """Needs Doc String"""
-    if preference.preference["notathome"]:
-        preference.preference["notathome"] = False
-    else:
-        preference.preference["notathome"] = True
-    setStatusMsg("Away bonus set to: " + str(preference.preference["notathome"]))
-    writepreferences()
-    statusline()
-    stats()
+# def claimNotHome():
+#     """Needs Doc String"""
+#     if preference.preference["notathome"]:
+#         preference.preference["notathome"] = False
+#     else:
+#         preference.preference["notathome"] = True
+#     setStatusMsg("Away bonus set to: " + str(preference.preference["notathome"]))
+#     writepreferences()
+#     statusline()
+#     stats()
 
 
-def claimSatellite():
-    """Needs Doc String"""
-    if preference.preference["satellite"]:
-        preference.preference["satellite"] = False
-    else:
-        preference.preference["satellite"] = True
-    setStatusMsg("Satellite bonus set to: " + str(preference.preference["satellite"]))
-    writepreferences()
-    statusline()
-    stats()
+# def claimSatellite():
+#     """Needs Doc String"""
+#     if preference.preference["satellite"]:
+#         preference.preference["satellite"] = False
+#     else:
+#         preference.preference["satellite"] = True
+#     setStatusMsg("Satellite bonus set to: " + str(preference.preference["satellite"]))
+#     writepreferences()
+#     statusline()
+#     stats()
 
 
 def displayHelp():
@@ -1512,42 +1581,7 @@ def processcommand(cmd):
             preference.writepreferences()
             look_up = None
             cat_control = None
-            if preference.preference["useqrz"]:
-                look_up = QRZlookup(
-                    preference.preference["lookupusername"],
-                    preference.preference["lookuppassword"],
-                )
-            if preference.preference["usehamdb"]:
-                look_up = HamDBlookup()
-            if preference.preference["usehamqth"]:
-                look_up = HamQTH(
-                    preference.preference["lookupusername"],
-                    preference.preference["lookuppassword"],
-                )
-            if preference.preference["useflrig"]:
-                cat_control = CAT(
-                    "flrig",
-                    preference.preference["CAT_ip"],
-                    preference.preference["CAT_port"],
-                )
-            if preference.preference["userigctld"]:
-                cat_control = CAT(
-                    "rigctld",
-                    preference.preference["CAT_ip"],
-                    preference.preference["CAT_port"],
-                )
-
-            if preference.preference["cloudlog"]:
-                __payload = "/validate/key=" + preference.preference["cloudlogapi"]
-                try:
-                    result = requests.get(
-                        preference.preference["cloudlogurl"] + __payload, timeout=5
-                    )
-
-                    if result.status_code == 200 or result.status_code == 400:
-                        cloudlog_on = True
-                except requests.exceptions.ConnectionError as exception:
-                    logging.warning("cloudlog authentication: %s", exception)
+            readpreferences()
         stdscr.clear()
         rectangle(stdscr, 0, 0, 7, 55)
         contactslabel = "Recent Contacts"
@@ -1610,40 +1644,40 @@ def processcommand(cmd):
     if cmd[:1] == "H":  # Print Help
         displayHelp()
         return
-    if cmd[:1] == "I":  # Set rigctld host
-        regex1 = re.compile("localhost")
-        regex2 = re.compile(r"[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
-        if re.match(regex1, cmd[1:].lower()) or re.match(regex2, cmd[1:].lower()):
-            setrigctrlhost(cmd[1:])
-        else:
-            setStatusMsg("Must be IP or localhost")
-        return
-    if cmd[:1] == "R":  # Set rigctld port
-        regex = re.compile("[0-9]{1,5}")
-        if (
-            re.match(regex, cmd[1:].lower())
-            and int(cmd[1:]) > 1023
-            and int(cmd[1:]) < 65536
-        ):
-            setrigctrlport(cmd[1:])
-        else:
-            setStatusMsg("Must be 1024 <= Port <= 65535")
-        return
+    # if cmd[:1] == "I":  # Set rigctld host
+    #     regex1 = re.compile("localhost")
+    #     regex2 = re.compile(r"[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
+    #     if re.match(regex1, cmd[1:].lower()) or re.match(regex2, cmd[1:].lower()):
+    #         setrigctrlhost(cmd[1:])
+    #     else:
+    #         setStatusMsg("Must be IP or localhost")
+    #     return
+    # if cmd[:1] == "R":  # Set rigctld port
+    #     regex = re.compile("[0-9]{1,5}")
+    #     if (
+    #         re.match(regex, cmd[1:].lower())
+    #         and int(cmd[1:]) > 1023
+    #         and int(cmd[1:]) < 65536
+    #     ):
+    #         setrigctrlport(cmd[1:])
+    #     else:
+    #         setStatusMsg("Must be 1024 <= Port <= 65535")
+    #     return
     if cmd[:1] == "L":  # Generate Cabrillo Log
         cabrillo()
         return
-    if cmd[:1] == "1":  # Claim Alt Power Bonus
-        claimAltPower()
-        return
-    if cmd[:1] == "2":  # Claim Outdoor Bonus
-        claimOutdoors()
-        return
-    if cmd[:1] == "3":  # Claim Not Home Bonus
-        claimNotHome()
-        return
-    if cmd[:1] == "4":  # Claim Satellite Bonus
-        claimSatellite()
-        return
+    # if cmd[:1] == "1":  # Claim Alt Power Bonus
+    #     claimAltPower()
+    #     return
+    # if cmd[:1] == "2":  # Claim Outdoor Bonus
+    #     claimOutdoors()
+    #     return
+    # if cmd[:1] == "3":  # Claim Not Home Bonus
+    #     claimNotHome()
+    #     return
+    # if cmd[:1] == "4":  # Claim Satellite Bonus
+    #     claimSatellite()
+    #     return
     curses.flash()
     curses.beep()
 
@@ -1697,6 +1731,8 @@ def proc_key(key):
                 band,
                 mode,
                 int(preference.preference["power"]),
+                contactlookup["grid"],
+                contactlookup["name"],
             )
             log_contact(contact)
             clearentry()
@@ -1999,10 +2035,9 @@ def main(s) -> None:
             poll_time = datetime.datetime.now() + datetime.timedelta(seconds=1)
 
 
-if __name__ == "__main__":
-    database = DataBase("wfd.db")
-    preference = Preferences()
-    readpreferences()
+def register_services():
+    """setup services"""
+    global look_up, cat_control, cloudlog_on
     look_up = None
     cat_control = None
     if preference.preference["useqrz"]:
@@ -2040,6 +2075,12 @@ if __name__ == "__main__":
         except requests.exceptions.ConnectionError as exception:
             logging.warning("cloudlog authentication: %s", exception)
 
+
+if __name__ == "__main__":
+    database = DataBase("wfd.db")
+    preference = Preferences()
+    readpreferences()
+    register_services()
     read_sections()
     scp = read_scp()
     hiscall_field = EditTextField(stdscr, y=9, x=1)
