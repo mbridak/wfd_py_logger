@@ -969,7 +969,7 @@ def cabrillo():
         print("EMAIL: ", end="\r\n", file=file_descriptor)
         log = database.fetch_all_contacts_asc()
         for x in log:
-            _, hiscall, hisclass, hissection, datetime, band, mode, _ = x
+            _, hiscall, hisclass, hissection, datetime, band, mode, _, _, _ = x
             loggeddate = datetime[:10]
             loggedtime = datetime[11:13] + datetime[14:16]
             print(
