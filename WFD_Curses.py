@@ -1300,6 +1300,7 @@ def clearentry():
     hisclass_field.get_focus()
     hiscall_field.set_text("")
     hiscall_field.get_focus()
+    clearcontactlookup()
 
 
 def YorN(boolean):
@@ -1698,9 +1699,13 @@ def proc_key(key):
             hissection = hissection_field.text()
             hiscall_field.get_focus()
         if inputFieldFocus == 1:  # class input
+            logging.debug(
+                "checking for dupe and grid %s - %s", hiscall, hiscall_field.text()
+            )
             if hiscall != hiscall_field.text():
                 if len(hiscall_field.text()) > 2 and hiscall_field.text()[:1] != ".":
                     dupCheck(hiscall_field.text())
+                    logging.debug("Call the lazy")
                     x = threading.Thread(
                         target=lazy_lookup, args=(hiscall_field.text(),), daemon=True
                     )
