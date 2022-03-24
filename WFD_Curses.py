@@ -838,7 +838,7 @@ def parsecallsign(callsign):
 
 def postcloudlog():
     """posts a contact to cloudlog"""
-    if not cloudlogapi:
+    if not cloudlog_on:
         return
     q = database.fetch_last_contact()
     _, hiscall, hisclass, hissection, datetime, band, mode, _, grid, name = q
@@ -877,11 +877,15 @@ def postcloudlog():
         adifq += f"<NAME:{len(name)}>{name}"
     adifq += "<COMMENT:16>WINTER-FIELD-DAY" "<EOR>"
 
-    payload = {"key": cloudlogapi, "type": "adif", "string": adifq}
+    payload = {
+        "key": preference.preference["cloudlogapi"],
+        "type": "adif",
+        "string": adifq,
+    }
 
     jsonData = dumps(payload)
     logging.debug(jsonData)
-    qsoUrl = cloudlogurl + "/qso"
+    qsoUrl = preference.preference["cloudlogurl"] + "/qso"
     _ = requests.post(qsoUrl, jsonData)
 
 
@@ -2049,6 +2053,7 @@ def register_services():
     global look_up, cat_control, cloudlog_on
     look_up = None
     cat_control = None
+    cloudlog_on = False
     if preference.preference["useqrz"]:
         look_up = QRZlookup(
             preference.preference["lookupusername"],
@@ -2073,13 +2078,24 @@ def register_services():
         )
 
     if preference.preference["cloudlog"]:
-        __payload = "/validate/key=" + preference.preference["cloudlogapi"]
+        # <auth>
+        # <status>Valid</status>
+        # <rights>rw</rights>
+        # </auth>
+
+        # <auth>
+        # <message>Key Invalid - either not found or disabled</message>
+        # </auth>
+
+        __payload = "/auth/" + preference.preference["cloudlogapi"]
+
         try:
             result = requests.get(
                 preference.preference["cloudlogurl"] + __payload, timeout=5
             )
 
-            if result.status_code == 200 or result.status_code == 400:
+            if result.status_code == 200 and "<status>Valid</status>" in result.text:
+                logging.debug("Cloudlog: Auth: %s", result.text)
                 cloudlog_on = True
         except requests.exceptions.ConnectionError as exception:
             logging.warning("cloudlog authentication: %s", exception)
