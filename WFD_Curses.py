@@ -489,8 +489,8 @@ def poll_radio() -> None:
     if cat_control.online:
         newfreq = cat_control.get_vfo()
         newmode = cat_control.get_mode()
-        newpwr = cat_control.get_power()
-        logging.info("F:%s M:%s P:%s", newfreq, newmode, newpwr)
+        # newpwr = cat_control.get_power()
+        logging.info("F:%s M:%s P:%s", newfreq, newmode)
         # newpwr = int(float(rigctrlsocket.recv(1024).decode().strip()) * 100)
         if newfreq != oldfreq or newmode != oldmode:  # or newpwr != oldpwr
             oldfreq = newfreq
