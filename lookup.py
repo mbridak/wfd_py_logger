@@ -42,8 +42,11 @@ class HamDBlookup:
             root = bs(query_result.text, "html.parser")
             if root.messages.find("status"):
                 error_text = root.messages.status.text
-                self.error = error_text
+                logging.debug("HamDB: %s", error_text)
+                if error_text != "OK":
+                    self.error = error_text
             if root.find("callsign"):
+                logging.debug("HamDB: found callsign field")
                 if root.callsign.find("grid"):
                     grid = root.callsign.grid.text
                 if root.callsign.find("fname"):
