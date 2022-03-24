@@ -83,6 +83,12 @@ You can enable callsign lookups by enabling them in the settings screen. If you 
 
 You can enable automatic logging to Cloudlog in the settings screen. Here you can enter your API key and URL to the service, along with a station ID if needed.
 
+#### Bearing to contact
+
+Once you put in your own call and choose a lookup provider, the program looks up your gridsquare. I did this because I didn't want to change the settings screen... I'm not kidding. After this, and after it looks up the grid for the other person, it'll show you the bearing and distance to the contact.  
+
+![screen clip of bearing](pics/bearing.png)
+
 #### Editing an existing contact
 
 Use the Up/Down arrow keys or PageUp/PageDown to scroll the contact into view. Your mouse scroll wheel may work as well. Double left click on the contact to edit, or use the '.E' command. Use the TAB or Up/Down arrow keys to move between fields. Backspace to erase and retype what you need.
