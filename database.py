@@ -24,7 +24,9 @@ class DataBase:
                 "date_time text NOT NULL, "
                 "band text NOT NULL, "
                 "mode text NOT NULL, "
-                "power INTEGER NOT NULL); "
+                "power INTEGER NOT NULL, "
+                "grid text NOT NULL, "
+                "opname text NOT NULL);"
             )
             cursor.execute(sql_table)
             conn.commit()
@@ -37,8 +39,10 @@ class DataBase:
         try:
             with sqlite3.connect(self.database) as conn:
                 sql = (
-                    "INSERT INTO contacts(callsign, class, section, date_time, band, mode, power) "
-                    "VALUES(?,?,?,datetime('now'),?,?,?)"
+                    "INSERT INTO contacts"
+                    "(callsign, class, section, date_time, "
+                    "band, mode, power, grid, opname) "
+                    "VALUES(?,?,?,datetime('now'),?,?,?,?,?)"
                 )
                 cur = conn.cursor()
                 cur.execute(sql, logme)
@@ -118,7 +122,7 @@ class DataBase:
             )
             log = cursor.fetchall()
             highpower = bool(list(log[0])[0])
-            qrp = not (qrpc + qrpp + qrpd)
+            qrp = not qrpc + qrpp + qrpd
 
             return (
                 cwcontacts,

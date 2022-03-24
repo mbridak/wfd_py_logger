@@ -10,8 +10,6 @@ I decided to write this after the 2018 Winter Field Day when I couldn't find a s
 
 ![Alt text](pics/logger.png)
 
-**A newer version based on PyQt5 can be found [here](https://github.com/mbridak/WinterFieldDayLogger)**.
-
 ## Recent Changes
 
 After 3+ years of neglect for the curses version, it was in need of some TLC. It's been one large monolithic chunk of code from the start. I've decided to break it into manageable chunks (classes). 
@@ -22,111 +20,71 @@ So far we have:
 * database.py well... does database stuff.
 * lookup.py Abstraction class for QRZ, HamQTH and HamDB
 * preferences.py Decided to move all the preferences from the sqlite table and into a json file. This makes it easier to edit for the user and straight forward  to load and save.
+* edittextfield.py A slightly better than nothing at all Class to handle entering text... You guessed it. In a field.
+* Made an actual Edit Settings screen leveraging the previous mentioned EditTextField class. The SettingsScreen class lives in settings.py .
 
 [Russ K5TUX](https://lhspodcast.info/) has made several pull requests with new features. Which to be honest, shamed me into looking at the code again, and seeing the absolute horror show the layers of cruft and years of neglect has brought.
 
 So many hours/days have been spent on making the code more PEP8 compliant.
 
 ## Caveats
-This is a simple logger ment for single op, it's not usable for clubs.
 
-**A newer version based on PyQt5 can be found [here](https://github.com/mbridak/WinterFieldDayLogger)**.
+This is a simple logger meant for a single op, it's not usable for clubs. There's no networking between logging machines etc.
 
 ## Initial Setup
-Before running you may want to edit the `wfd_preferences.json` file. It has settings for rigcontrol, callsign lookup and cloudlog integration.
+
+After launching the program you may want to access the new Edit Settings screen by using the command listed in the next section. Here you can setup your call/class/section, CAT, callsign lookup, Cloudlog intigration.
+
+![Settings Screen](pics/settings.png)
+
+Navigate the screen by pressing either `TAB` or `Shift-TAB`. Settings with brackets `[_]` are boolean. `[_]` means disabled and `[X]` is enabled. They can either be toggled with the `SPACE` key, or pressing either one of these `XxYy1` to enable, or one of these `Nn0` to disable it.
+
+After you make your changes, either press the `Enter` key to save your changes, or the `Esc` key to abort any changes and exit the screen.
 
 ## Commands:
+
 Commands start with a period character in the callsign field and are immediately followed by any information needed by the command.
 
 ```
 .H displays a short list of commands.
 .Q Quit the program.
-.Kyourcall Sets your callsign. .KK6GTE will set it to K6GTE.
-.Cyourclass Sets your class. .C1O will set your class to 1O.
-.Syoursection Sets your section. .SORG sets your section to ORG.
+.S Access the settings screen
 .P# Sets the power level, .P5 will set the power to 5 watts.
 .MCW .MPH .MDI Sets the mode. CW Morse, PH Phone, DI Digital.
 .B# sets the band, .B40 for 40 meters.
 .D# Deletes log entry. .D26 will delete the log line starting with 026.
 .E# Edits log entry. .E26 will edit the log line starting with 026.
 .L Generate Cabrillo log file for submission.
-.1 Claim Alt-Power Bonus
-.2 Claim Outdoors Bonus
-.3 Claim Away from Home Bonus
-.4 Claim Satellite Bonus
+
 [esc] abort input, clear all fields.
 ```
 
-After the command is entered press the TAB key to execute it.
-
-So when I initially start the program I would enter the following:
-
-```
-.KK6GTE
-.C1O
-.SORG
-.P5
-.B40
-.MCW
-``` 
-This says I'm K6GTE 1O ORG, running 5 watts CW on 40 Meters.
-
-For claimed bonuses, since I'll be using battery and solar and I'll be outdoors and away from home, but I don't plan on making any Satellite contacts I'd also enter the following.
-```
-.1
-.2
-.3
-```
+After the command is entered press the ENTER key to execute it.
 
 ## Logging
-Okay you've made a contact. Enter the call in the call field. As you type it in, it will do a super check partial (see below). Press TAB or SPACE to advance to the next field. Once the call is complete it will do a DUP check (see below). It will try and Autofill the next fields (see below). When entering the section, it will do a section partial check (see below). Press the ENTER key to submit the Q to the log. If it's a busted call or a dup, press the ESC key to clear all inputs and start again.
+
+Okay you've made a contact. Enter the call in the call field. As you type it in, it will do a super check partial (see below). Press TAB or SPACE to advance to the next field. Once the call is complete it will do a DUP check (see below). It will try and Autofill the next fields (see below). When entering the section, it will do a section partial check (see below). Press the ENTER key to submit the contact to the log. If it's a busted call or a dup, press the ESC key to clear all inputs and start again.
 
 ## Features
 
 #### Radio Polling via rigctld or flrig
-Be sure to edit the json file referenced in the Initial Setup section. Place a `1` next to your preferred CAT method. and fill in the CAT_ip and CAT_port fields.
 
-##### flrig:
-
-    "userigctld": 0,
-    "useflrig": 1,
-    "CAT_ip": "localhost",
-    "CAT_port": 12345,
-
-##### rigctld:
-
-    "userigctld": 1,
-    "useflrig": 0,
-    "CAT_ip": "localhost",
-    "CAT_port": 4532,
+You can enable/disable the use of rigctld or flrig in the settings screen. The flrig default port is 12345, and the default rigctld port is 4532.
 
 The radio will be polled for band/mode updates automatically. There is an indicator at the bottom of the logging window to indicate polling status. Dim if no connection or timeout, and highlighted if all okay.
 
 ![Alt text](pics/rigctld.png)
 
 #### QRZ, HamQTH, HamDB
-If you are going to use a callsign lookup service, you can edit the lines in the wfd_preference.json shown below.
 
-    "usehamdb": 0,
-    "hamdburl": "https://api.hamdb.org",
-    "useqrz": 0,
-    "qrzusername": "",
-    "qrzpassword": "",
-    "qrzurl": "https://xmldata.qrz.com/xml/134",
-    "usehamqth": 0,
-    "hamqthusername": "",
-    "hamqthpassword": "",
-    "hamqthurl": "",
+You can enable callsign lookups by enabling them in the settings screen. If you choose either QRZ or HamQTH place you credentials for that service in the username and password fields provided.
 
 #### Cloudlog
-If you wish to have your contacts pushed to cloudlog, edit the lines in the wfd_preference.json shown below.
 
-    "cloudlog": 0,
-    "cloudlogapi": "c01234567890123456789",
-    "cloudlogurl": "https://www.cloudlog.com/Cloudlog/index.php/api",
-    "cloudlogstationid": "",
+You can enable automatic logging to Cloudlog in the settings screen. Here you can enter your API key and URL to the service, along with a station ID if needed.
 
 #### Editing an existing contact
+
 Use the Up/Down arrow keys or PageUp/PageDown to scroll the contact into view. Your mouse scroll wheel may work as well. Double left click on the contact to edit, or use the '.E' command. Use the TAB or Up/Down arrow keys to move between fields. Backspace to erase and retype what you need.
 Once done press the Enter key to save, or the Escape key to exit.
 

@@ -28,7 +28,15 @@ class HamDBlookup:
         name = False
         error_text = False
         nickname = False
-        query_result = requests.get(self.url + call + "/xml/wfd_logger", timeout=3.0)
+
+        try:
+            self.error = False
+            query_result = requests.get(
+                self.url + call + "/xml/wfd_logger", timeout=10.0
+            )
+        except requests.exceptions.Timeout as exception:
+            self.error = True
+            return grid, name, nickname, exception
         if query_result.status_code == 200:
             self.error = False
             root = bs(query_result.text, "html.parser")
@@ -117,7 +125,11 @@ class QRZlookup:
         nickname = False
         if self.session:
             payload = {"s": self.session, "callsign": call}
-            query_result = requests.get(self.qrzurl, params=payload, timeout=3.0)
+            try:
+                query_result = requests.get(self.qrzurl, params=payload, timeout=10.0)
+            except requests.exceptions.Timeout as exception:
+                self.error = True
+                return grid, name, nickname, exception
             root = bs(query_result.text, "html.parser")
             if not root.session.key:  # key expired get a new one
                 logging.info("QRZlookup-lookup: no key, getting new one.")
@@ -183,7 +195,11 @@ class HamQTH:
         # self.message = False
         self.session = False
         payload = {"u": self.username, "p": self.password}
-        query_result = requests.get(self.url, params=payload, timeout=10.0)
+        try:
+            query_result = requests.get(self.url, params=payload, timeout=10.0)
+        except requests.exceptions.Timeout:
+            self.error = True
+            return
         logging.info("hamqth-getsession:%s", query_result.status_code)
         root = bs(query_result.text, "html.parser")
         if root.find("session"):
@@ -200,7 +216,11 @@ class HamQTH:
         grid, name, nickname, error_text = False, False, False, False
         if self.session:
             payload = {"id": self.session, "callsign": call, "prg": "wfd_curses"}
-            query_result = requests.get(self.url, params=payload, timeout=10.0)
+            try:
+                query_result = requests.get(self.url, params=payload, timeout=10.0)
+            except requests.exceptions.Timeout as exception:
+                self.error = True
+                return grid, name, nickname, exception
             logging.info("lookup resultcode: %s", query_result.status_code)
             root = bs(query_result.text, "html.parser")
             if not root.find("search"):
