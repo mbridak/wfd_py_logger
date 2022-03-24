@@ -1918,7 +1918,7 @@ def editQSO(q):
     if not log:
         return
     qso = ["", "", "", "", "", "", "", ""]
-    qso[0], qso[1], qso[2], qso[3], qso[4], qso[5], qso[6], qso[7] = log[0]
+    qso[0], qso[1], qso[2], qso[3], qso[4], qso[5], qso[6], qso[7], _, _ = log[0]
     qsoew = curses.newwin(10, 40, 6, 10)
     qsoew.keypad(True)
     qsoew.nodelay(True)
