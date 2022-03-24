@@ -1074,13 +1074,13 @@ def logdown():
 def dupCheck(acall):
     """check for duplicates"""
     # global hisclass, hissection
-    if not contactlookup["call"] and look_up:
-        _thethread = threading.Thread(
-            target=lazy_lookup,
-            args=(acall,),
-            daemon=True,
-        )
-        _thethread.start()
+    # if not contactlookup["call"] and look_up:
+    #     _thethread = threading.Thread(
+    #         target=lazy_lookup,
+    #         args=(acall,),
+    #         daemon=True,
+    #     )
+    #     _thethread.start()
     oy, ox = stdscr.getyx()
     scpwindow = curses.newpad(1000, 33)
     rectangle(stdscr, 11, 0, 21, 34)
@@ -1317,7 +1317,7 @@ def setStatusMsg(msg):
     oy, ox = stdscr.getyx()
     window = curses.newpad(10, 33)
     rectangle(stdscr, 11, 0, 21, 34)
-    window.addstr(0, 0, msg)
+    window.addstr(0, 0, str(msg))
     stdscr.refresh()
     window.refresh(0, 0, 12, 1, 20, 33)
     stdscr.move(oy, ox)
@@ -1564,13 +1564,13 @@ def displayinfo(info, line=2):
     """Displays a line of text at the bottom of the info window"""
     y, x = stdscr.getyx()
     stdscr.move(18 + line, 1)
-    stdscr.addstr(info)
+    stdscr.addstr(str(info))
     stdscr.move(y, x)
     stdscr.refresh()
 
 
 def processcommand(cmd):
-    """Needs Doc String"""
+    """Process Dot commands"""
     global quitprogram, look_up, cat_control
     cmd = cmd[1:].upper()
     if cmd == "S":
