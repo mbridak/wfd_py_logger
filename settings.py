@@ -198,7 +198,7 @@ class SettingsScreen:
                 self.screen.erase()
                 return self.preference
             self.input_fields[self.input_field_focus].getchar(c)
-            time.sleep(0.1)
+            time.sleep(0.01)
 
     def close(self):
         """not useful yet"""
