@@ -276,7 +276,9 @@ def lazy_lookup(acall: str):
     if look_up:
         if acall == contactlookup["call"]:
             return
-
+        y, x = stdscr.getyx()
+        stdscr.addstr(9, 16, "💤")
+        stdscr.move(y, x)
         contactlookup["call"] = acall
         (
             contactlookup["grid"],
@@ -285,7 +287,14 @@ def lazy_lookup(acall: str):
             contactlookup["error"],
         ) = look_up.lookup(acall)
         if contactlookup["name"] == "NOT_FOUND NOT_FOUND":
+            y, x = stdscr.getyx()
+            stdscr.addstr(9, 16, "💢")
+            stdscr.move(y, x)
             contactlookup["name"] = "NOT_FOUND"
+        else:
+            y, x = stdscr.getyx()
+            stdscr.addstr(9, 16, "🌐")
+            stdscr.move(y, x)
         if contactlookup["grid"] == "NOT_FOUND":
             contactlookup["grid"] = ""
         if contactlookup["grid"] and mygrid:
@@ -598,13 +607,12 @@ def super_check(acall: str) -> list:
 
 def contacts_label():
     """
-    all it does is centers a string to create a label for a window...
-    why is this it's own function?
-    I'm sure there is a reason. I just don't remember.
+    Centers a string to create a label for the Recent contacts window.
+    Seems stupid but it's used like 4 times.
     """
     rectangle(stdscr, 0, 0, 7, 55)
     contactslabel = "Recent Contacts"
-    contactslabeloffset = (49 / 2) - len(contactslabel) / 2
+    contactslabeloffset = (55 / 2) - len(contactslabel) / 2
     stdscr.addstr(0, int(contactslabeloffset), contactslabel)
 
 
@@ -1292,6 +1300,9 @@ def clearentry():
     hissection = ""
     hisclass = ""
     kbuf = ""
+    y, x = stdscr.getyx()
+    stdscr.addstr(9, 16, " ")
+    stdscr.move(y, x)
     inputFieldFocus = 0
     hissection_field.set_text("")
     hissection_field.get_focus()
@@ -1588,10 +1599,7 @@ def processcommand(cmd):
             cat_control = None
             readpreferences()
         stdscr.clear()
-        rectangle(stdscr, 0, 0, 7, 55)
-        contactslabel = "Recent Contacts"
-        contactslabeloffset = (49 / 2) - len(contactslabel) / 2
-        stdscr.addstr(0, int(contactslabeloffset), contactslabel)
+        contacts_label()
         logwindow()
         sections()
         stats()
@@ -1791,10 +1799,7 @@ def edit_key(key):
         change_contact(qso)
         qsoew.erase()
         stdscr.clear()
-        rectangle(stdscr, 0, 0, 7, 55)
-        contactslabel = "Recent Contacts"
-        contactslabeloffset = (49 / 2) - len(contactslabel) / 2
-        stdscr.addstr(0, int(contactslabeloffset), contactslabel)
+        contacts_label()
         logwindow()
         sections()
         stats()
@@ -1806,10 +1811,7 @@ def edit_key(key):
     if key == ESCAPE:
         qsoew.erase()
         stdscr.clear()
-        rectangle(stdscr, 0, 0, 7, 55)
-        contactslabel = "Recent Contacts"
-        contactslabeloffset = (49 / 2) - len(contactslabel) / 2
-        stdscr.addstr(0, int(contactslabeloffset), contactslabel)
+        contacts_label()
         logwindow()
         sections()
         stats()
@@ -2104,8 +2106,8 @@ if __name__ == "__main__":
     register_services()
     read_sections()
     scp = read_scp()
-    hiscall_field = EditTextField(stdscr, y=9, x=1)
+    hiscall_field = EditTextField(stdscr, y=9, x=1, length=14)
     hisclass_field = EditTextField(stdscr, y=9, x=20, length=4)
-    hissection_field = EditTextField(stdscr, y=9, x=27, length=7)
+    hissection_field = EditTextField(stdscr, y=9, x=27, length=3)
 
     wrapper(main)
