@@ -1354,12 +1354,13 @@ def statusline():
 
     suffix = ""
 
-    if strband == "OOB":
-        suffix = ""
-    elif int(freq) > 225000000:
-        suffix = "cm"
-    else:
-        suffix = "m"
+    if freq != "":
+        if strband == "OOB":
+            suffix = ""
+        elif int(freq) > 225000000:
+            suffix = "cm"
+        else:
+            suffix = "m"
 
     strband += suffix
 
