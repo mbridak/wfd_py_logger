@@ -7,8 +7,6 @@
 Winter Field Day logger curses based.
 """
 
-# rows, cols = stdscr.getmaxyx()
-
 # COLOR_BLACK	    Black
 # COLOR_BLUE	    Blue
 # COLOR_CYAN	    Cyan (light greenish blue)
@@ -56,11 +54,8 @@ if Path("./debug").exists():
 poll_time = datetime.datetime.now()
 look_up = None
 cat_control = None
-cloudlogapi = False
-cloudlogurl = False
 cloudlog_on = False
 preference = None
-rigonline = False
 
 stdscr = curses.initscr()
 height, width = stdscr.getmaxyx()
