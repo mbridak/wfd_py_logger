@@ -142,7 +142,9 @@ class SettingsScreen:
 
     def _title(self):
         position = int((self.WIDTH / 2) - (len(self.TITLE) / 2))
+        self.screen.addch(0, position - 1, curses.ACS_RTEE)
         self.screen.addstr(0, position, self.TITLE)
+        self.screen.addch(curses.ACS_LTEE)
 
     def _display_menu(self):
         """Displays menu text and input fields"""
