@@ -44,7 +44,7 @@ class HamDBlookup:
                 error_text = root.messages.status.text
                 logging.debug("HamDB: %s", error_text)
                 if error_text != "OK":
-                    self.error = error_text
+                    self.error = False
             if root.find("callsign"):
                 logging.debug("HamDB: found callsign field")
                 if root.callsign.find("grid"):
