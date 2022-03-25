@@ -1910,7 +1910,7 @@ def EditClickedQSO(line: int) -> None:
         if c != -1:
             edit_key(c)
         else:
-            time.sleep(0.1)
+            time.sleep(0.01)
         if quitprogram:
             quitprogram = False
             break
@@ -1982,7 +1982,7 @@ def editQSO(q):
         if c != -1:
             edit_key(c)
         else:
-            time.sleep(0.1)
+            time.sleep(0.01)
         if quitprogram:
             quitprogram = False
             break
@@ -2035,7 +2035,7 @@ def main(s) -> None:
         elif ch != -1:
             proc_key(ch)
         else:
-            time.sleep(0.1)
+            time.sleep(0.01)
         if quitprogram:
             break
         if datetime.datetime.now() > poll_time:
