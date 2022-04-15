@@ -285,7 +285,6 @@ def lazy_lookup(acall: str):
         ) = look_up.lookup(acall)
         if contactlookup["name"] == "NOT_FOUND NOT_FOUND":
             contactlookup["name"] = "NOT_FOUND"
-        else:
         if contactlookup["grid"] == "NOT_FOUND":
             contactlookup["grid"] = ""
         if contactlookup["grid"] and mygrid:
