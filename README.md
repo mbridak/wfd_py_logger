@@ -10,6 +10,13 @@ I decided to write this after the 2018 Winter Field Day when I couldn't find a s
 
 ![Alt text](pics/logger.png)
 
+## Requirements
+
+It requires Python3, BeautifulSoup (bs4), lxml and requests.
+
+`sudo apt install python3-requests python3-bs4 python3-lxml`
+
+
 ## Recent Changes
 
 After 3+ years of neglect for the curses version, it was in need of some TLC. It's been one large monolithic chunk of code from the start. I've decided to break it into manageable chunks (classes). 
