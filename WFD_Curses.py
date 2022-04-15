@@ -276,9 +276,6 @@ def lazy_lookup(acall: str):
     if look_up:
         if acall == contactlookup["call"]:
             return
-        y, x = stdscr.getyx()
-        stdscr.addstr(9, 16, "💤")
-        stdscr.move(y, x)
         contactlookup["call"] = acall
         (
             contactlookup["grid"],
@@ -287,14 +284,8 @@ def lazy_lookup(acall: str):
             contactlookup["error"],
         ) = look_up.lookup(acall)
         if contactlookup["name"] == "NOT_FOUND NOT_FOUND":
-            y, x = stdscr.getyx()
-            stdscr.addstr(9, 16, "💢")
-            stdscr.move(y, x)
             contactlookup["name"] = "NOT_FOUND"
         else:
-            y, x = stdscr.getyx()
-            stdscr.addstr(9, 16, "🌐")
-            stdscr.move(y, x)
         if contactlookup["grid"] == "NOT_FOUND":
             contactlookup["grid"] = ""
         if contactlookup["grid"] and mygrid:
