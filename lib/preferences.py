@@ -64,3 +64,10 @@ class Preferences:
                     file_descriptor.write(dumps(self.preference, indent=4))
         except IOError as exception:
             logging.critical("readpreferences: %s", exception)
+
+def main():
+    """Just in case..."""
+    pass
+
+if __name__ == "__main__":
+    main()

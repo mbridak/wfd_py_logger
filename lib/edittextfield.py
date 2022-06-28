@@ -140,3 +140,11 @@ class EditTextField:
         )
         self.set_cursor_position(len(self.textfield) * (not self.is_bool))
         self.screen.move(self.position_y, self.position_x + self.cursor_position)
+
+def main():
+    """Just in case..."""
+    pass
+
+if __name__ == "__main__":
+    main()
+    

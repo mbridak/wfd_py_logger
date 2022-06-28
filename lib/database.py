@@ -199,3 +199,10 @@ class DataBase:
             cursor = conn.cursor()
             cursor.execute("select * from contacts where id=" + record)
             return cursor.fetchall()
+
+def main():
+    """Just in case..."""
+    pass
+
+if __name__ == "__main__":
+    main()
