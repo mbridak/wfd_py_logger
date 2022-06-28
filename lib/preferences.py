@@ -31,6 +31,9 @@ class Preferences:
             "outdoors": 0,
             "notathome": 0,
             "satellite": 0,
+            "cwtype": 0,
+            "CW_IP": "localhost",
+            "CW_port": 6789,
         }
 
     def writepreferences(self) -> None:
