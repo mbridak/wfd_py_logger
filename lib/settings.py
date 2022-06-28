@@ -4,7 +4,7 @@
 
 import curses
 import time
-from edittextfield import EditTextField
+from lib.edittextfield import EditTextField
 
 
 class SettingsScreen:
@@ -205,3 +205,10 @@ class SettingsScreen:
     def close(self):
         """not useful yet"""
         self.screen.endwin()
+
+def main():
+    """Just in case..."""
+    pass
+
+if __name__ == "__main__":
+    main()

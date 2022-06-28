@@ -262,3 +262,10 @@ class CAT:
             except socket.error:
                 self.online = False
                 self.rigctrlsocket = None
+
+def main():
+    """Just in case..."""
+    pass
+
+if __name__ == "__main__":
+    main()

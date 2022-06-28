@@ -365,3 +365,10 @@ class HamQTH:
             if root.search.find("adr_name"):
                 name = root.search.adr_name.text
         return grid, name, nickname, error_text
+
+def main():
+    """Just in case..."""
+    pass
+
+if __name__ == "__main__":
+    main()

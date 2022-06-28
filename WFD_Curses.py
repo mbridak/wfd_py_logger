@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
+"""
+K6GTE Winter Field Day logger curses based.
+Email: michael.bridak@gmail.com
+GPL V3
+"""
+
 # pylint: disable=too-many-lines
 # pylint: disable=global-statement
 # pylint: disable=redefined-outer-name
 # pylint: disable=invalid-name
-"""
-Winter Field Day logger curses based.
-"""
 
 # COLOR_BLACK	    Black
 # COLOR_BLUE	    Blue
@@ -32,12 +35,13 @@ from json import dumps
 import threading
 
 import requests
-from database import DataBase
-from preferences import Preferences
-from lookup import HamDBlookup, HamQTH, QRZlookup
-from cat_interface import CAT
-from edittextfield import EditTextField
-from settings import SettingsScreen
+from lib.database import DataBase
+from lib.preferences import Preferences
+from lib.lookup import HamDBlookup, HamQTH, QRZlookup
+from lib.cat_interface import CAT
+from lib.edittextfield import EditTextField
+from lib.settings import SettingsScreen
+#from lib.cwinterface import CW
 
 
 if Path("./debug").exists():
@@ -544,7 +548,7 @@ def read_sections() -> None:
     """Reads in ARRL section data into a list"""
     try:
         with open(
-            relpath("arrl_sect.dat"), "r", encoding="utf-8"
+            relpath("data/arrl_sect.dat"), "r", encoding="utf-8"
         ) as file_descriptor:  # read section data
             while 1:
                 line = file_descriptor.readline().strip()  # read a line and put in db
@@ -585,7 +589,7 @@ def section_check(sec: str) -> None:
 
 def read_scp() -> list:
     """reads in the super check partion data into a list"""
-    with open(relpath("MASTER.SCP"), "r", encoding="utf-8") as file_descriptor:
+    with open(relpath("data/MASTER.SCP"), "r", encoding="utf-8") as file_descriptor:
         lines = file_descriptor.readlines()
     return list(map(lambda x: x.strip(), lines))
 
