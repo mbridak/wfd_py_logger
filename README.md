@@ -14,25 +14,20 @@ I decided to write this after the 2018 Winter Field Day when I couldn't find a s
 
 It requires Python3, BeautifulSoup (bs4), lxml and requests.
 
+If you're using pip for dependencies you can:
+
+pip3 install -r requirements.txt
+
+If you use Debian/Ubuntu you can:
+
 `sudo apt install python3-requests python3-bs4 python3-lxml`
 
 
 ## Recent Changes
 
-After 3+ years of neglect for the curses version, it was in need of some TLC. It's been one large monolithic chunk of code from the start. I've decided to break it into manageable chunks (classes). 
-
-So far we have:
-
-* cat_interface.py Abstraction class "CAT" for both rigctld and flrig.
-* database.py well... does database stuff.
-* lookup.py Abstraction class for QRZ, HamQTH and HamDB
-* preferences.py Decided to move all the preferences from the sqlite table and into a json file. This makes it easier to edit for the user and straight forward  to load and save.
-* edittextfield.py A slightly better than nothing at all Class to handle entering text... You guessed it. In a field.
-* Made an actual Edit Settings screen leveraging the previous mentioned EditTextField class. The SettingsScreen class lives in settings.py .
-
-[Russ K5TUX](https://lhspodcast.info/) has made several pull requests with new features. Which to be honest, shamed me into looking at the code again, and seeing the absolute horror show the layers of cruft and years of neglect has brought.
-
-So many hours/days have been spent on making the code more PEP8 compliant.
+* Added CW macros
+* Support for cwdaemon and PyWinkeyer
+* Cleaned up directory structure.  
 
 ## Caveats
 
@@ -40,7 +35,7 @@ This is a simple logger meant for a single op, it's not usable for clubs. There'
 
 ## Initial Setup
 
-After launching the program you may want to access the new Edit Settings screen by using the command listed in the next section. Here you can setup your call/class/section, CAT, callsign lookup, Cloudlog intigration.
+After launching the program you may want to access the new Edit Settings screen by using the command listed in the next section. Here you can setup your call/class/section, CAT, callsign lookup, Cloudlog intigration, CW keyer.
 
 ![Settings Screen](pics/settings.png)
 
@@ -120,6 +115,27 @@ Once you type a complete callsign and press TAB or SPACE to advance to the next 
 
 #### Autofill
 If you have worked this person before on another band/mode the program will load the class and section used previously for this call so you will not have to enter this info again.
+
+#### CW Keying and Macros
+
+You can use either cwdaemon or PyWinkeyer as a keying interface. After you run the program and choose your keyer interface you will find a file called cwmacros.txt in the base directory that you launched the logger from. The file has 12 lines, corresponding to the 12 function keys on most keyboards. The format of the file is simple:
+
+F1|CQ|CQ WFD {MYCALL} {MYCALL} WFD
+
+Three fields separated by a `|` character. The first field is the function key to map. The second is the name of the macro being sent. Which in this case does not make a whole lot of sense, because you can't see the name... Just go with it. The last field is the macro to send.
+
+There are 4 substitution macros provided: {MYCALL} {HISCALL} {MYCLASS} {MYSECT}
+They send pretty much excatly what you think it should send.
+
+So if your're running, you might want a macro like:
+
+F2|exchange|{HISCALL} {MYCLASS} {MYSECT}
+
+Who knows... Go wild. The world is your very limited, Oddly specific oyster.
+
+#### cwdaemon use
+
+If you use cwdaemon for your keyer, you can use the plus and minus on the keyboard to increase/decrease the sending speed by 1 wpm each time you press it. Pressing Escape aborts the sending.
 
 ## TODO
   * Enter a contact at a specific time.
