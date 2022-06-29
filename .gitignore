@@ -16,3 +16,4 @@ wfd.ini
 lib/__pycache__
 lib/__pycache__/*
 wfd_preferences.json
+cwmacros.txt
