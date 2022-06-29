@@ -206,7 +206,10 @@ class SettingsScreen:
                 self.preference["userigctld"] = self.userigctld.get_state()
                 self.preference["useflrig"] = self.useflrig.get_state()
                 self.preference["CAT_ip"] = self.CAT_ip.text()
-                self.preference["CAT_port"] = int(self.CAT_port.text())
+                try:
+                    self.preference["CAT_port"] = int(self.CAT_port.text())
+                except ValueError:
+                    self.preference["CAT_port"] = 0
                 self.preference["cloudlog"] = self.cloudlog.get_state()
                 self.preference["cloudlogapi"] = self.cloudlogapi.text()
                 self.preference["cloudlogurl"] = self.cloudlogurl.text()
@@ -221,7 +224,10 @@ class SettingsScreen:
                 if self.pywinkeyer.get_state():
                     self.preference["cwtype"] = 2
                 self.preference["CW_IP"] = self.CW_IP.text()
-                self.preference["CW_port"] = self.CW_port.text()
+                try:
+                    self.preference["CW_port"] = int(self.CW_port.text())
+                except ValueError:
+                    self.preference["CW_port"] = 0
                 self.screen.erase()
                 return self.preference
             self.input_fields[self.input_field_focus].getchar(c)
@@ -233,7 +239,7 @@ class SettingsScreen:
 
 def main():
     """Just in case..."""
-    pass
+    print("I'm not a program.")
 
 if __name__ == "__main__":
     main()

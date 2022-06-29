@@ -29,6 +29,7 @@ import sys
 
 from math import degrees, radians, sin, cos, atan2, sqrt, asin, pi
 from pathlib import Path
+from shutil import copyfile
 from curses.textpad import rectangle
 from curses import wrapper
 from json import dumps
@@ -41,7 +42,7 @@ from lib.lookup import HamDBlookup, HamQTH, QRZlookup
 from lib.cat_interface import CAT
 from lib.edittextfield import EditTextField
 from lib.settings import SettingsScreen
-#from lib.cwinterface import CW
+from lib.cwinterface import CW
 
 
 if Path("./debug").exists():
@@ -254,7 +255,8 @@ secState = {}
 oldfreq = "0"
 oldmode = ""
 oldpwr = 0
-
+fkeys = {}
+cw = None
 
 def clearcontactlookup():
     """clearout the contact lookup"""
@@ -498,6 +500,70 @@ def poll_radio() -> None:
             setmode(str(getmode(newmode)))
             # setpower(str(newpwr))
             setfreq(str(newfreq))
+
+def read_cw_macros():
+    """
+    Reads in the CW macros, firsts it checks to see if the file exists. If it does not,
+    and this has been packaged with pyinstaller it will copy the default file from the
+    temp directory this is running from... In theory.
+    """
+    if not Path("./cwmacros.txt").exists():
+        logging.info("copying default macro file.")
+        copyfile(relpath("data/cwmacros.txt"), "./cwmacros.txt")
+    with open("./cwmacros.txt", "r", encoding="utf-8") as file_descriptor:
+        for line in file_descriptor:
+            try:
+                fkey, buttonname, cwtext = line.split("|")
+                fkeys[fkey.strip()] = (buttonname.strip(), cwtext.strip())
+            except ValueError as err:
+                logging.info("%s", err)
+
+def process_macro(macro):
+    """process string substitutions"""
+    macro = macro.upper()
+    macro = macro.replace("{MYCALL}", preference.preference["mycallsign"])
+    macro = macro.replace("{MYCLASS}", preference.preference["myclass"])
+    macro = macro.replace("{MYSECT}", preference.preference["mysection"])
+    macro = macro.replace("{HISCALL}", hiscall)
+    return macro
+
+def check_function_keys(key):
+    """Sends a CW macro if a function key was pressed."""
+    if cw:
+        if key == curses.KEY_F1 and "F1" in fkeys:
+            cw.sendcw(process_macro(fkeys["F1"][1]))
+        elif key == curses.KEY_F2 and "F2" in fkeys:
+            cw.sendcw(process_macro(fkeys["F2"][1]))
+        elif key == curses.KEY_F3 and "F3" in fkeys:
+            cw.sendcw(process_macro(fkeys["F3"][1]))
+        elif key == curses.KEY_F4 and "F4" in fkeys:
+            cw.sendcw(process_macro(fkeys["F4"][1]))
+        elif key == curses.KEY_F5 and "F5" in fkeys:
+            cw.sendcw(process_macro(fkeys["F5"][1]))
+        elif key == curses.KEY_F6 and "F6" in fkeys:
+            cw.sendcw(process_macro(fkeys["F6"][1]))
+        elif key == curses.KEY_F7 and "F7" in fkeys:
+            cw.sendcw(process_macro(fkeys["F7"][1]))
+        elif key == curses.KEY_F8 and "F8" in fkeys:
+            cw.sendcw(process_macro(fkeys["F8"][1]))
+        elif key == curses.KEY_F9 and "F9" in fkeys:
+            cw.sendcw(process_macro(fkeys["F9"][1]))
+        elif key == curses.KEY_F10 and "F10" in fkeys:
+            cw.sendcw(process_macro(fkeys["F10"][1]))
+        elif key == curses.KEY_F11 and "F11" in fkeys:
+            cw.sendcw(process_macro(fkeys["F11"][1]))
+        elif key == curses.KEY_F12 and "F12" in fkeys:
+            cw.sendcw(process_macro(fkeys["F12"][1]))
+        elif key == 43 and cw.servertype == 1:
+            cw.speed += 1
+            cw.sendcw(f"\x1b2{cw.speed}")
+            statusline()
+        elif key == 45 and cw.servertype ==1:
+            cw.speed -= 1
+            if cw.speed < 5:
+                cw.speed = 5
+            cw.sendcw(f"\x1b2{cw.speed}")
+            statusline()
 
 
 def readpreferences() -> None:
@@ -1693,6 +1759,12 @@ def proc_key(key):
     """Processes key presses"""
     global inputFieldFocus, hiscall, hissection, hisclass
     input_field = [hiscall_field, hisclass_field, hissection_field]
+    if key == ESCAPE:
+        clearentry()
+        if cw is not None: # abort cw output
+            if cw.servertype == 1:
+                cw.sendcw("\x1b4")
+        return
     if key == 9 or key == SPACE:
         inputFieldFocus += 1
         if inputFieldFocus > 2:
@@ -1750,9 +1822,6 @@ def proc_key(key):
         else:
             setStatusMsg("Must be valid call sign")
         return
-    if key == ESCAPE:
-        clearentry()
-        return
     if key == 258:  # key down
         logup()
         return
@@ -1770,6 +1839,7 @@ def proc_key(key):
         displaySCP(super_check(hiscall_field.text()))
     if inputFieldFocus == 2:
         section_check(hissection_field.text())
+    check_function_keys(key)
 
 
 def edit_key(key):
@@ -2007,6 +2077,7 @@ def main(s) -> None:
     stdscr.clear()
     contacts_label()
     sections()
+    read_cw_macros()
     entry()
     logwindow()
     stats()
@@ -2042,10 +2113,22 @@ def main(s) -> None:
 
 def register_services():
     """setup services"""
-    global look_up, cat_control, cloudlog_on
+    global look_up, cat_control, cloudlog_on, cw
+    cw = None
     look_up = None
     cat_control = None
     cloudlog_on = False
+
+    if preference.preference["cwtype"]:
+        cw = CW(
+            int(preference.preference["cwtype"]),
+            preference.preference["CW_IP"],
+            int(preference.preference["CW_port"])
+            )
+        cw.speed = 20
+        if preference.preference["cwtype"] == 1:
+            cw.sendcw("\x1b220")
+
     if preference.preference["useqrz"]:
         look_up = QRZlookup(
             preference.preference["lookupusername"],

@@ -265,7 +265,7 @@ class CAT:
 
 def main():
     """Just in case..."""
-    pass
+    print("I'm not a program.")
 
 if __name__ == "__main__":
     main()
