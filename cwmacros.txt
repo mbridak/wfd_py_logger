@@ -1,0 +1,13 @@
+F1|MyCall|{MYCALL}
+F2|Exch|{MYCLASS} {MYSECT}
+F3|MyClass|{MYCLASS}
+F4|MySect|{MYSECT}
+F5|AGN|agn
+F6|?|?
+F7|Roger|rr
+F8|73|73
+F9|..|ee
+F10|Call?|call?
+F11|Class?|cls?
+F12|Sect?|sec?
+
