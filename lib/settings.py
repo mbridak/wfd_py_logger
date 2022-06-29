@@ -40,8 +40,9 @@ class SettingsScreen:
         " Cloudlog URL:",
         " Cloudlog StationID:",
         "",
-        "                                 BONUSES",
-        " Alt-Power: [ ]   Out Doors: [ ]   Not At Home: [ ]   Satellite: [ ]",
+        "               CW                            BONUSES",
+        "    cwdaemon: [ ]  PyWinkeyer [ ]         Alt-Power: [ ]   Out Doors: [ ]",
+        " Host:                      Port:       Not At Home: [ ]   Satellite: [ ]",
     ]
 
     def __init__(self, preference):
@@ -101,18 +102,31 @@ class SettingsScreen:
         )
         self.cloudlogstationid.lowercase(True)
         self.cloudlogstationid.set_text(preference["cloudlogstationid"])
-        self.altpower = EditTextField(self.screen, 19, 14, 1, curses.A_UNDERLINE)
+        self.altpower = EditTextField(self.screen, 19, 55, 1, curses.A_UNDERLINE)
         self.altpower.set_bool(True)
-        self.outdoors = EditTextField(self.screen, 19, 31, 1, curses.A_UNDERLINE)
+        self.outdoors = EditTextField(self.screen, 19, 72, 1, curses.A_UNDERLINE)
         self.outdoors.set_bool(True)
-        self.notathome = EditTextField(self.screen, 19, 50, 1, curses.A_UNDERLINE)
+        self.notathome = EditTextField(self.screen, 20, 55, 1, curses.A_UNDERLINE)
         self.notathome.set_bool(True)
-        self.satellite = EditTextField(self.screen, 19, 67, 1, curses.A_UNDERLINE)
+        self.satellite = EditTextField(self.screen, 20, 72, 1, curses.A_UNDERLINE)
         self.satellite.set_bool(True)
         self.altpower.set_state(bool(preference["altpower"]))
         self.outdoors.set_state(bool(preference["outdoors"]))
         self.notathome.set_state(bool(preference["notathome"]))
         self.satellite.set_state(bool(preference["satellite"]))
+
+        self.cwdaemon = EditTextField(self.screen, 19, 16, 1, curses.A_UNDERLINE)
+        self.cwdaemon.set_bool(True)
+        self.pywinkeyer = EditTextField(self.screen, 19, 32, 1, curses.A_UNDERLINE)
+        self.pywinkeyer.set_bool(True)
+        cwd = preference["cwtype"]
+        self.cwdaemon.set_state(bool(cwd == 1))
+        self.pywinkeyer.set_state(bool(cwd == 2))
+        self.CW_IP = EditTextField(self.screen, 20, 8, 20, curses.A_UNDERLINE)
+        self.CW_IP.lowercase(True)
+        self.CW_IP.set_text(preference["CW_IP"])
+        self.CW_port = EditTextField(self.screen, 20, 35, 5, curses.A_UNDERLINE)
+        self.CW_port.set_text(str(preference["CW_port"]))
 
         self.input_fields = [
             self.mycallsign,
@@ -132,6 +146,10 @@ class SettingsScreen:
             self.cloudlogapi,
             self.cloudlogurl,
             self.cloudlogstationid,
+            self.cwdaemon,
+            self.pywinkeyer,
+            self.CW_IP,
+            self.CW_port,
             self.altpower,
             self.outdoors,
             self.notathome,
@@ -188,7 +206,10 @@ class SettingsScreen:
                 self.preference["userigctld"] = self.userigctld.get_state()
                 self.preference["useflrig"] = self.useflrig.get_state()
                 self.preference["CAT_ip"] = self.CAT_ip.text()
-                self.preference["CAT_port"] = int(self.CAT_port.text())
+                try:
+                    self.preference["CAT_port"] = int(self.CAT_port.text())
+                except ValueError:
+                    self.preference["CAT_port"] = 0
                 self.preference["cloudlog"] = self.cloudlog.get_state()
                 self.preference["cloudlogapi"] = self.cloudlogapi.text()
                 self.preference["cloudlogurl"] = self.cloudlogurl.text()
@@ -197,6 +218,16 @@ class SettingsScreen:
                 self.preference["outdoors"] = self.outdoors.get_state()
                 self.preference["notathome"] = self.notathome.get_state()
                 self.preference["satellite"] = self.satellite.get_state()
+                self.preference["cwtype"] = 0
+                if self.cwdaemon.get_state():
+                    self.preference["cwtype"] = 1
+                if self.pywinkeyer.get_state():
+                    self.preference["cwtype"] = 2
+                self.preference["CW_IP"] = self.CW_IP.text()
+                try:
+                    self.preference["CW_port"] = int(self.CW_port.text())
+                except ValueError:
+                    self.preference["CW_port"] = 0
                 self.screen.erase()
                 return self.preference
             self.input_fields[self.input_field_focus].getchar(c)
@@ -208,7 +239,7 @@ class SettingsScreen:
 
 def main():
     """Just in case..."""
-    pass
+    print("I'm not a program.")
 
 if __name__ == "__main__":
     main()

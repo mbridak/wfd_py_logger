@@ -31,6 +31,9 @@ class Preferences:
             "outdoors": 0,
             "notathome": 0,
             "satellite": 0,
+            "cwtype": 0,
+            "CW_IP": "localhost",
+            "CW_port": 6789,
         }
 
     def writepreferences(self) -> None:
@@ -67,7 +70,7 @@ class Preferences:
 
 def main():
     """Just in case..."""
-    pass
+    print("I'm not a program.")
 
 if __name__ == "__main__":
     main()

@@ -13,3 +13,6 @@ debug.log
 wfd.ini
 *.pyc
 *.backup
+lib/__pycache__
+lib/__pycache__/*
+wfd_preferences.json
