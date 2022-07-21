@@ -43,6 +43,8 @@ from lib.cat_interface import CAT
 from lib.edittextfield import EditTextField
 from lib.settings import SettingsScreen
 from lib.cwinterface import CW
+from lib.version import __version__
+
 
 
 if Path("./debug").exists():
@@ -671,7 +673,7 @@ def contacts_label():
     Seems stupid but it's used like 4 times.
     """
     rectangle(stdscr, 0, 0, 7, 55)
-    contactslabel = "Recent Contacts"
+    contactslabel = f"Recent Contacts v[{__version__}]"
     contactslabeloffset = (55 / 2) - len(contactslabel) / 2
     stdscr.addstr(0, int(contactslabeloffset), contactslabel)
 
