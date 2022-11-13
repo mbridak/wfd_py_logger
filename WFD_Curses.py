@@ -1485,9 +1485,9 @@ def statusline():
         strband += " "
 
     stdscr.addstr(23, 0, "Band       Freq             Mode   ")
-    stdscr.addstr(23, 5, strband.rjust(5), curses.A_REVERSE)
-    stdscr.addstr(23, 16, strfreq, curses.A_REVERSE)
-    stdscr.addstr(23, 33, mode, curses.A_REVERSE)
+    stdscr.addstr(23, 5, strband.rjust(5), highlightBonus(True))
+    stdscr.addstr(23, 16, strfreq, highlightBonus(True))
+    stdscr.addstr(23, 33, mode, highlightBonus(True))
     stdscr.addstr(22, 37, "                         ")
     stdscr.addstr(
         22,
@@ -1496,7 +1496,7 @@ def statusline():
         f"{preference.preference.get('myclass')}|"
         f"{preference.preference.get('mysection')}|"
         f"{preference.preference.get('power')}w ",
-        curses.A_REVERSE,
+        highlightBonus(True),
     )
     stdscr.addstr(22, 0, "Bonus")
     stdscr.addstr(
