@@ -1,4 +1,4 @@
-## K6GTE Winter Field Day logger (Curses)
+# K6GTE Winter Field Day logger (Curses)
 
 The logger is written in Python 3, and uses the curses lib. It will work with Linux and Mac, but since the Windows curses lib is lacking it will not work properly in Windows. 
 
@@ -9,6 +9,31 @@ The log is stored in an sqlite3 database file 'WFD_Curses.db'. If you need to wi
 I decided to write this after the 2018 Winter Field Day when I couldn't find a simple Linux logger for the event. I didn't need multiuser logging or GPS disciplined time servers. Just a simple logger with dup checking that could generate a cabrillo log for submission.
 
 ![Alt text](pics/logger.png)
+
+## TOC
+
+- [K6GTE Winter Field Day logger (Curses)](#k6gte-winter-field-day-logger-curses)
+  - [TOC](#toc)
+  - [Requirements](#requirements)
+  - [Recent Changes](#recent-changes)
+  - [Caveats](#caveats)
+  - [Initial Setup](#initial-setup)
+  - [Commands:](#commands)
+  - [Logging](#logging)
+  - [Features](#features)
+    - [Radio Polling via rigctld or flrig](#radio-polling-via-rigctld-or-flrig)
+    - [QRZ, HamQTH, HamDB](#qrz-hamqth-hamdb)
+    - [Cloudlog](#cloudlog)
+    - [Bearing to contact](#bearing-to-contact)
+    - [Editing an existing contact](#editing-an-existing-contact)
+    - [Super Check Partial](#super-check-partial)
+    - [Section partial check](#section-partial-check)
+    - [DUP checking](#dup-checking)
+    - [Autofill](#autofill)
+    - [CW Keying and Macros](#cw-keying-and-macros)
+    - [cwdaemon use](#cwdaemon-use)
+  - [TODO](#todo)
+
 
 ## Requirements
 
@@ -27,7 +52,8 @@ If you use Debian/Ubuntu you can:
 
 * Added CW macros
 * Support for cwdaemon and PyWinkeyer
-* Cleaned up directory structure.  
+* Cleaned up directory structure.
+* Updates for 2023 rules.
 
 ## Caveats
 
@@ -69,7 +95,7 @@ Okay you've made a contact. Enter the call in the call field. As you type it in,
 
 ## Features
 
-#### Radio Polling via rigctld or flrig
+### Radio Polling via rigctld or flrig
 
 You can enable/disable the use of rigctld or flrig in the settings screen. The flrig default port is 12345, and the default rigctld port is 4532.
 
@@ -77,46 +103,46 @@ The radio will be polled for band/mode updates automatically. There is an indica
 
 ![Alt text](pics/rigctld.png)
 
-#### QRZ, HamQTH, HamDB
+### QRZ, HamQTH, HamDB
 
 You can enable callsign lookups by enabling them in the settings screen. If you choose either QRZ or HamQTH place you credentials for that service in the username and password fields provided.
 
-#### Cloudlog
+### Cloudlog
 
 You can enable automatic logging to Cloudlog in the settings screen. Here you can enter your API key and URL to the service, along with a station ID if needed.
 
-#### Bearing to contact
+### Bearing to contact
 
 Once you put in your own call and choose a lookup provider, the program looks up your gridsquare. I did this because I didn't want to change the settings screen... I'm not kidding. After this, and after it looks up the grid for the other person, it'll show you the bearing and distance to the contact.  
 
 ![screen clip of bearing](pics/bearing.png)
 
-#### Editing an existing contact
+### Editing an existing contact
 
 Use the Up/Down arrow keys or PageUp/PageDown to scroll the contact into view. Your mouse scroll wheel may work as well. Double left click on the contact to edit, or use the '.E' command. Use the TAB or Up/Down arrow keys to move between fields. Backspace to erase and retype what you need.
 Once done press the Enter key to save, or the Escape key to exit.
 
 ![Alt text](pics/editcontact.png)
 
-#### Super Check Partial
+### Super Check Partial
 If you type more than two characters in the callsign field the program will filter the input through a "Super Check Partial" routine and show you possible matches to known contesting call signs. Is this useful? Doubt it.
 
 ![Alt text](pics/scp.png)
 
-#### Section partial check
+### Section partial check
 As you type the section abbreviation you are presented with a list of all possible sections that start with what you have typed.
 
 ![Alt text](pics/sectioncheckpartial.png)
 
-#### DUP checking
+### DUP checking
 Once you type a complete callsign and press TAB or SPACE to advance to the next field. The callsign is checked against previous callsigns in your log. It will list any prior contact made showing the band and mode of the contact. If the band and mode are the same as the one you are currently using, the listing will be highlighted, the screen will flash, a bell will sound to alert you that this is a DUP. At this point you and the other OP can argue back and forth about who's wrong. In the end you'll put your big boy pants on and make a decision if you'll enter the call or not.
 
 ![Alt text](pics/dupe_check.png)
 
-#### Autofill
+### Autofill
 If you have worked this person before on another band/mode the program will load the class and section used previously for this call so you will not have to enter this info again.
 
-#### CW Keying and Macros
+### CW Keying and Macros
 
 You can use either cwdaemon or PyWinkeyer as a keying interface. After you run the program and choose your keyer interface you will find a file called cwmacros.txt in the base directory that you launched the logger from. The file has 12 lines, corresponding to the 12 function keys on most keyboards. The format of the file is simple:
 
@@ -133,7 +159,7 @@ F2|exchange|{HISCALL} {MYCLASS} {MYSECT}
 
 Who knows... Go wild. The world is your very limited, Oddly specific oyster.
 
-#### cwdaemon use
+### cwdaemon use
 
 If you use cwdaemon for your keyer, you can use the plus and minus on the keyboard to increase/decrease the sending speed by 1 wpm each time you press it. Pressing Escape aborts the sending.
 
