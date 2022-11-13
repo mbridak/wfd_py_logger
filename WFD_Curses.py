@@ -32,7 +32,7 @@ from pathlib import Path
 from shutil import copyfile
 from curses.textpad import rectangle
 from curses import wrapper
-from json import dumps
+from json import dumps, loads
 import threading
 
 import requests
@@ -44,7 +44,6 @@ from lib.edittextfield import EditTextField
 from lib.settings import SettingsScreen
 from lib.cwinterface import CW
 from lib.version import __version__
-
 
 
 if Path("./debug").exists():
@@ -219,6 +218,7 @@ validSections = [
     "NL",
     "SK",
     "PE",
+    "MX",
 ]
 
 contactlookup = {
@@ -259,6 +259,7 @@ oldmode = ""
 oldpwr = 0
 fkeys = {}
 cw = None
+
 
 def clearcontactlookup():
     """clearout the contact lookup"""
@@ -503,6 +504,7 @@ def poll_radio() -> None:
             # setpower(str(newpwr))
             setfreq(str(newfreq))
 
+
 def read_cw_macros():
     """
     Reads in the CW macros, firsts it checks to see if the file exists. If it does not,
@@ -520,6 +522,7 @@ def read_cw_macros():
             except ValueError as err:
                 logging.info("%s", err)
 
+
 def process_macro(macro):
     """process string substitutions"""
     macro = macro.upper()
@@ -528,6 +531,7 @@ def process_macro(macro):
     macro = macro.replace("{MYSECT}", preference.preference["mysection"])
     macro = macro.replace("{HISCALL}", hiscall)
     return macro
+
 
 def check_function_keys(key):
     """Sends a CW macro if a function key was pressed."""
@@ -560,7 +564,7 @@ def check_function_keys(key):
             cw.speed += 1
             cw.sendcw(f"\x1b2{cw.speed}")
             statusline()
-        elif key == 45 and cw.servertype ==1:
+        elif key == 45 and cw.servertype == 1:
             cw.speed -= 1
             if cw.speed < 5:
                 cw.speed = 5
@@ -613,28 +617,25 @@ def change_contact(__qso) -> None:
 
 
 def read_sections() -> None:
-    """Reads in ARRL section data into a list"""
+    """
+    Reads in the ARRL sections into some internal dictionaries.
+    """
+    global secName, secState, secPartial
     try:
         with open(
-            relpath("data/arrl_sect.dat"), "r", encoding="utf-8"
-        ) as file_descriptor:  # read section data
-            while 1:
-                line = file_descriptor.readline().strip()  # read a line and put in db
-                if not line:
-                    break
-                if line[0] == "#":
-                    continue
-                try:
-                    _, state, canum, abbrev, name = str.split(line, None, 4)
-                    secName[abbrev] = abbrev + " " + name + " " + canum
-                    secState[abbrev] = state
-                    for i in range(len(abbrev) - 1):
-                        p = abbrev[: -i - 1]
-                        secPartial[p] = 1
-                except ValueError as value_exception:
-                    logging.debug("read_sections: Value error %s", value_exception)
+            relpath("./data/secname.json"), "rt", encoding="utf-8"
+        ) as file_descriptor:
+            secName = loads(file_descriptor.read())
+        with open(
+            relpath("./data/secstate.json"), "rt", encoding="utf-8"
+        ) as file_descriptor:
+            secState = loads(file_descriptor.read())
+        with open(
+            relpath("./data/secpartial.json"), "rt", encoding="utf-8"
+        ) as file_descriptor:
+            secPartial = loads(file_descriptor.read())
     except IOError as exception:
-        logging.debug("read_sections: IO Error %s", exception)
+        logging.critical("read error: %s", exception)
 
 
 def section_check(sec: str) -> None:
@@ -715,17 +716,22 @@ def score() -> int:
     cw, ph, di, bandmodemult, _, _, highpower, qrp = database.stats()
     __score = (int(cw) * 2) + int(ph) + (int(di) * 2)
     if qrp:
-        __score = __score * 4
-    elif not highpower:
         __score = __score * 2
+    elif not highpower:
+        __score = __score * 1
     __score = __score * bandmodemult
-    __score = (
-        __score
-        + (500 * preference.preference["altpower"])
-        + (500 * preference.preference["outdoors"])
-        + (500 * preference.preference["notathome"])
-        + (500 * preference.preference["satellite"])
-    )
+
+    if preference.preference.get("altpower"):
+        __score += 500
+    if preference.preference.get("outdoors"):
+        __score += 500
+    if preference.preference.get("notathome"):
+        __score += 500
+    if preference.preference.get("satellite"):
+        __score += 500
+    if preference.preference.get("antenna"):
+        __score += 500
+
     return __score
 
 
@@ -768,7 +774,7 @@ def generateBandModeTally():
 def get_state(section):
     """returns the state of a section"""
     try:
-        state = secState[section]
+        state = secState.get(section)
         if state != "--":
             return state
     except IndexError:
@@ -951,14 +957,17 @@ def postcloudlog():
     jsonData = dumps(payload)
     logging.debug(jsonData)
     qsoUrl = preference.preference["cloudlogurl"] + "/qso"
-    _ = requests.post(qsoUrl, jsonData)
+    try:
+        _ = requests.post(qsoUrl, jsonData, timeout=3.0)
+    except requests.exceptions.Timeout:
+        logging.debug("Timeout")
 
 
 def cabrillo():
     """generates a cabrillo log"""
     bonuses = 0
     catpower = ""
-    _, _, _, _, _, _, highpower, qrp = database.stats()
+    _, _, _, bandmodemult, _, _, highpower, qrp = database.stats()
     if qrp:
         catpower = "QRP"
     elif highpower:
@@ -999,29 +1008,43 @@ def cabrillo():
                 end="\r\n",
                 file=file_descriptor,
             )
-            bonuses = bonuses + 500
+            bonuses += 500
         if preference.preference["outdoors"]:
             print(
                 "SOAPBOX: 500 points for setting up outdoors",
                 end="\r\n",
                 file=file_descriptor,
             )
-            bonuses = bonuses + 500
+            bonuses += 500
         if preference.preference["notathome"]:
             print(
                 "SOAPBOX: 500 points for setting up away from home",
                 end="\r\n",
                 file=file_descriptor,
             )
-            bonuses = bonuses + 500
+            bonuses += 500
         if preference.preference["satellite"]:
             print(
                 "SOAPBOX: 500 points for working satellite",
                 end="\r\n",
                 file=file_descriptor,
             )
-            bonuses = bonuses + 500
+            bonuses += 500
+        if preference.preference["antenna"]:
+            print(
+                "SOAPBOX: 500 points for WFD antenna setup",
+                end="\r\n",
+                file=file_descriptor,
+            )
+            bonuses += 500
         print(f"SOAPBOX: BONUS Total {bonuses}", end="\r\n", file=file_descriptor)
+
+        if bandmodemult:
+            print(
+                f"SOAPBOX: Band Mode Multiplier: {bandmodemult}",
+                end="\r\n",
+                file=file_descriptor,
+            )
 
         print(f"CLAIMED-SCORE: {score()}", end="\r\n", file=file_descriptor)
         print(
@@ -1143,13 +1166,6 @@ def logdown():
 def dupCheck(acall):
     """check for duplicates"""
     global hisclass, hissection
-    # if not contactlookup["call"] and look_up:
-    #     _thethread = threading.Thread(
-    #         target=lazy_lookup,
-    #         args=(acall,),
-    #         daemon=True,
-    #     )
-    #     _thethread.start()
     oy, ox = stdscr.getyx()
     scpwindow = curses.newpad(1000, 33)
     rectangle(stdscr, 11, 0, 21, 34)
@@ -1207,7 +1223,6 @@ def workedSections():
 def workedSection(section):
     """highlights the worked sections"""
     if section in wrkdsections:
-        # return curses.A_BOLD
         return curses.color_pair(1)
     return curses.A_DIM
 
@@ -1216,7 +1231,8 @@ def sectionsCol1():
     """display section column 1"""
     rectangle(stdscr, 8, 35, 21, 43)
     stdscr.addstr(8, 36, "   DX  ", curses.A_REVERSE)
-    stdscr.addstr(9, 36, "   DX  ", workedSection("DX"))
+    stdscr.addstr(9, 36, "DX", workedSection("DX"))
+    stdscr.addstr(9, 41, "MX", workedSection("MX"))
     stdscr.addstr(10, 36, "   1   ", curses.A_REVERSE)
     stdscr.addstr(11, 36, "CT", workedSection("CT"))
     stdscr.addstr(11, 41, "RI", workedSection("RI"))
@@ -1462,6 +1478,8 @@ def statusline():
     stdscr.addstr("NotHome", highlightBonus(preference.preference["notathome"]))
     stdscr.addch(curses.ACS_VLINE)
     stdscr.addstr("Sat", highlightBonus(preference.preference["satellite"]))
+    stdscr.addch(curses.ACS_VLINE)
+    stdscr.addstr("Ant", highlightBonus(preference.preference.get("antenna")))
     stdscr.addstr(23, 37, "                        ")
 
     if cat_control:
@@ -1520,100 +1538,6 @@ def setfreq(f: str) -> None:
     global freq
     freq = f
     statusline()
-
-
-# def setcallsign(c):
-#     """Needs Doc String"""
-#     regex = re.compile(r"^([0-9])?[A-z]{1,2}[0-9]{1,3}[A-Za-z]{1,4}$")
-#     if re.match(regex, str(c)):
-#         preference.preference["mycallsign"] = str(c)
-#         writepreferences()
-#         statusline()
-#     else:
-#         setStatusMsg("Must be valid call sign")
-
-
-# def setclass(c):
-#     """Needs Doc String"""
-#     regex = re.compile(r"^[0-9]{1,2}[HhIiOo]$")
-#     if re.match(regex, str(c)):
-#         preference.preference["myclass"] = str(c)
-#         writepreferences()
-#         statusline()
-#     else:
-#         setStatusMsg("Must be valid station class")
-
-
-# def setsection(s):
-#     """validates users section"""
-#     if s and str(s) in validSections:
-#         preference.preference["mysection"] = str(s)
-#         writepreferences()
-#         statusline()
-#     else:
-#         setStatusMsg("Must be valid section")
-
-
-# def setrigctrlhost(o):
-#     """Needs Doc String"""
-#     preference.preference["CAT_ip"] = str(o)
-#     writepreferences()
-#     statusline()
-
-
-# def setrigctrlport(r):
-#     """Needs Doc String"""
-#     preference.preference["CAT_port"] = int(str(r))
-#     writepreferences()
-#     statusline()
-
-
-# def claimAltPower():
-#     """Needs Doc String"""
-#     if preference.preference["altpower"]:
-#         preference.preference["altpower"] = False
-#     else:
-#         preference.preference["altpower"] = True
-#     setStatusMsg("Alt Power set to: " + str(preference.preference["altpower"]))
-#     writepreferences()
-#     statusline()
-#     stats()
-
-
-# def claimOutdoors():
-#     """Needs Doc String"""
-#     if preference.preference["outdoors"]:
-#         preference.preference["outdoors"] = False
-#     else:
-#         preference.preference["outdoors"] = True
-#     setStatusMsg("Outdoor bonus set to: " + str(preference.preference["outdoors"]))
-#     writepreferences()
-#     statusline()
-#     stats()
-
-
-# def claimNotHome():
-#     """Needs Doc String"""
-#     if preference.preference["notathome"]:
-#         preference.preference["notathome"] = False
-#     else:
-#         preference.preference["notathome"] = True
-#     setStatusMsg("Away bonus set to: " + str(preference.preference["notathome"]))
-#     writepreferences()
-#     statusline()
-#     stats()
-
-
-# def claimSatellite():
-#     """Needs Doc String"""
-#     if preference.preference["satellite"]:
-#         preference.preference["satellite"] = False
-#     else:
-#         preference.preference["satellite"] = True
-#     setStatusMsg("Satellite bonus set to: " + str(preference.preference["satellite"]))
-#     writepreferences()
-#     statusline()
-#     stats()
 
 
 def displayHelp():
@@ -1719,40 +1643,9 @@ def processcommand(cmd):
     if cmd[:1] == "H":  # Print Help
         displayHelp()
         return
-    # if cmd[:1] == "I":  # Set rigctld host
-    #     regex1 = re.compile("localhost")
-    #     regex2 = re.compile(r"[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*")
-    #     if re.match(regex1, cmd[1:].lower()) or re.match(regex2, cmd[1:].lower()):
-    #         setrigctrlhost(cmd[1:])
-    #     else:
-    #         setStatusMsg("Must be IP or localhost")
-    #     return
-    # if cmd[:1] == "R":  # Set rigctld port
-    #     regex = re.compile("[0-9]{1,5}")
-    #     if (
-    #         re.match(regex, cmd[1:].lower())
-    #         and int(cmd[1:]) > 1023
-    #         and int(cmd[1:]) < 65536
-    #     ):
-    #         setrigctrlport(cmd[1:])
-    #     else:
-    #         setStatusMsg("Must be 1024 <= Port <= 65535")
-    #     return
     if cmd[:1] == "L":  # Generate Cabrillo Log
         cabrillo()
         return
-    # if cmd[:1] == "1":  # Claim Alt Power Bonus
-    #     claimAltPower()
-    #     return
-    # if cmd[:1] == "2":  # Claim Outdoor Bonus
-    #     claimOutdoors()
-    #     return
-    # if cmd[:1] == "3":  # Claim Not Home Bonus
-    #     claimNotHome()
-    #     return
-    # if cmd[:1] == "4":  # Claim Satellite Bonus
-    #     claimSatellite()
-    #     return
     curses.flash()
     curses.beep()
 
@@ -1763,7 +1656,7 @@ def proc_key(key):
     input_field = [hiscall_field, hisclass_field, hissection_field]
     if key == ESCAPE:
         clearentry()
-        if cw is not None: # abort cw output
+        if cw is not None:  # abort cw output
             if cw.servertype == 1:
                 cw.sendcw("\x1b4")
         return
@@ -2125,8 +2018,8 @@ def register_services():
         cw = CW(
             int(preference.preference["cwtype"]),
             preference.preference["CW_IP"],
-            int(preference.preference["CW_port"])
-            )
+            int(preference.preference["CW_port"]),
+        )
         cw.speed = 20
         if preference.preference["cwtype"] == 1:
             cw.sendcw("\x1b220")
