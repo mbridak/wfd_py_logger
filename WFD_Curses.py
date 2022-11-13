@@ -276,14 +276,14 @@ def lookupmygrid():
     """lookup my own gridsquare"""
     global mygrid
     if look_up:
-        mygrid, _, _, _ = look_up.lookup(preference.preference["mycallsign"])
+        mygrid, _, _, _ = look_up.lookup(preference.preference.get("mycallsign"))
         logging.info("my grid: %s", mygrid)
 
 
 def lazy_lookup(acall: str):
     """El Lookup De Lazy"""
     if look_up:
-        if acall == contactlookup["call"]:
+        if acall == contactlookup.get("call"):
             return
         contactlookup["call"] = acall
         (
@@ -292,18 +292,18 @@ def lazy_lookup(acall: str):
             contactlookup["nickname"],
             contactlookup["error"],
         ) = look_up.lookup(acall)
-        if contactlookup["name"] == "NOT_FOUND NOT_FOUND":
+        if contactlookup.get("name") == "NOT_FOUND NOT_FOUND":
             contactlookup["name"] = "NOT_FOUND"
-        if contactlookup["grid"] == "NOT_FOUND":
+        if contactlookup.get("grid") == "NOT_FOUND":
             contactlookup["grid"] = ""
-        if contactlookup["grid"] and mygrid:
-            contactlookup["distance"] = distance(mygrid, contactlookup["grid"])
-            contactlookup["bearing"] = bearing(mygrid, contactlookup["grid"])
-            displayinfo(f"{contactlookup['name']}", line=1)
+        if contactlookup.get("grid") and mygrid:
+            contactlookup["distance"] = distance(mygrid, contactlookup.get("grid"))
+            contactlookup["bearing"] = bearing(mygrid, contactlookup.get("grid"))
+            displayinfo(f"{contactlookup.get('name')}", line=1)
             displayinfo(
-                f"{contactlookup['grid']} "
-                f"{round(contactlookup['distance'])}km "
-                f"{round(contactlookup['bearing'])}deg"
+                f"{contactlookup.get('grid')} "
+                f"{round(contactlookup.get('distance'))}km "
+                f"{round(contactlookup.get('bearing'))}deg"
             )
         logging.info("%s", contactlookup)
 
@@ -476,17 +476,17 @@ def poll_radio() -> None:
     if cat_control is None:
         return
     if not cat_control.online:
-        if preference.preference["useflrig"]:
+        if preference.preference.get("useflrig"):
             cat_control = CAT(
                 "flrig",
-                preference.preference["CAT_ip"],
-                preference.preference["CAT_port"],
+                preference.preference.get("CAT_ip"),
+                preference.preference.get("CAT_port"),
             )
-        if preference.preference["userigctld"]:
+        if preference.preference.get("userigctld"):
             cat_control = CAT(
                 "rigctld",
-                preference.preference["CAT_ip"],
-                preference.preference["CAT_port"],
+                preference.preference.get("CAT_ip"),
+                preference.preference.get("CAT_port"),
             )
 
     if cat_control.online:
@@ -526,9 +526,9 @@ def read_cw_macros():
 def process_macro(macro):
     """process string substitutions"""
     macro = macro.upper()
-    macro = macro.replace("{MYCALL}", preference.preference["mycallsign"])
-    macro = macro.replace("{MYCLASS}", preference.preference["myclass"])
-    macro = macro.replace("{MYSECT}", preference.preference["mysection"])
+    macro = macro.replace("{MYCALL}", preference.preference.get("mycallsign"))
+    macro = macro.replace("{MYCLASS}", preference.preference.get("myclass"))
+    macro = macro.replace("{MYSECT}", preference.preference.get("mysection"))
     macro = macro.replace("{HISCALL}", hiscall)
     return macro
 
@@ -576,7 +576,7 @@ def readpreferences() -> None:
     """Reads in preferences"""
     preference.readpreferences()
     register_services()
-    if look_up and preference.preference["mycallsign"] != "":
+    if look_up and preference.preference.get("mycallsign") != "":
         _thethread = threading.Thread(
             target=lookupmygrid,
             daemon=True,
@@ -647,10 +647,8 @@ def section_check(sec: str) -> None:
     rectangle(stdscr, 11, 0, 21, 34)
     list_of_keys = list(secName.keys())
     matches = list(filter(lambda y: y.startswith(sec), list_of_keys))
-    count = 0
-    for match in matches:
+    for count, match in enumerate(matches):
         seccheckwindow.addstr(count, 1, secName[match])
-        count += 1
     stdscr.refresh()
     seccheckwindow.refresh(0, 0, 12, 1, 20, 33)
     stdscr.move(oy, ox)
@@ -931,7 +929,11 @@ def postcloudlog():
         f"<RST_SENT:{len(rst)}>{rst}"
         f"<RST_RCVD:{len(rst)}>{rst}"
     )
-    value2 = preference.preference["myclass"] + " " + preference.preference["mysection"]
+    value2 = (
+        preference.preference.get("myclass")
+        + " "
+        + preference.preference.get("mysection")
+    )
     value1 = len(value2)
     adifq += (
         f"<STX_STRING:{value1}>{value2}"
@@ -949,14 +951,14 @@ def postcloudlog():
     adifq += "<COMMENT:16>WINTER-FIELD-DAY" "<EOR>"
 
     payload = {
-        "key": preference.preference["cloudlogapi"],
+        "key": preference.preference.get("cloudlogapi"),
         "type": "adif",
         "string": adifq,
     }
 
     jsonData = dumps(payload)
     logging.debug(jsonData)
-    qsoUrl = preference.preference["cloudlogurl"] + "/qso"
+    qsoUrl = preference.preference.get("cloudlogurl") + "/qso"
     try:
         _ = requests.post(qsoUrl, jsonData, timeout=3.0)
     except requests.exceptions.Timeout:
@@ -984,53 +986,53 @@ def cabrillo():
         print("CONTEST: WFD", end="\r\n", file=file_descriptor)
         print(
             "CALLSIGN:",
-            preference.preference["mycallsign"],
+            preference.preference.get("mycallsign"),
             end="\r\n",
             file=file_descriptor,
         )
         print("LOCATION:", end="\r\n", file=file_descriptor)
         print(
             "ARRL-SECTION:",
-            preference.preference["mysection"],
+            preference.preference.get("mysection"),
             end="\r\n",
             file=file_descriptor,
         )
         print(
             "CATEGORY:",
-            preference.preference["myclass"],
+            preference.preference.get("myclass"),
             end="\r\n",
             file=file_descriptor,
         )
         print("CATEGORY-POWER: " + catpower, end="\r\n", file=file_descriptor)
-        if preference.preference["altpower"]:
+        if preference.preference.get("altpower"):
             print(
                 "SOAPBOX: 500 points for not using commercial power",
                 end="\r\n",
                 file=file_descriptor,
             )
             bonuses += 500
-        if preference.preference["outdoors"]:
+        if preference.preference.get("outdoors"):
             print(
                 "SOAPBOX: 500 points for setting up outdoors",
                 end="\r\n",
                 file=file_descriptor,
             )
             bonuses += 500
-        if preference.preference["notathome"]:
+        if preference.preference.get("notathome"):
             print(
                 "SOAPBOX: 500 points for setting up away from home",
                 end="\r\n",
                 file=file_descriptor,
             )
             bonuses += 500
-        if preference.preference["satellite"]:
+        if preference.preference.get("satellite"):
             print(
                 "SOAPBOX: 500 points for working satellite",
                 end="\r\n",
                 file=file_descriptor,
             )
             bonuses += 500
-        if preference.preference["antenna"]:
+        if preference.preference.get("antenna"):
             print(
                 "SOAPBOX: 500 points for WFD antenna setup",
                 end="\r\n",
@@ -1048,7 +1050,7 @@ def cabrillo():
 
         print(f"CLAIMED-SCORE: {score()}", end="\r\n", file=file_descriptor)
         print(
-            f"OPERATORS:{preference.preference['mycallsign']}",
+            f"OPERATORS:{preference.preference.get('mycallsign')}",
             end="\r\n",
             file=file_descriptor,
         )
@@ -1066,9 +1068,9 @@ def cabrillo():
             loggedtime = datetime[11:13] + datetime[14:16]
             print(
                 f"QSO: {band}M {mode} {loggeddate} {loggedtime} "
-                f"{preference.preference['mycallsign']} "
-                f"{preference.preference['myclass']} "
-                f"{preference.preference['mysection']} {hiscall} {hisclass} {hissection}",
+                f"{preference.preference.get('mycallsign')} "
+                f"{preference.preference.get('myclass')} "
+                f"{preference.preference.get('mysection')} {hiscall} {hisclass} {hissection}",
                 end="\r\n",
                 file=file_descriptor,
             )
@@ -1210,7 +1212,7 @@ def workedSections():
     """gets the worked sections"""
     global wrkdsections
     all_rows = database.sections()
-    wrkdsections = str(all_rows)
+    wrkdsections = str(all_rows)  # FIXME - What is this garbage
     wrkdsections = (
         wrkdsections.replace("('", "")
         .replace("',), ", ",")
@@ -1464,20 +1466,22 @@ def statusline():
     stdscr.addstr(
         22,
         37,
-        f" {preference.preference['mycallsign']}|"
-        f"{preference.preference['myclass']}|"
-        f"{preference.preference['mysection']}|"
-        f"{preference.preference['power']}w ",
+        f" {preference.preference.get('mycallsign')}|"
+        f"{preference.preference.get('myclass')}|"
+        f"{preference.preference.get('mysection')}|"
+        f"{preference.preference.get('power')}w ",
         curses.A_REVERSE,
     )
     stdscr.addstr(22, 0, "Bonus")
-    stdscr.addstr(22, 6, "AltPwr", highlightBonus(preference.preference["altpower"]))
+    stdscr.addstr(
+        22, 6, "AltPwr", highlightBonus(preference.preference.get("altpower"))
+    )
     stdscr.addch(curses.ACS_VLINE)
-    stdscr.addstr("Outdoor", highlightBonus(preference.preference["outdoors"]))
+    stdscr.addstr("Outdoor", highlightBonus(preference.preference.get("outdoors")))
     stdscr.addch(curses.ACS_VLINE)
-    stdscr.addstr("NotHome", highlightBonus(preference.preference["notathome"]))
+    stdscr.addstr("NotHome", highlightBonus(preference.preference.get("notathome")))
     stdscr.addch(curses.ACS_VLINE)
-    stdscr.addstr("Sat", highlightBonus(preference.preference["satellite"]))
+    stdscr.addstr("Sat", highlightBonus(preference.preference.get("satellite")))
     stdscr.addch(curses.ACS_VLINE)
     stdscr.addstr("Ant", highlightBonus(preference.preference.get("antenna")))
     stdscr.addstr(23, 37, "                        ")
@@ -1708,9 +1712,9 @@ def proc_key(key):
                 hissection,
                 band,
                 mode,
-                int(preference.preference["power"]),
-                contactlookup["grid"],
-                contactlookup["name"],
+                int(preference.preference.get("power")),
+                contactlookup.get("grid"),
+                contactlookup.get("name"),
             )
             log_contact(contact)
             clearentry()
@@ -2014,40 +2018,42 @@ def register_services():
     cat_control = None
     cloudlog_on = False
 
-    if preference.preference["cwtype"]:
+    if preference.preference.get("cwtype"):
         cw = CW(
-            int(preference.preference["cwtype"]),
-            preference.preference["CW_IP"],
-            int(preference.preference["CW_port"]),
+            int(preference.preference.get("cwtype")),
+            preference.preference.get("CW_IP"),
+            int(preference.preference.get("CW_port")),
         )
         cw.speed = 20
-        if preference.preference["cwtype"] == 1:
+        if preference.preference.get("cwtype") == 1:
             cw.sendcw("\x1b220")
 
-    if preference.preference["useqrz"]:
+    if preference.preference.get("useqrz"):
         look_up = QRZlookup(
-            preference.preference["lookupusername"],
-            preference.preference["lookuppassword"],
+            preference.preference.get("lookupusername"),
+            preference.preference.get("lookuppassword"),
         )
-    if preference.preference["usehamdb"]:
+    if preference.preference.get("usehamdb"):
         look_up = HamDBlookup()
-    if preference.preference["usehamqth"]:
+    if preference.preference.get("usehamqth"):
         look_up = HamQTH(
-            preference.preference["lookupusername"],
-            preference.preference["lookuppassword"],
+            preference.preference.get("lookupusername"),
+            preference.preference.get("lookuppassword"),
         )
-    if preference.preference["useflrig"]:
+    if preference.preference.get("useflrig"):
         cat_control = CAT(
-            "flrig", preference.preference["CAT_ip"], preference.preference["CAT_port"]
+            "flrig",
+            preference.preference.get("CAT_ip"),
+            preference.preference.get("CAT_port"),
         )
-    if preference.preference["userigctld"]:
+    if preference.preference.get("userigctld"):
         cat_control = CAT(
             "rigctld",
-            preference.preference["CAT_ip"],
-            preference.preference["CAT_port"],
+            preference.preference.get("CAT_ip"),
+            preference.preference.get("CAT_port"),
         )
 
-    if preference.preference["cloudlog"]:
+    if preference.preference.get("cloudlog"):
         # <auth>
         # <status>Valid</status>
         # <rights>rw</rights>
@@ -2057,11 +2063,11 @@ def register_services():
         # <message>Key Invalid - either not found or disabled</message>
         # </auth>
 
-        __payload = "/auth/" + preference.preference["cloudlogapi"]
+        __payload = "/auth/" + preference.preference.get("cloudlogapi")
 
         try:
             result = requests.get(
-                preference.preference["cloudlogurl"] + __payload, timeout=5
+                preference.preference.get("cloudlogurl") + __payload, timeout=5
             )
 
             if result.status_code == 200 and "<status>Valid</status>" in result.text:
