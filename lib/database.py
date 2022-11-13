@@ -103,17 +103,17 @@ class DataBase:
             )
             lasthour = str(cursor.fetchone()[0])
             cursor.execute(
-                "select count(*) as qrpc from contacts where mode = 'CW' and power > 5"
+                "select count(*) as qrpc from contacts where mode = 'CW' and power > 10"
             )
             log = cursor.fetchall()
             qrpc = list(log[0])[0]
             cursor.execute(
-                "select count(*) as qrpp from contacts where mode = 'PH' and power > 10"
+                "select count(*) as qrpp from contacts where mode = 'PH' and power > 20"
             )
             log = cursor.fetchall()
             qrpp = list(log[0])[0]
             cursor.execute(
-                "select count(*) as qrpd from contacts where mode = 'DI' and power > 10"
+                "select count(*) as qrpd from contacts where mode = 'DI' and power > 20"
             )
             log = cursor.fetchall()
             qrpd = list(log[0])[0]
@@ -200,9 +200,11 @@ class DataBase:
             cursor.execute("select * from contacts where id=" + record)
             return cursor.fetchall()
 
+
 def main():
     """Just in case..."""
     print("I'm not a program.")
+
 
 if __name__ == "__main__":
     main()
