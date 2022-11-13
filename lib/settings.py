@@ -42,7 +42,7 @@ class SettingsScreen:
         "",
         "                 CW                                   BONUSES",
         "    cwdaemon: [ ]  PyWinkeyer [ ]         Alt-Power: [ ]   Out Doors: [ ]",
-        " Host:                      Port:       Not At Home: [ ]   Satellite: [ ]",
+        " Host:                      Port:       NotAtHome: [ ]  Sat: [ ] Ant: [ ]",
     ]
 
     def __init__(self, preference):
@@ -106,14 +106,17 @@ class SettingsScreen:
         self.altpower.set_bool(True)
         self.outdoors = EditTextField(self.screen, 19, 72, 1, curses.A_UNDERLINE)
         self.outdoors.set_bool(True)
-        self.notathome = EditTextField(self.screen, 20, 55, 1, curses.A_UNDERLINE)
+        self.notathome = EditTextField(self.screen, 20, 53, 1, curses.A_UNDERLINE)
         self.notathome.set_bool(True)
-        self.satellite = EditTextField(self.screen, 20, 72, 1, curses.A_UNDERLINE)
+        self.satellite = EditTextField(self.screen, 20, 63, 1, curses.A_UNDERLINE)
         self.satellite.set_bool(True)
+        self.antenna = EditTextField(self.screen, 20, 72, 1, curses.A_UNDERLINE)
+        self.antenna.set_bool(True)
         self.altpower.set_state(bool(preference["altpower"]))
         self.outdoors.set_state(bool(preference["outdoors"]))
         self.notathome.set_state(bool(preference["notathome"]))
         self.satellite.set_state(bool(preference["satellite"]))
+        self.antenna.set_state(bool(preference.get("antenna")))
 
         self.cwdaemon = EditTextField(self.screen, 19, 16, 1, curses.A_UNDERLINE)
         self.cwdaemon.set_bool(True)
@@ -154,6 +157,7 @@ class SettingsScreen:
             self.outdoors,
             self.notathome,
             self.satellite,
+            self.antenna,
         ]
 
         self._display_menu()
@@ -218,6 +222,7 @@ class SettingsScreen:
                 self.preference["outdoors"] = self.outdoors.get_state()
                 self.preference["notathome"] = self.notathome.get_state()
                 self.preference["satellite"] = self.satellite.get_state()
+                self.preference["antenna"] = self.antenna.get_state()
                 self.preference["cwtype"] = 0
                 if self.cwdaemon.get_state():
                     self.preference["cwtype"] = 1
@@ -237,9 +242,11 @@ class SettingsScreen:
         """not useful yet"""
         self.screen.endwin()
 
+
 def main():
     """Just in case..."""
     print("I'm not a program.")
+
 
 if __name__ == "__main__":
     main()

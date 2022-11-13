@@ -31,6 +31,7 @@ class Preferences:
             "outdoors": 0,
             "notathome": 0,
             "satellite": 0,
+            "antenna": 0,
             "cwtype": 0,
             "CW_IP": "localhost",
             "CW_port": 6789,
@@ -68,9 +69,11 @@ class Preferences:
         except IOError as exception:
             logging.critical("readpreferences: %s", exception)
 
+
 def main():
     """Just in case..."""
     print("I'm not a program.")
+
 
 if __name__ == "__main__":
     main()
