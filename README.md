@@ -1,5 +1,7 @@
 # K6GTE Winter Field Day logger (Curses)
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0) [![Python: 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg?style=for-the-badge)](https://www.python.org/downloads/)  [![Made With:PyQt5](https://img.shields.io/badge/Made%20with-Ancient%20technology-red?style=for-the-badge)](https://en.wikipedia.org/wiki/Curses_%28programming_library%29)
+
 The logger is written in Python 3, and uses the curses lib. It will work with Linux and Mac, but since the Windows curses lib is lacking it will not work properly in Windows. 
 
 **A newer version based on PyQt5 can be found [here](https://github.com/mbridak/WinterFieldDayLogger)**.
