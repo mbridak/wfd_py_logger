@@ -41,7 +41,7 @@ class SettingsScreen:
         " Cloudlog StationID:",
         "",
         "                 CW                                   BONUSES",
-        "    cwdaemon: [ ]  PyWinkeyer [ ]         Alt-Power: [ ]   Out Doors: [ ]",
+        "    cwdaemon: [ ]  PyWinkeyer [ ]         Alt-Power: [ ]    Outdoors: [ ]",
         " Host:                      Port:       NotAtHome: [ ]  Sat: [ ] Ant: [ ]",
     ]
 
