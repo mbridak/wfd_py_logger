@@ -1,8 +1,8 @@
 # K6GTE Winter Field Day logger (Curses)
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0) [![Python: 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg?style=for-the-badge)](https://www.python.org/downloads/)  [![Made With:PyQt5](https://img.shields.io/badge/Made%20with-Ancient%20technology-red?style=for-the-badge)](https://en.wikipedia.org/wiki/Curses_%28programming_library%29)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0) [![Python: 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg?style=for-the-badge)](https://www.python.org/downloads/)  [![Made With: Ancient Technology](https://img.shields.io/badge/Made%20with-Ancient%20technology-red?style=for-the-badge)][def]
 
-The logger is written in Python 3, and uses the curses lib. It will work with Linux and Mac, but since the Windows curses lib is lacking it will not work properly in Windows. 
+The logger is written in Python 3, and uses the curses lib. It will work with Linux and Mac, but since the Windows curses lib is lacking it will not work properly in Windows.
 
 **A newer version based on PyQt5 can be found [here](https://github.com/mbridak/WinterFieldDayLogger)**.
 
@@ -20,7 +20,7 @@ I decided to write this after the 2018 Winter Field Day when I couldn't find a s
   - [Recent Changes](#recent-changes)
   - [Caveats](#caveats)
   - [Initial Setup](#initial-setup)
-  - [Commands:](#commands)
+  - [Commands](#commands)
   - [Logging](#logging)
   - [Features](#features)
     - [Radio Polling via rigctld or flrig](#radio-polling-via-rigctld-or-flrig)
@@ -36,26 +36,28 @@ I decided to write this after the 2018 Winter Field Day when I couldn't find a s
     - [cwdaemon use](#cwdaemon-use)
   - [TODO](#todo)
 
-
 ## Requirements
 
 It requires Python3, BeautifulSoup (bs4), lxml and requests.
 
 If you're using pip for dependencies you can:
 
+```bash
 pip3 install -r requirements.txt
+```
 
 If you use Debian/Ubuntu you can:
 
-`sudo apt install python3-requests python3-bs4 python3-lxml`
-
+```bash
+sudo apt install python3-requests python3-bs4 python3-lxml
+```
 
 ## Recent Changes
 
-* Added CW macros
-* Support for cwdaemon and PyWinkeyer
-* Cleaned up directory structure.
-* Updates for 2023 rules.
+- Added CW macros
+- Support for cwdaemon and PyWinkeyer
+- Cleaned up directory structure.
+- Updates for 2023 rules.
 
 ## Caveats
 
@@ -71,11 +73,11 @@ Navigate the screen by pressing either `TAB` or `Shift-TAB`. Settings with brack
 
 After you make your changes, either press the `Enter` key to save your changes, or the `Esc` key to abort any changes and exit the screen.
 
-## Commands:
+## Commands
 
 Commands start with a period character in the callsign field and are immediately followed by any information needed by the command.
 
-```
+```text
 .H displays a short list of commands.
 .Q Quit the program.
 .S Access the settings screen
@@ -127,21 +129,25 @@ Once done press the Enter key to save, or the Escape key to exit.
 ![Alt text](pics/editcontact.png)
 
 ### Super Check Partial
+
 If you type more than two characters in the callsign field the program will filter the input through a "Super Check Partial" routine and show you possible matches to known contesting call signs. Is this useful? Doubt it.
 
 ![Alt text](pics/scp.png)
 
 ### Section partial check
+
 As you type the section abbreviation you are presented with a list of all possible sections that start with what you have typed.
 
 ![Alt text](pics/sectioncheckpartial.png)
 
 ### DUP checking
+
 Once you type a complete callsign and press TAB or SPACE to advance to the next field. The callsign is checked against previous callsigns in your log. It will list any prior contact made showing the band and mode of the contact. If the band and mode are the same as the one you are currently using, the listing will be highlighted, the screen will flash, a bell will sound to alert you that this is a DUP. At this point you and the other OP can argue back and forth about who's wrong. In the end you'll put your big boy pants on and make a decision if you'll enter the call or not.
 
 ![Alt text](pics/dupe_check.png)
 
 ### Autofill
+
 If you have worked this person before on another band/mode the program will load the class and section used previously for this call so you will not have to enter this info again.
 
 ### CW Keying and Macros
@@ -166,6 +172,9 @@ Who knows... Go wild. The world is your very limited, Oddly specific oyster.
 If you use cwdaemon for your keyer, you can use the plus and minus on the keyboard to increase/decrease the sending speed by 1 wpm each time you press it. Pressing Escape aborts the sending.
 
 ## TODO
-  * Enter a contact at a specific time.
+
+- Enter a contact at a specific time.
 
 Let me know if you think of something else.
+
+[def]: https://en.wikipedia.org/wiki/Curses_%28programming_library%29
