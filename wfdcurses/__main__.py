@@ -26,6 +26,7 @@ import curses
 import time
 import re
 import sys
+import pkgutil
 
 from math import degrees, radians, sin, cos, atan2, sqrt, asin, pi
 from pathlib import Path
@@ -36,21 +37,49 @@ from json import dumps, loads
 import threading
 
 import requests
-from lib.database import DataBase
-from lib.preferences import Preferences
-from lib.lookup import HamDBlookup, HamQTH, QRZlookup
-from lib.cat_interface import CAT
-from lib.edittextfield import EditTextField
-from lib.settings import SettingsScreen
-from lib.cwinterface import CW
-from lib.version import __version__
+
+try:
+    from wfdcurses.lib.database import DataBase
+except ModuleNotFoundError:
+    from lib.database import DataBase
+try:
+    from wfdcurses.lib.preferences import Preferences
+except ModuleNotFoundError:
+    from lib.preferences import Preferences
+try:
+    from wfdcurses.lib.lookup import HamDBlookup, HamQTH, QRZlookup
+except ModuleNotFoundError:
+    from lib.lookup import HamDBlookup, HamQTH, QRZlookup
+try:
+    from wfdcurses.lib.cat_interface import CAT
+except ModuleNotFoundError:
+    from lib.cat_interface import CAT
+try:
+    from wfdcurses.lib.edittextfield import EditTextField
+except ModuleNotFoundError:
+    from lib.edittextfield import EditTextField
+try:
+    from wfdcurses.lib.settings import SettingsScreen
+except ModuleNotFoundError:
+    from lib.settings import SettingsScreen
+try:
+    from wfdcurses.lib.cwinterface import CW
+except ModuleNotFoundError:
+    from lib.cwinterface import CW
+try:
+    from wfdcurses.lib.version import __version__
+except ModuleNotFoundError:
+    from lib.version import __version__
 
 
 if Path("./debug").exists():
     logging.basicConfig(
         filename="debug.log",
         filemode="w",
-        format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
+        format=(
+            "[%(asctime)s] %(levelname)s %(module)s - "
+            "%(funcName)s Line %(lineno)d:\n%(message)s"
+        ),
         datefmt="%H:%M:%S",
         level=logging.DEBUG,
     )
@@ -206,12 +235,12 @@ validSections = [
     "MN",
     "SD",
     "AB",
-    "NT",
+    "NB",
     "BC",
     "ONE",
-    "GTA",
+    "GH",
     "ONN",
-    "MAR",
+    "TER",
     "ONS",
     "MB",
     "QC",
@@ -388,18 +417,6 @@ def haversine(lon1: str, lat1: str, lon2: str, lat2: str) -> float:
     return c * r
 
 
-def relpath(filename: str) -> str:
-    """
-    Checks to see if program has been packaged with pyinstaller.
-    If so base dir is in a temp folder.
-    """
-    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-        base_path = getattr(sys, "_MEIPASS")
-    else:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, filename)
-
-
 def getband(the_freq) -> str:
     """returns a string containing the band a frequency is on."""
     if the_freq.isnumeric():
@@ -513,7 +530,12 @@ def read_cw_macros():
     """
     if not Path("./cwmacros.txt").exists():
         logging.info("copying default macro file.")
-        copyfile(relpath("data/cwmacros.txt"), "./cwmacros.txt")
+        try:
+            path = os.path.dirname(pkgutil.get_loader("wfdcurses").get_filename())
+            logging.info("the path : %s", path)
+            copyfile(path + "/data/cwmacros.txt", "./cwmacros.txt")
+        except AttributeError:
+            copyfile("wfdcurses/data/cwmacros.txt", "./cwmacros.txt")
     with open("./cwmacros.txt", "r", encoding="utf-8") as file_descriptor:
         for line in file_descriptor:
             try:
@@ -622,20 +644,32 @@ def read_sections() -> None:
     """
     global secName, secState, secPartial
     try:
+        # path = os.path.dirname(pkgutil.get_loader("wfdcurses").get_filename())
+        # logging.info("the path : %s", path)
+        secName = loads(pkgutil.get_data(__name__, "data/secname.json").decode("utf8"))
+    except ValueError:
         with open(
-            relpath("./data/secname.json"), "rt", encoding="utf-8"
+            "wfdcurses/data/secname.json", "rt", encoding="utf-8"
         ) as file_descriptor:
             secName = loads(file_descriptor.read())
+    try:
+        secState = loads(
+            pkgutil.get_data(__name__, "data/secstate.json").decode("utf8")
+        )
+    except ValueError:
         with open(
-            relpath("./data/secstate.json"), "rt", encoding="utf-8"
+            "wfdcurses/data/secstate.json", "rt", encoding="utf-8"
         ) as file_descriptor:
             secState = loads(file_descriptor.read())
+    try:
+        secPartial = loads(
+            pkgutil.get_data(__name__, "data/secpartial.json").decode("utf8")
+        )
+    except ValueError:
         with open(
-            relpath("./data/secpartial.json"), "rt", encoding="utf-8"
+            "wfdcurses/data/secpartial.json", "rt", encoding="utf-8"
         ) as file_descriptor:
             secPartial = loads(file_descriptor.read())
-    except IOError as exception:
-        logging.critical("read error: %s", exception)
 
 
 def section_check(sec: str) -> None:
@@ -656,8 +690,14 @@ def section_check(sec: str) -> None:
 
 def read_scp() -> list:
     """reads in the super check partion data into a list"""
-    with open(relpath("data/MASTER.SCP"), "r", encoding="utf-8") as file_descriptor:
-        lines = file_descriptor.readlines()
+    try:
+        data = pkgutil.get_data(__name__, "data/MASTER.SCP").decode("utf8")
+        lines = data.splitlines()
+    except ValueError:
+        with open(
+            "wfdcurses/data/MASTER.SCP", "r", encoding="utf-8"
+        ) as file_descriptor:
+            lines = file_descriptor.readlines()
     return list(map(lambda x: x.strip(), lines))
 
 
@@ -1364,18 +1404,19 @@ def sectionsCol5():
     stdscr.addch(13, 79, curses.ACS_RTEE)
     stdscr.addstr(13, 72, "CANADA")
     stdscr.addstr(14, 72, "AB", workedSection("AB"))
-    stdscr.addstr(14, 77, "NT", workedSection("NT"))
     stdscr.addstr(15, 72, "BC", workedSection("BC"))
-    stdscr.addstr(15, 76, "ONE", workedSection("ONE"))
-    stdscr.addstr(16, 72, "GTA", workedSection("GTA"))
-    stdscr.addstr(16, 76, "ONN", workedSection("ONN"))
-    stdscr.addstr(17, 72, "MAR", workedSection("MAR"))
-    stdscr.addstr(17, 76, "ONS", workedSection("ONS"))
-    stdscr.addstr(18, 72, "MB", workedSection("MB"))
-    stdscr.addstr(18, 77, "QC", workedSection("QC"))
+    stdscr.addstr(16, 72, "GH", workedSection("GH"))
+    stdscr.addstr(17, 72, "MB", workedSection("MB"))
+    stdscr.addstr(18, 72, "NB", workedSection("NB"))
     stdscr.addstr(19, 72, "NL", workedSection("NL"))
+    stdscr.addstr(20, 72, "NS", workedSection("NS"))
+    stdscr.addstr(14, 77, "PE", workedSection("PE"))
+    stdscr.addstr(15, 76, "ONE", workedSection("ONE"))
+    stdscr.addstr(16, 76, "ONN", workedSection("ONN"))
+    stdscr.addstr(17, 76, "ONS", workedSection("ONS"))
+    stdscr.addstr(18, 77, "QC", workedSection("QC"))
     stdscr.addstr(19, 77, "SK", workedSection("SK"))
-    stdscr.addstr(20, 72, "PE", workedSection("PE"))
+    stdscr.addstr(20, 76, "TER", workedSection("TER"))
 
 
 def sections():
@@ -2103,15 +2144,20 @@ def register_services():
             logging.warning("cloudlog authentication: %s", exception)
 
 
-if __name__ == "__main__":
-    database = DataBase("wfd.db")
-    preference = Preferences()
-    readpreferences()
-    register_services()
-    read_sections()
-    scp = read_scp()
-    hiscall_field = EditTextField(stdscr, y=9, x=1, length=14)
-    hisclass_field = EditTextField(stdscr, y=9, x=20, length=4)
-    hissection_field = EditTextField(stdscr, y=9, x=27, length=3)
+database = DataBase("wfd.db")
+preference = Preferences()
+readpreferences()
+register_services()
+read_sections()
+scp = read_scp()
+hiscall_field = EditTextField(stdscr, y=9, x=1, length=14)
+hisclass_field = EditTextField(stdscr, y=9, x=20, length=4)
+hissection_field = EditTextField(stdscr, y=9, x=27, length=3)
 
+
+def run():
+    wrapper(main)
+
+
+if __name__ == "__main__":
     wrapper(main)

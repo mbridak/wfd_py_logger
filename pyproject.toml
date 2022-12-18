@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wfdcurses" 
+version = "22.12.17"
+description = "Winter Field Day logger"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+  { name="Michael Bridak", email="michael.bridak@gmail.com" },
+]
+dependencies = [
+    "requests",
+    "bs4",
+    "lxml",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Environment :: Console :: Curses",
+    "Operating System :: POSIX :: Linux",
+    "Intended Audience :: End Users/Desktop",
+    "Natural Language :: English",
+    "Topic :: Communications :: Ham Radio",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/mbridak/wfd_py_logger"
+"Bug Tracker" = "https://github.com/mbridak/wfd_py_logger/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+"wfdcurses.data" = ["*.json", "*.txt", "*.SCP",]
+
+[project.scripts]
+wfdcurses = "wfdcurses.__main__:run"

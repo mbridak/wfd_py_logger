@@ -4,6 +4,8 @@ WFD_Curses.db
 wfd.db
 WFD.adi
 Statistics.txt
+test.py
+databasex.py
 
 build/
 dist/
