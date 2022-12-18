@@ -4,7 +4,7 @@
 
 The logger is written in Python 3, and uses the curses lib. It will work with Linux and Mac, but since the Windows curses lib is lacking it will not work properly in Windows.
 
-The log is stored in an sqlite3 database file 'WFD_Curses.db'. If you need to wipe everything and start clean, just delete this file. The screen size expected by the program is an 80 x 24 character terminal. Nothing needs to be installed, compiled etc... Just make WFD_Curses.py executable and run it within the same folder.
+The log is stored in an sqlite3 database file 'wfd.db'. If you need to wipe everything and start clean, just delete this file. The screen size expected by the program is an 80 x 24 character terminal.
 
 I decided to write this after the 2018 Winter Field Day when I couldn't find a simple Linux logger for the event. I didn't need multiuser logging or GPS disciplined time servers. Just a simple logger with dup checking that could generate a cabrillo log for submission.
 
@@ -14,6 +14,8 @@ I decided to write this after the 2018 Winter Field Day when I couldn't find a s
 
 - [K6GTE Winter Field Day logger (Curses)](#k6gte-winter-field-day-logger-curses)
   - [TOC](#toc)
+  - [Installation and running](#installation-and-running)
+  - [Running from the source tree](#running-from-the-source-tree)
   - [Requirements](#requirements)
   - [Recent Changes](#recent-changes)
   - [Caveats](#caveats)
@@ -34,6 +36,26 @@ I decided to write this after the 2018 Winter Field Day when I couldn't find a s
     - [cwdaemon use](#cwdaemon-use)
   - [TODO](#todo)
 
+## Installation and running
+
+The project is now on pypi. So now to install and run the package, you would:
+
+```bash
+#install it with
+pip install wfdcurses
+
+#run it with
+wfdcurses
+```
+
+## Running from the source tree
+
+If you check out the code from github, you would call Python against the directory.
+
+```bash
+python wfdcurses
+```
+
 ## Requirements
 
 If running from source, you can install the needed Python libraries.
@@ -53,11 +75,12 @@ sudo apt install python3-requests python3-bs4 python3-lxml
 
 ## Recent Changes
 
+- The RAC sections have been updated for 2023
 - You can now install via `pip install wfdcurses`
 - Added CW macros
 - Support for cwdaemon and PyWinkeyer
 - Cleaned up directory structure.
-- Updates for 2023 rules.
+- Updated for 2023 WFD rules.
 
 ## Caveats
 
