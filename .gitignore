@@ -21,3 +21,4 @@ wfd_preferences.json
 cwmacros.txt
 wfdcurses.egg-info/*
 buildinstructions.md
+wfdcurses.egg-info/
