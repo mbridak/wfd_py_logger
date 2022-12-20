@@ -11,6 +11,21 @@ class DataBase:
         self.database = database
         self.create_db()
 
+    @staticmethod
+    def row_factory(cursor, row):
+        """
+        cursor.description:
+        (name, type_code, display_size,
+        internal_size, precision, scale, null_ok)
+        row: (value, value, ...)
+        """
+        return {
+            col[0]: row[idx]
+            for idx, col in enumerate(
+                cursor.description,
+            )
+        }
+
     def create_db(self) -> None:
         """create a database and table if it does not exist"""
         with sqlite3.connect(self.database) as conn:
@@ -77,7 +92,7 @@ class DataBase:
         except sqlite3.Error as exception:
             logging.debug("DataBase change_contact: %s", exception)
 
-    def stats(self) -> tuple:
+    def stats(self) -> dict:
         """
         returns a tuple with some stats:
         cwcontacts, phonecontacts, digitalcontacts, bandmodemult, last15, lasthour, hignpower, qrp
@@ -124,23 +139,26 @@ class DataBase:
             highpower = bool(list(log[0])[0])
             qrp = not qrpc + qrpp + qrpd
 
-            return (
-                cwcontacts,
-                phonecontacts,
-                digitalcontacts,
-                bandmodemult,
-                last15,
-                lasthour,
-                highpower,
-                qrp,
-            )
+            packaged_stats = {
+                "cwcontacts": cwcontacts,
+                "phonecontacts": phonecontacts,
+                "digitalcontacts": digitalcontacts,
+                "bandmodemult": bandmodemult,
+                "last15": last15,
+                "lasthour": lasthour,
+                "highpower": highpower,
+                "qrp": qrp,
+            }
 
-    def get_band_mode_tally(self, band, mode):
+            return packaged_stats
+
+    def get_band_mode_tally(self, band, mode) -> dict:
         """
         returns the amount of contacts and the maximum power used
         for a given band using a particular mode.
         """
         with sqlite3.connect(self.database) as conn:
+            conn.row_factory = self.row_factory
             cursor = conn.cursor()
             cursor.execute(
                 "select count(*) as tally, MAX(power) as mpow from contacts "
@@ -148,37 +166,42 @@ class DataBase:
             )
             return cursor.fetchone()
 
-    def get_bands(self) -> tuple:
+    def get_bands(self) -> list:
         """returns a list of bands"""
         with sqlite3.connect(self.database) as conn:
+            conn.row_factory = self.row_factory
             cursor = conn.cursor()
             cursor.execute("select DISTINCT band from contacts")
             return cursor.fetchall()
 
-    def fetch_all_contacts_asc(self) -> tuple:
+    def fetch_all_contacts_asc(self) -> list:
         """returns a tuple of all contacts in the database."""
         with sqlite3.connect(self.database) as conn:
+            conn.row_factory = self.row_factory
             cursor = conn.cursor()
             cursor.execute("select * from contacts order by date_time ASC")
             return cursor.fetchall()
 
-    def fetch_all_contacts_desc(self) -> tuple:
+    def fetch_all_contacts_desc(self) -> list:
         """returns a tuple of all contacts in the database."""
         with sqlite3.connect(self.database) as conn:
+            conn.row_factory = self.row_factory
             cursor = conn.cursor()
             cursor.execute("select * from contacts order by date_time desc")
             return cursor.fetchall()
 
-    def fetch_last_contact(self) -> tuple:
+    def fetch_last_contact(self) -> dict:
         """returns a tuple of all contacts in the database."""
         with sqlite3.connect(self.database) as conn:
+            conn.row_factory = self.row_factory
             cursor = conn.cursor()
             cursor.execute("select * from contacts order by date_time desc")
             return cursor.fetchone()
 
-    def dup_check(self, acall: str) -> tuple:
+    def dup_check(self, acall: str) -> list:
         """returns a list of possible dups"""
         with sqlite3.connect(self.database) as conn:
+            conn.row_factory = self.row_factory
             cursor = conn.cursor()
             cursor.execute(
                 "select callsign, class, section, band, mode "
@@ -186,16 +209,18 @@ class DataBase:
             )
             return cursor.fetchall()
 
-    def sections(self) -> tuple:
+    def sections(self) -> list:
         """returns a list of sections worked."""
         with sqlite3.connect(self.database) as conn:
+            conn.row_factory = self.row_factory
             cursor = conn.cursor()
             cursor.execute("select distinct section from contacts")
             return cursor.fetchall()
 
-    def contact_by_id(self, record) -> tuple:
+    def contact_by_id(self, record) -> list:
         """returns a contact matching an id"""
         with sqlite3.connect(self.database) as conn:
+            conn.row_factory = self.row_factory
             cursor = conn.cursor()
             cursor.execute("select * from contacts where id=" + record)
             return cursor.fetchall()
