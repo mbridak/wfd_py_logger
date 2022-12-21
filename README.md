@@ -2,13 +2,21 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0) [![Python: 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg?logo=python&style=for-the-badge)](https://www.python.org/downloads/)  [![Made With: Ancient Technology](https://img.shields.io/badge/Made%20with-Ancient%20technology-red?style=for-the-badge)][def] ![PyPI - Downloads](https://img.shields.io/pypi/dm/wfdcurses?label=PYPI-Downloads&logo=pypi&style=for-the-badge)
 
+[Winter Field Day](https://www.winterfieldday.org/) is a once a year 24hr
+emergency preparidness event for radio amateurs (Hams). During the event, we try
+and make as many radio contacts with other Hams in a 24 hour period. Bonus
+points are awarded for operating outside or using alternate power sources, such
+as battery/solar/wind. You can find out more about Winter Field Day by visiting
+the [WFDA](https://winterfieldday.org/). You can find out more about amateur radio
+by visiting the [ARRL](https://www.arrl.org/).
+
 The logger is written in Python 3, and uses the curses lib. It will work with Linux and Mac, but since the Windows curses lib is lacking it will not work properly in Windows.
 
 The log is stored in an sqlite3 database file 'wfd.db'. If you need to wipe everything and start clean, just delete this file. The screen size expected by the program is an 80 x 24 character terminal.
 
 I decided to write this after the 2018 Winter Field Day when I couldn't find a simple Linux logger for the event. Just a simple logger with dup checking that could generate a cabrillo log for submission.
 
-![Alt text](pics/logger.png)
+![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/pics/logger.png)
 
 ## TOC
 
@@ -90,7 +98,7 @@ This is a simple logger meant for a single op, it's not usable for clubs. There'
 
 After launching the program you may want to access the new Edit Settings screen by using the command listed in the next section. Here you can setup your call/class/section, CAT, callsign lookup, Cloudlog intigration, CW keyer.
 
-![Settings Screen](pics/settings.png)
+![Settings Screen](https://github.com/mbridak/wfd_py_logger/raw/master/pics/settings.png)
 
 Navigate the screen by pressing either `TAB` or `Shift-TAB`. Settings with brackets `[_]` are boolean. `[_]` means disabled and `[X]` is enabled. They can either be toggled with the `SPACE` key, or pressing either one of these `XxYy1` to enable, or one of these `Nn0` to disable it.
 
@@ -128,7 +136,7 @@ You can enable/disable the use of rigctld or flrig in the settings screen. The f
 
 The radio will be polled for band/mode updates automatically. There is an indicator at the bottom of the logging window to indicate polling status. Dim if no connection or timeout, and highlighted if all okay.
 
-![Alt text](pics/rigctld.png)
+![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/pics/rigctld.png)
 
 ### QRZ, HamQTH, HamDB
 
@@ -142,32 +150,32 @@ You can enable automatic logging to Cloudlog in the settings screen. Here you ca
 
 Once you put in your own call and choose a lookup provider, the program looks up your gridsquare. I did this because I didn't want to change the settings screen... I'm not kidding. After this, and after it looks up the grid for the other person, it'll show you the bearing and distance to the contact.  
 
-![screen clip of bearing](pics/bearing.png)
+![screen clip of bearing](https://github.com/mbridak/wfd_py_logger/raw/master/pics/bearing.png)
 
 ### Editing an existing contact
 
 Use the Up/Down arrow keys or PageUp/PageDown to scroll the contact into view. Your mouse scroll wheel may work as well. Double left click on the contact to edit, or use the '.E' command. Use the TAB or Up/Down arrow keys to move between fields. Backspace to erase and retype what you need.
 Once done press the Enter key to save, or the Escape key to exit.
 
-![Alt text](pics/editcontact.png)
+![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/pics/editcontact.png)
 
 ### Super Check Partial
 
 If you type more than two characters in the callsign field the program will filter the input through a "Super Check Partial" routine and show you possible matches to known contesting call signs. Is this useful? Doubt it.
 
-![Alt text](pics/scp.png)
+![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/pics/scp.png)
 
 ### Section partial check
 
 As you type the section abbreviation you are presented with a list of all possible sections that start with what you have typed.
 
-![Alt text](pics/sectioncheckpartial.png)
+![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/pics/sectioncheckpartial.png)
 
 ### DUP checking
 
 Once you type a complete callsign and press TAB or SPACE to advance to the next field. The callsign is checked against previous callsigns in your log. It will list any prior contact made showing the band and mode of the contact. If the band and mode are the same as the one you are currently using, the listing will be highlighted, the screen will flash, a bell will sound to alert you that this is a DUP. At this point you and the other OP can argue back and forth about who's wrong. In the end you'll put your big boy pants on and make a decision if you'll enter the call or not.
 
-![Alt text](pics/dupe_check.png)
+![Alt text](https://github.com/mbridak/wfd_py_logger/raw/master/pics/dupe_check.png)
 
 ### Autofill
 
