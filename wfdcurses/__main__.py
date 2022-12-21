@@ -9,6 +9,7 @@ GPL V3
 # pylint: disable=global-statement
 # pylint: disable=redefined-outer-name
 # pylint: disable=invalid-name
+# pylint: disable=ungrouped-imports
 
 # COLOR_BLACK	    Black
 # COLOR_BLUE	    Blue
@@ -720,16 +721,14 @@ def contacts_label():
 def stats() -> None:
     """calculates and displays the current statistics."""
     y, x = stdscr.getyx()
-    (
-        cwcontacts,
-        phonecontacts,
-        digitalcontacts,
-        _,
-        last15,
-        lasthour,
-        _,
-        _,
-    ) = database.stats()
+    db_stats = database.stats()
+
+    cwcontacts = db_stats.get("cwcontacts")
+    phonecontacts = db_stats.get("phonecontacts")
+    digitalcontacts = db_stats.get("digitalcontacts")
+    last15 = db_stats.get("last15")
+    lasthour = db_stats.get("lasthour")
+
     rectangle(stdscr, 0, 57, 7, 79)
     statslabel = "Score Stats"
     statslabeloffset = (25 / 2) - len(statslabel) / 2
@@ -751,7 +750,13 @@ def stats() -> None:
 
 def score() -> int:
     """generates current score, returns an int"""
-    cw, ph, di, bandmodemult, _, _, highpower, qrp = database.stats()
+    results = database.stats()
+    cw = results.get("cwcontacts")
+    ph = results.get("phonecontacts")
+    di = results.get("digitalcontacts")
+    bandmodemult = results.get("bandmodemult")
+    highpower = results.get("highpower")
+    qrp = results.get("qrp")
     __score = (int(cw) * 2) + int(ph) + (int(di) * 2)
     if qrp:
         __score = __score * 2
@@ -781,12 +786,9 @@ def getBandModeTally(band, mode):
 def getbands():
     """Needs Doc String"""
     bandlist = []
-    x = database.get_bands()
-    if x:
-        for count in x:
-            bandlist.append(count[0])
-        return bandlist
-    return []
+    for bands in database.get_bands():
+        bandlist.append(bands.get("band"))
+    return bandlist
 
 
 def generateBandModeTally():
@@ -802,7 +804,9 @@ def generateBandModeTally():
                 dit = getBandModeTally(b, "DI")
                 pht = getBandModeTally(b, "PH")
                 print(
-                    f"Band:\t{b}\t{cwt[0]}\t{cwt[1]}\t{dit[0]}\t{dit[1]}\t{pht[0]}\t{pht[1]}",
+                    f"Band:\t{b}\t{cwt.get('tally')}\t{cwt.get('mpow')}\t"
+                    f"{dit.get('tally')}\t{dit.get('mpow')}\t"
+                    f"{pht.get('tally')}\t{pht.get('mpow')}",
                     end="\r\n",
                     file=f,
                 )
@@ -828,18 +832,15 @@ def adif():
         print("<ADIF_VER:5>2.2.0", end="\r\n", file=file_descriptor)
         print("<EOH>", end="\r\n", file=file_descriptor)
         for contact in log:
-            (
-                _,
-                hiscall,
-                hisclass,
-                hissection,
-                datetime,
-                band,
-                mode,
-                _,
-                grid,
-                name,
-            ) = contact
+            hiscall = contact.get("callsign")
+            hisclass = contact.get("class")
+            hissection = contact.get("section")
+            datetime = contact.get("date_time")
+            band = contact.get("band")
+            mode = contact.get("mode")
+            grid = contact.get("grid")
+            name = contact.get("opname")
+
             if mode == "DI":
                 mode = "RTTY"
             if mode == "PH":
@@ -949,10 +950,15 @@ def postcloudlog():
     """posts a contact to cloudlog"""
     if not cloudlog_on:
         return
-    q = database.fetch_last_contact()
-    _, hiscall, hisclass, hissection, datetime, band, mode, _, grid, name = q
-    # Doesn't appear to be used
-    # strippedcall = parsecallsign(hiscall)
+    contact = database.fetch_last_contact()
+    hiscall = contact.get("callsign")
+    hisclass = contact.get("class")
+    hissection = contact.get("section")
+    datetime = contact.get("date_time")
+    band = contact.get("band")
+    mode = contact.get("mode")
+    grid = contact.get("grid")
+    name = contact.get("opname")
     if mode == "CW":
         rst = "599"
     else:
@@ -1009,7 +1015,11 @@ def cabrillo():
     """generates a cabrillo log"""
     bonuses = 0
     catpower = ""
-    _, _, _, bandmodemult, _, _, highpower, qrp = database.stats()
+    db_stats = database.stats()
+    bandmodemult = db_stats.get("bandmodemult")
+    highpower = db_stats.get("highpower")
+    qrp = db_stats.get("qrp")
+
     if qrp:
         catpower = "QRP"
     elif highpower:
@@ -1102,8 +1112,13 @@ def cabrillo():
         print("ADDRESS-COUNTRY: ", end="\r\n", file=file_descriptor)
         print("EMAIL: ", end="\r\n", file=file_descriptor)
         log = database.fetch_all_contacts_asc()
-        for x in log:
-            _, hiscall, hisclass, hissection, datetime, band, mode, _, _, _ = x
+        for contact in log:
+            hiscall = contact.get("callsign")
+            hisclass = contact.get("class")
+            hissection = contact.get("section")
+            datetime = contact.get("date_time")
+            band = contact.get("band")
+            mode = contact.get("mode")
             loggeddate = datetime[:10]
             loggedtime = datetime[11:13] + datetime[14:16]
             print(
@@ -1141,18 +1156,15 @@ def logwindow():
     log = database.fetch_all_contacts_desc()
     logNumber = 0
     for contact in log:
-        (
-            logid,
-            hiscall,
-            hisclass,
-            hissection,
-            datetime,
-            band,
-            mode,
-            power,
-            _,
-            _,
-        ) = contact
+        logid = contact.get("id")
+        hiscall = contact.get("callsign")
+        hisclass = contact.get("class")
+        hissection = contact.get("section")
+        datetime = contact.get("date_time")
+        band = contact.get("band")
+        mode = contact.get("mode")
+        power = contact.get("power")
+
         logline = (
             f"{str(logid).rjust(3,'0')} "
             f"{hiscall.ljust(10)} "
@@ -1214,6 +1226,11 @@ def dupCheck(acall):
     log = database.dup_check(acall)
     for counter, contact in enumerate(log):
         decorate = ""
+        hiscall = contact.get("callsign")
+        hisclass = contact.get("class")
+        hissection = contact.get("section")
+        hisband = contact.get("band")
+        hismode = contact.get("mode")
         hiscall, hisclass, hissection, hisband, hismode = contact
         if hissection_field.text() == "":
             hissection_field.set_text(hissection)
@@ -1251,15 +1268,10 @@ def displaySCP(matches):
 def workedSections():
     """gets the worked sections"""
     global wrkdsections
+    wrkdsections.clear()
     all_rows = database.sections()
-    wrkdsections = str(all_rows)  # FIXME - What is this garbage
-    wrkdsections = (
-        wrkdsections.replace("('", "")
-        .replace("',), ", ",")
-        .replace("',)]", "")
-        .replace("[", "")
-        .split(",")
-    )
+    for section in all_rows:
+        wrkdsections.append(section.get("section"))
 
 
 def workedSection(section):
@@ -1959,7 +1971,16 @@ def editQSO(q):
     if not log:
         return
     qso = ["", "", "", "", "", "", "", ""]
-    qso[0], qso[1], qso[2], qso[3], qso[4], qso[5], qso[6], qso[7], _, _ = log[0]
+    qso[0] = log.get("id")
+    qso[1] = log.get("callsign")
+    qso[2] = log.get("class")
+    qso[3] = log.get("section")
+    qso[4] = log.get("date_time")
+    qso[5] = log.get("band")
+    qso[6] = log.get("mode")
+    qso[7] = log.get("power")
+
+    # qso[0], qso[1], qso[2], qso[3], qso[4], qso[5], qso[6], qso[7], _, _ = log[0]
     qsoew = curses.newwin(10, 40, 6, 10)
     qsoew.keypad(True)
     qsoew.nodelay(True)
@@ -2156,6 +2177,7 @@ hissection_field = EditTextField(stdscr, y=9, x=27, length=3)
 
 
 def run():
+    """main entry point"""
     wrapper(main)
 
 

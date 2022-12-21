@@ -1,2 +1,0 @@
-[console_scripts]
-wfdcurses = wfdcurses.__main__:run
