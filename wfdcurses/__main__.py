@@ -41,36 +41,24 @@ import requests
 
 try:
     from wfdcurses.lib.database import DataBase
+    from wfdcurses.lib.preferences import Preferences
+    from wfdcurses.lib.lookup import HamDBlookup, HamQTH, QRZlookup
+    from wfdcurses.lib.cat_interface import CAT
+    from wfdcurses.lib.edittextfield import EditTextField
+    from wfdcurses.lib.settings import SettingsScreen
+    from wfdcurses.lib.cwinterface import CW
+    from wfdcurses.lib.version import __version__
+    from wfdcurses.lib.versiontest import VersionTest
 except ModuleNotFoundError:
     from lib.database import DataBase
-try:
-    from wfdcurses.lib.preferences import Preferences
-except ModuleNotFoundError:
     from lib.preferences import Preferences
-try:
-    from wfdcurses.lib.lookup import HamDBlookup, HamQTH, QRZlookup
-except ModuleNotFoundError:
     from lib.lookup import HamDBlookup, HamQTH, QRZlookup
-try:
-    from wfdcurses.lib.cat_interface import CAT
-except ModuleNotFoundError:
     from lib.cat_interface import CAT
-try:
-    from wfdcurses.lib.edittextfield import EditTextField
-except ModuleNotFoundError:
     from lib.edittextfield import EditTextField
-try:
-    from wfdcurses.lib.settings import SettingsScreen
-except ModuleNotFoundError:
     from lib.settings import SettingsScreen
-try:
-    from wfdcurses.lib.cwinterface import CW
-except ModuleNotFoundError:
     from lib.cwinterface import CW
-try:
-    from wfdcurses.lib.version import __version__
-except ModuleNotFoundError:
     from lib.version import __version__
+    from lib.versiontest import VersionTest
 
 
 if Path("./debug").exists():
@@ -2061,6 +2049,30 @@ def main(s) -> None:
     curses.mousemask(curses.ALL_MOUSE_EVENTS)
     stdscr.attrset(curses.color_pair(0))
     stdscr.clear()
+    version_check = VersionTest(__version__)
+    if version_check.test():
+        version_dialog = curses.newwin(7, 36, 7, 24)
+        version_dialog.keypad(True)
+        version_dialog.nodelay(True)
+        version_dialog.box()
+        version_dialog.addstr(
+            1, 2, f"A newer version exists: {version_check.newest_release}"
+        )
+        version_dialog.addstr(2, 2, "You can install it with:")
+        version_dialog.addstr(3, 2, "pip install --upgrade wfdcurses")
+        version_dialog.addstr(5, 5, "Press any key to dismiss")
+
+        while 1:
+            statusline()
+            stdscr.refresh()
+            version_dialog.refresh()
+            c = version_dialog.getch()
+            if c != -1:
+                version_dialog.erase()
+                stdscr.clear()
+                break
+            else:
+                time.sleep(0.01)
     contacts_label()
     sections()
     read_cw_macros()
