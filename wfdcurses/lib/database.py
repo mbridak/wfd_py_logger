@@ -219,13 +219,18 @@ class DataBase:
             cursor.execute("select distinct section from contacts")
             return cursor.fetchall()
 
-    def contact_by_id(self, record) -> list:
+    def contact_by_id(self, record) -> dict:
         """returns a contact matching an id"""
-        with sqlite3.connect(self.database) as conn:
-            conn.row_factory = self.row_factory
-            cursor = conn.cursor()
-            cursor.execute("select * from contacts where id=" + record)
-            return cursor.fetchall()
+        try:
+            with sqlite3.connect(self.database) as conn:
+                conn.row_factory = self.row_factory
+                cursor = conn.cursor()
+                cursor.execute(f"select * from contacts where id={int(record)}")
+                return cursor.fetchone()
+        except sqlite3.Error as exception:
+            logging.debug("DataBase delete_contact: %s", exception)
+        except ValueError as exception:
+            logging.debug("DataBase delete_contact: %s", exception)
 
 
 def main():
