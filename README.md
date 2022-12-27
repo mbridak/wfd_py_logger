@@ -52,6 +52,9 @@ The project is now on pypi. So now to install and run the package, you would:
 #install it with
 pip install wfdcurses
 
+#update with
+pip install --upgrade wfdcurses
+
 #run it with
 wfdcurses
 ```
@@ -78,7 +81,7 @@ pip install -r requirements.txt
 If you use Debian/Ubuntu you can:
 
 ```bash
-sudo apt install python3-requests python3-bs4 python3-lxml
+sudo apt install python3-requests python3-bs4 python3-lxml python3-xmltodict
 ```
 
 ## Recent Changes
