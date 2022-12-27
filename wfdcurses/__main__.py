@@ -1231,7 +1231,6 @@ def dupCheck(acall):
         hissection = contact.get("section")
         hisband = contact.get("band")
         hismode = contact.get("mode")
-        hiscall, hisclass, hissection, hisband, hismode = contact
         if hissection_field.text() == "":
             hissection_field.set_text(hissection)
             hissection_field.get_focus()
