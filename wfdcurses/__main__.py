@@ -99,7 +99,7 @@ QUESTIONMARK = 63
 ENTERKEY = 10
 SPACE = 32
 
-modes = ("PH", "CW", "DI")
+modes = ("PH", "CW", "DG")
 bands = (
     "160",
     "80",
@@ -448,7 +448,7 @@ def getmode(rigmode: str) -> str:
         return "CW"
     if rigmode in ("USB", "LSB", "FM", "AM"):
         return "PH"
-    return "DI"  # All else digital
+    return "DG"  # All else digital
 
 
 def send_radio(cmd: str, arg: str) -> None:
@@ -784,12 +784,12 @@ def generateBandModeTally():
     blist = getbands()
     bmtfn = "Statistics.txt"
     with open(bmtfn, "w", encoding="utf-8") as f:
-        print("\t\tCW\tPWR\tDI\tPWR\tPH\tPWR", end="\r\n", file=f)
+        print("\t\tCW\tPWR\tDG\tPWR\tPH\tPWR", end="\r\n", file=f)
         print("-" * 60, end="\r\n", file=f)
         for b in bands:
             if b in blist:
                 cwt = getBandModeTally(b, "CW")
-                dit = getBandModeTally(b, "DI")
+                dit = getBandModeTally(b, "DG")
                 pht = getBandModeTally(b, "PH")
                 print(
                     f"Band:\t{b}\t{cwt.get('tally')}\t{cwt.get('mpow')}\t"
@@ -829,7 +829,7 @@ def adif():
             grid = contact.get("grid")
             name = contact.get("opname")
 
-            if mode == "DI":
+            if mode == "DG":
                 mode = "RTTY"
             if mode == "PH":
                 mode = "SSB"
@@ -1621,7 +1621,7 @@ def displayHelp():
         ".E### Edit Log entry ",
         ".D### Delte Log entry  ",
         ".B## Change operating band",
-        ".M[CW,PH,DI] Change mode logged",
+        ".M[CW,PH,DG] Change mode logged",
         ".P## Change power logged",
         ".L Generate Logs",
     ]
@@ -1680,10 +1680,10 @@ def processcommand(cmd):
         return
     if cmd[:1] == "M":  # Change Mode
         if not cat_control:
-            if cmd[1:] == "CW" or cmd[1:] == "PH" or cmd[1:] == "DI":
+            if cmd[1:] == "CW" or cmd[1:] == "PH" or cmd[1:] == "DG":
                 setmode(cmd[1:])
             else:
-                setStatusMsg("Must be CW, DI, PH")
+                setStatusMsg("Must be CW, DG, PH")
         else:
             if (
                 cmd[1:] == "USB"
