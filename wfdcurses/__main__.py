@@ -1254,7 +1254,6 @@ def displaySCP(matches):
 
 def workedSections():
     """gets the worked sections"""
-    global wrkdsections
     wrkdsections.clear()
     all_rows = database.sections()
     for section in all_rows:
