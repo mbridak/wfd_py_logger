@@ -76,6 +76,8 @@ class DataBase:
                     conn.commit()
             except sqlite3.Error as exception:
                 logging.debug("DataBase delete_contact: %s", exception)
+            except ValueError as exception:
+                logging.debug("DataBase delete_contact: %s", exception)
 
     def change_contact(self, qso):
         """Update an existing contact."""
@@ -103,7 +105,7 @@ class DataBase:
             cwcontacts = str(cursor.fetchone()[0])
             cursor.execute("select count(*) from contacts where mode = 'PH'")
             phonecontacts = str(cursor.fetchone()[0])
-            cursor.execute("select count(*) from contacts where mode = 'DI'")
+            cursor.execute("select count(*) from contacts where mode = 'DG'")
             digitalcontacts = str(cursor.fetchone()[0])
             cursor.execute("select distinct band, mode from contacts")
             bandmodemult = len(cursor.fetchall())
@@ -128,7 +130,7 @@ class DataBase:
             log = cursor.fetchall()
             qrpp = list(log[0])[0]
             cursor.execute(
-                "select count(*) as qrpd from contacts where mode = 'DI' and power > 10"
+                "select count(*) as qrpd from contacts where mode = 'DG' and power > 10"
             )
             log = cursor.fetchall()
             qrpd = list(log[0])[0]
