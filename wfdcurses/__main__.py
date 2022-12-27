@@ -1982,15 +1982,15 @@ def editQSO(q):
     qso_edit_field_7 = EditTextField(qsoew, 6, 10, 2)
     qso_edit_field_8 = EditTextField(qsoew, 7, 10, 3)
 
-    qso_edit_field_1.set_text(log[0][1])
-    qso_edit_field_2.set_text(log[0][2])
-    qso_edit_field_3.set_text(log[0][3])
-    dt = log[0][4].split()
+    qso_edit_field_1.set_text(log.get("callsign"))
+    qso_edit_field_2.set_text(log.get("class"))
+    qso_edit_field_3.set_text(log.get("section"))
+    dt = log.get("date_time").split()
     qso_edit_field_4.set_text(dt[0])
     qso_edit_field_5.set_text(dt[1])
-    qso_edit_field_6.set_text(log[0][5])
-    qso_edit_field_7.set_text(log[0][6])
-    qso_edit_field_8.set_text(str(log[0][7]))
+    qso_edit_field_6.set_text(log.get("band"))
+    qso_edit_field_7.set_text(log.get("mode"))
+    qso_edit_field_8.set_text(str(log.get("power")))
 
     qso_edit_fields = [
         qso_edit_field_1,
