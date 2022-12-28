@@ -13,8 +13,6 @@ authors = [
 ]
 dependencies = [
     "requests",
-    "bs4",
-    "lxml",
     "xmltodict",
 ]
 classifiers = [

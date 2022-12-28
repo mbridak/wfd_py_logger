@@ -6,7 +6,7 @@ HamQTH
 """
 
 import logging
-from bs4 import BeautifulSoup as bs
+import xmltodict
 import requests
 
 
@@ -65,26 +65,29 @@ class HamDBlookup:
             return grid, name, nickname, exception
         if query_result.status_code == 200:
             self.error = False
-            root = bs(query_result.text, "xml")
-            logging.info("\n\n%s\n\n", root)
-            if root.messages.find("status"):
-                error_text = root.messages.status.text
+            rootdict = xmltodict.parse(query_result.text)
+            root = rootdict.get("hamdb")
+            if root:
+                messages = root.get("messages")
+                callsign = root.get("callsign")
+            if messages:
+                error_text = messages.get("status")
                 logging.debug("HamDB: %s", error_text)
                 if error_text != "OK":
                     self.error = False
-            if root.find("callsign"):
+            if callsign:
                 logging.debug("HamDB: found callsign field")
-                if root.callsign.find("grid"):
-                    grid = root.callsign.grid.text
-                if root.callsign.find("fname"):
-                    name = root.callsign.fname.text
-                if root.callsign.find("name"):
+                if callsign.get("grid"):
+                    grid = callsign.get("grid")
+                if callsign.get("fname"):
+                    name = callsign.get("fname")
+                if callsign.get("name"):
                     if not name:
-                        name = root.callsign.find("name").string
+                        name = callsign.get("name")
                     else:
-                        name = f"{name} {root.find('name').string}"
-                if root.callsign.find("nickname"):
-                    nickname = root.callsign.nickname.text
+                        name = f"{name} {callsign.get('name')}"
+                if callsign.get("nickname"):
+                    nickname = callsign.get("nickname")
         else:
             self.error = True
             error_text = str(query_result.status_code)
@@ -143,16 +146,19 @@ class QRZlookup:
         try:
             payload = {"username": self.username, "password": self.password}
             query_result = requests.get(self.qrzurl, params=payload, timeout=10.0)
-            root = bs(query_result.text, "xml")
+            baseroot = xmltodict.parse(query_result.text)
+            root = baseroot.get("QRZDatabase")
+            if root:
+                session = root.get("Session")
             logging.info("\n\n%s\n\n", root)
-            if root.Session.find("Key"):
-                self.session = root.Session.Key.text
-            if root.Session.find("SubExp"):
-                self.expiration = root.Session.SubExp.text
-            if root.Session.find("Error"):
-                self.error = root.Session.Error.text
-            if root.Session.find("Message"):
-                self.message = root.Session.Message.text
+            if session.get("Key"):
+                self.session = session.get("Key")
+            if session.get("SubExp"):
+                self.expiration = session.get("SubExp")
+            if session.get("Error"):
+                self.error = session.get("Error")
+            if session.get("Message"):
+                self.message = session.get("Message")
             logging.info(
                 "key:%s error:%s message:%s",
                 self.session,
@@ -180,9 +186,11 @@ class QRZlookup:
             except requests.exceptions.Timeout as exception:
                 self.error = True
                 return grid, name, nickname, exception
-            root = bs(query_result.text, "xml")
+            baseroot = xmltodict.parse(query_result.text)
+            root = baseroot.get("QRZDatabase")
             logging.info("\n\n%s\n\n", root)
-            if not root.Session.Key:  # key expired get a new one
+            session = root.get("Session")
+            if not session.get("Key"):  # key expired get a new one
                 logging.info("no key, getting new one.")
                 self.getsession()
                 if self.session:
@@ -262,23 +270,26 @@ class QRZlookup:
         error_text = False
         nickname = False
         if query_result.status_code == 200:
-            root = bs(query_result.text, "xml")
+            baseroot = xmltodict.parse(query_result.text)
+            root = baseroot.get("QRZDatabase")
+            session = root.get("Session")
+            callsign = root.get("Callsign")
             logging.info("\n\n%s\n\n", root)
-            if root.Session.find("Error"):
-                error_text = root.Session.Error.text
+            if session.get("Error"):
+                error_text = session.get("Error")
                 self.error = error_text
-            if root.find("Callsign"):
-                if root.Callsign.find("grid"):
-                    grid = root.Callsign.grid.text
-                if root.Callsign.find("fname"):
-                    name = root.Callsign.fname.text
-                if root.find("name"):
+            if callsign:
+                if callsign.get("grid"):
+                    grid = callsign.get("grid")
+                if callsign.get("fname"):
+                    name = callsign.get("fname")
+                if callsign.get("name"):
                     if not name:
-                        name = root.find("name").string
+                        name = callsign.get("name")
                     else:
-                        name = f"{name} {root.find('name').string}"
-                if root.Callsign.find("nickname"):
-                    nickname = root.Callsign.nickname.text
+                        name = f"{name} {callsign.get('name')}"
+                if callsign.get("nickname"):
+                    nickname = callsign.get("nickname")
         logging.info("%s %s %s %s", grid, name, nickname, error_text)
         return grid, name, nickname, error_text
 
@@ -307,12 +318,16 @@ class HamQTH:
             self.error = True
             return
         logging.info("resultcode: %s", query_result.status_code)
-        root = bs(query_result.text, "xml")
-        if root.find("session"):
-            if root.session.find("session_id"):
-                self.session = root.session.session_id.text
-            if root.session.find("error"):
-                self.error = root.session.error.text
+        baseroot = xmltodict.parse(query_result.text)
+        root = baseroot.get("HamQTH")
+        session = root.get("session")
+        print(baseroot)
+        print(root)
+        if session:
+            if session.get("session_id"):
+                self.session = session.get("session_id")
+            if session.get("error"):
+                self.error = session.get("error")
         logging.info("session: %s", self.session)
 
     def lookup(self, call: str) -> tuple:
@@ -321,24 +336,24 @@ class HamQTH:
         """
         grid, name, nickname, error_text = False, False, False, False
         if self.session:
-            payload = {"id": self.session, "callsign": call, "prg": "wfd_curses"}
+            payload = {"id": self.session, "callsign": call, "prg": "wfdcurses"}
             try:
                 query_result = requests.get(self.url, params=payload, timeout=10.0)
             except requests.exceptions.Timeout as exception:
                 self.error = True
                 return grid, name, nickname, exception
             logging.info("resultcode: %s", query_result.status_code)
-            root = bs(query_result.text, "xml")
-            if not root.find("search"):
-                if root.find("session"):
-                    if root.session.find("error"):
-                        if root.session.error.text == "Callsign not found":
-                            error_text = root.session.error.text
+            baseroot = xmltodict.parse(query_result.text)
+            root = baseroot.get("HamQTH")
+            search = root.get("search")
+            session = root.get("session")
+            if not search:
+                if session:
+                    if session.get("error"):
+                        if session.get("error") == "Callsign not found":
+                            error_text = session.get("error")
                             return grid, name, nickname, error_text
-                        if (
-                            root.session.error.text
-                            == "Session does not exist or expired"
-                        ):
+                        if session.get("error") == "Session does not exist or expired":
                             self.getsession()
                             query_result = requests.get(
                                 self.url, params=payload, timeout=10.0
@@ -353,23 +368,27 @@ class HamQTH:
         Or False for both if none found or error.
         """
         grid, name, nickname, error_text = False, False, False, False
-        root = bs(query_result.text, "xml")
-        if root.find("session"):
-            if root.session.find("error"):
-                error_text = root.session.error.text
-        if root.find("search"):
-            if root.search.find("grid"):
-                grid = root.search.grid.text
-            if root.search.find("nick"):
-                nickname = root.search.nick.text
-            if root.search.find("adr_name"):
-                name = root.search.adr_name.text
+        baseroot = xmltodict.parse(query_result.text)
+        root = baseroot.get("HamQTH")
+        session = root.get("session")
+        search = root.get("search")
+        if session:
+            if session.get("error"):
+                error_text = session.get("error")
+        if search:
+            if search.get("grid"):
+                grid = search.get("grid")
+            if search.get("nick"):
+                nickname = search.get("nick")
+            if search.get("adr_name"):
+                name = search.get("adr_name")
         return grid, name, nickname, error_text
+
 
 def main():
     """Just in case..."""
     print("I'm not a program.")
 
+
 if __name__ == "__main__":
     main()
-    
