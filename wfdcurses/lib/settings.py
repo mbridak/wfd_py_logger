@@ -59,16 +59,22 @@ class SettingsScreen:
         self.screen.box()
         self._title()
         self.mycallsign = EditTextField(self.screen, 2, 11, 14, curses.A_UNDERLINE)
-        self.mycallsign.set_text(preference["mycallsign"])
+        self.mycallsign.set_text(
+            preference.get("mycallsign") if preference.get("mycallsign") else ""
+        )
         self.myclass = EditTextField(self.screen, 2, 36, 3, curses.A_UNDERLINE)
-        self.myclass.set_text(preference["myclass"])
+        self.myclass.set_text(
+            preference.get("myclass") if preference.get("myclass") else ""
+        )
         self.mysection = EditTextField(self.screen, 2, 52, 3, curses.A_UNDERLINE)
-        self.mysection.set_text(preference["mysection"])
+        self.mysection.set_text(
+            preference.get("mysection") if preference.get("mysection") else ""
+        )
         self.power = EditTextField(self.screen, 2, 70, 3, curses.A_UNDERLINE)
-        self.power.set_text(preference["power"])
+        self.power.set_text(preference.get("power") if preference.get("power") else "")
         self.usehamdb = EditTextField(self.screen, 5, 14, 1, curses.A_UNDERLINE)
         self.usehamdb.set_bool(True)
-        self.usehamdb.set_state(bool(preference["usehamdb"]))
+        self.usehamdb.set_state(bool(preference.get("usehamdb")))
         self.useqrz = EditTextField(self.screen, 5, 38, 1, curses.A_UNDERLINE)
         self.useqrz.set_bool(True)
         self.useqrz.set_state(bool(preference["useqrz"]))
@@ -77,10 +83,14 @@ class SettingsScreen:
         self.usehamqth.set_state(bool(preference["usehamqth"]))
         self.lookupusername = EditTextField(self.screen, 6, 12, 15, curses.A_UNDERLINE)
         self.lookupusername.lowercase(True)
-        self.lookupusername.set_text(preference["lookupusername"])
+        self.lookupusername.set_text(
+            preference.get("lookupusername") if preference.get("lookupusername") else ""
+        )
         self.lookuppassword = EditTextField(self.screen, 6, 38, 20, curses.A_UNDERLINE)
         self.lookuppassword.lowercase(True)
-        self.lookuppassword.set_text(preference["lookuppassword"])
+        self.lookuppassword.set_text(
+            preference.get("lookuppassword") if preference.get("lookuppassword") else ""
+        )
         self.userigctld = EditTextField(self.screen, 9, 16, 1, curses.A_UNDERLINE)
         self.userigctld.set_bool(True)
         self.userigctld.set_state(bool(preference["userigctld"]))
@@ -89,23 +99,35 @@ class SettingsScreen:
         self.useflrig.set_state(bool(preference["useflrig"]))
         self.CAT_ip = EditTextField(self.screen, 10, 19, 20, curses.A_UNDERLINE)
         self.CAT_ip.lowercase(True)
-        self.CAT_ip.set_text(preference["CAT_ip"])
+        self.CAT_ip.set_text(
+            preference.get("CAT_ip") if preference.get("CAT_ip") else ""
+        )
         self.CAT_port = EditTextField(self.screen, 10, 50, 5, curses.A_UNDERLINE)
-        self.CAT_port.set_text(str(preference["CAT_port"]))
+        self.CAT_port.set_text(
+            str(preference.get("CAT_port") if preference.get("CAT_port") else "")
+        )
         self.cloudlog = EditTextField(self.screen, 13, 17, 1, curses.A_UNDERLINE)
         self.cloudlog.set_bool(True)
         self.cloudlog.set_state(bool(preference["cloudlog"]))
         self.cloudlogapi = EditTextField(self.screen, 14, 16, 25, curses.A_UNDERLINE)
         self.cloudlogapi.lowercase(True)
-        self.cloudlogapi.set_text(preference["cloudlogapi"])
+        self.cloudlogapi.set_text(
+            preference.get("cloudlogapi") if preference.get("cloudlogapi") else ""
+        )
         self.cloudlogurl = EditTextField(self.screen, 15, 16, 58, curses.A_UNDERLINE)
         self.cloudlogurl.lowercase(True)
-        self.cloudlogurl.set_text(preference["cloudlogurl"])
+        self.cloudlogurl.set_text(
+            preference.get("cloudlogurl") if preference.get("cloudlogurl") else ""
+        )
         self.cloudlogstationid = EditTextField(
             self.screen, 16, 23, 20, curses.A_UNDERLINE
         )
         self.cloudlogstationid.lowercase(True)
-        self.cloudlogstationid.set_text(preference["cloudlogstationid"])
+        self.cloudlogstationid.set_text(
+            preference.get("cloudlogstationid")
+            if preference.get("cloudlogstationid")
+            else ""
+        )
         self.altpower = EditTextField(self.screen, 19, 55, 1, curses.A_UNDERLINE)
         self.altpower.set_bool(True)
         self.outdoors = EditTextField(self.screen, 19, 72, 1, curses.A_UNDERLINE)
@@ -131,9 +153,11 @@ class SettingsScreen:
         self.pywinkeyer.set_state(bool(cwd == 2))
         self.CW_IP = EditTextField(self.screen, 20, 8, 20, curses.A_UNDERLINE)
         self.CW_IP.lowercase(True)
-        self.CW_IP.set_text(preference["CW_IP"])
+        self.CW_IP.set_text(preference.get("CW_IP") if preference.get("CW_IP") else "")
         self.CW_port = EditTextField(self.screen, 20, 35, 5, curses.A_UNDERLINE)
-        self.CW_port.set_text(str(preference["CW_port"]))
+        self.CW_port.set_text(
+            str(preference.get("CW_port") if preference.get("CW_port") else "")
+        )
 
         self.input_fields = [
             self.mycallsign,

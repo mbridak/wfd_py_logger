@@ -21,8 +21,5 @@ wfd_preferences.json
 cwmacros.txt
 wfdcurses.egg-info/*
 buildinstructions.md
-<<<<<<< HEAD
 rebuild.sh
-=======
-wfdcurses.egg-info/
->>>>>>> b9ff08a37e529865d55fb51c7d26ceb8ca5d02d6
+publish.sh
