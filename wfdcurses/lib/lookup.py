@@ -321,8 +321,6 @@ class HamQTH:
         baseroot = xmltodict.parse(query_result.text)
         root = baseroot.get("HamQTH")
         session = root.get("session")
-        print(baseroot)
-        print(root)
         if session:
             if session.get("session_id"):
                 self.session = session.get("session_id")
@@ -358,18 +356,16 @@ class HamQTH:
                             query_result = requests.get(
                                 self.url, params=payload, timeout=10.0
                             )
-            grid, name, nickname, error_text = self.parse_lookup(query_result)
+            grid, name, nickname, error_text = self.parse_lookup(root)
         logging.info("%s %s %s %s", grid, name, nickname, error_text)
         return grid, name, nickname, error_text
 
-    def parse_lookup(self, query_result) -> tuple:
+    def parse_lookup(self, root) -> tuple:
         """
         Returns gridsquare and name for a callsign looked up by qrz or hamdb.
         Or False for both if none found or error.
         """
         grid, name, nickname, error_text = False, False, False, False
-        baseroot = xmltodict.parse(query_result.text)
-        root = baseroot.get("HamQTH")
         session = root.get("session")
         search = root.get("search")
         if session:
