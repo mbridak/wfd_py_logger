@@ -70,7 +70,7 @@ python wfdcurses
 ## Requirements
 
 If running from source, you can install the needed Python libraries.
-It requires Python3, BeautifulSoup (bs4), lxml and requests.
+It requires Python3, requests and xmltodict.
 
 If you're using pip for dependencies you can:
 
@@ -81,11 +81,12 @@ pip install -r requirements.txt
 If you use Debian/Ubuntu you can:
 
 ```bash
-sudo apt install python3-requests python3-bs4 python3-lxml python3-xmltodict
+sudo apt install python3-requests python3-xmltodict
 ```
 
 ## Recent Changes
 
+- Dropped BeautifulSoup and lxml, replaced with xmltodict.
 - The RAC sections have been updated for 2023
 - You can now install via `pip install wfdcurses`
 - Added CW macros
