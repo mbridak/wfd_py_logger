@@ -1,7 +1,15 @@
-"""CAT interface abstraction"""
+"""
+K6GTE, CAT interface abstraction
+Email: michael.bridak@gmail.com
+GPL V3
+"""
+
 import logging
 import socket
 import xmlrpc.client
+
+if __name__ == "__main__":
+    print("I'm not the program you are looking for.")
 
 
 class CAT:
@@ -29,6 +37,8 @@ class CAT:
 
         get_power()
 
+        get_ptt()
+
         set_vfo()
 
         set_mode()
@@ -48,6 +58,7 @@ class CAT:
             target = f"http://{host}:{port}"
             logging.debug("%s", target)
             self.server = xmlrpc.client.ServerProxy(target)
+            self.online = True
         if self.interface == "rigctld":
             self.__initialize_rigctrld()
 
@@ -79,7 +90,7 @@ class CAT:
     def __getvfo_flrig(self) -> str:
         """Poll the radio using flrig"""
         try:
-            self.online = True
+            # self.online = True
             return self.server.rig.get_vfo()
         except ConnectionRefusedError as exception:
             self.online = False
@@ -115,7 +126,7 @@ class CAT:
     def __getmode_flrig(self) -> str:
         """Returns mode via flrig"""
         try:
-            self.online = True
+            # self.online = True
             return self.server.rig.get_mode()
         except ConnectionRefusedError as exception:
             self.online = False
@@ -152,7 +163,7 @@ class CAT:
 
     def __getpower_flrig(self):
         try:
-            self.online = True
+            # self.online = True
             return self.server.rig.get_power()
         except ConnectionRefusedError as exception:
             self.online = False
@@ -171,6 +182,40 @@ class CAT:
                 self.rigctrlsocket = None
             return ""
 
+    def get_ptt(self):
+        """Get PTT state"""
+        if self.interface == "flrig":
+            return self.__getptt_flrig()
+        if self.interface == "rigctld":
+            return self.__getptt_rigctld()
+        return False
+
+    def __getptt_flrig(self):
+        """Returns ptt state via flrig"""
+        try:
+            # self.online = True
+            return self.server.rig.get_ptt()
+        except ConnectionRefusedError as exception:
+            self.online = False
+            logging.debug("%s", exception)
+        return "0"
+
+    def __getptt_rigctld(self):
+        """Returns ptt state via rigctld"""
+        if self.rigctrlsocket:
+            try:
+                self.online = True
+                self.rigctrlsocket.send(b"t\n")
+                ptt = self.rigctrlsocket.recv(1024).decode()
+                logging.debug("%s", ptt)
+                ptt = ptt.strip()
+                return ptt
+            except socket.error as exception:
+                self.online = False
+                logging.debug("%s", exception)
+                self.rigctrlsocket = None
+        return "0"
+
     def set_vfo(self, freq: str) -> bool:
         """Sets the radios vfo"""
         if self.interface == "flrig":
@@ -182,7 +227,7 @@ class CAT:
     def __setvfo_flrig(self, freq: str) -> bool:
         """Sets the radios vfo"""
         try:
-            self.online = True
+            # self.online = True
             return self.server.rig.set_frequency(float(freq))
         except ConnectionRefusedError as exception:
             self.online = False
@@ -216,7 +261,7 @@ class CAT:
     def __setmode_flrig(self, mode: str) -> bool:
         """Sets the radios mode"""
         try:
-            self.online = True
+            # self.online = True
             return self.server.rig.set_mode(mode)
         except ConnectionRefusedError as exception:
             self.online = False
@@ -249,7 +294,7 @@ class CAT:
 
     def __setpower_flrig(self, power):
         try:
-            self.online = True
+            # self.online = True
             return self.server.rig.set_power(power)
         except ConnectionRefusedError as exception:
             self.online = False
