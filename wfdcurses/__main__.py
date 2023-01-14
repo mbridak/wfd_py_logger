@@ -501,14 +501,13 @@ def poll_radio() -> None:
         # newpwr = cat_control.get_power()
         logging.info("F:%s M:%s", newfreq, newmode)
         # newpwr = int(float(rigctrlsocket.recv(1024).decode().strip()) * 100)
-        if newfreq != oldfreq or newmode != oldmode:  # or newpwr != oldpwr
+        if newfreq and newfreq != oldfreq:
             oldfreq = newfreq
-            oldmode = newmode
-            # oldpwr = newpwr
             setband(str(getband(newfreq)))
-            setmode(str(getmode(newmode)))
-            # setpower(str(newpwr))
             setfreq(str(newfreq))
+        if newmode and newmode != oldmode:
+            oldmode = newmode
+            setmode(str(getmode(newmode)))
 
 
 def read_cw_macros():
@@ -1483,7 +1482,7 @@ def setStatusMsg(msg):
     stdscr.move(oy, ox)
 
 
-def statusline():
+def statusline() -> None:
     """displays a status line..."""
     y, x = stdscr.getyx()
     now = datetime.datetime.now().isoformat(" ")[5:19].replace("-", "/")
@@ -1588,14 +1587,14 @@ def setpower(p):
         setStatusMsg("Must be 1 <= Power <= 100")
 
 
-def setband(b):
+def setband(b: str) -> None:
     """Needs Doc String"""
     global band
     band = b
     statusline()
 
 
-def setmode(m):
+def setmode(m: str) -> None:
     """Needs Doc String"""
     global mode
     mode = m
@@ -2188,6 +2187,20 @@ hissection_field = EditTextField(stdscr, y=9, x=27, length=3)
 
 def run():
     """main entry point"""
+    PATH = os.path.dirname(pkgutil.get_loader("wfdcurses").get_filename())
+    os.system(
+        "xdg-icon-resource install --size 64 --context apps --mode user "
+        f"{PATH}/data/k6gte.wfdcurses-32.png k6gte-wfdcurses"
+    )
+    os.system(
+        "xdg-icon-resource install --size 64 --context apps --mode user "
+        f"{PATH}/data/k6gte.wfdcurses-64.png k6gte-wfdcurses"
+    )
+    os.system(
+        "xdg-icon-resource install --size 64 --context apps --mode user "
+        f"{PATH}/data/k6gte.wfdcurses-128.png k6gte-wfdcurses"
+    )
+    os.system(f"xdg-desktop-menu install {PATH}/data/k6gte-wfdcurses.desktop")
     wrapper(main)
 
 
