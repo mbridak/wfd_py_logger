@@ -2,6 +2,8 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0) [![Python: 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg?logo=python&style=for-the-badge)](https://www.python.org/downloads/)  [![Made With: Ancient Technology](https://img.shields.io/badge/Made%20with-Ancient%20technology-red?style=for-the-badge)][def] ![PyPI - Downloads](https://img.shields.io/pypi/dm/wfdcurses?label=PYPI-Downloads&logo=pypi&style=for-the-badge)
 
+![logo](https://github.com/mbridak/wfd_py_logger/raw/master/wfdcurses/data/k6gte.wfdcurses.svg)
+
 [Winter Field Day](https://www.winterfieldday.org/) is a once a year 24hr
 emergency preparidness event for radio amateurs (Hams). During the event, we try
 and make as many radio contacts with other Hams in a 24 hour period. Bonus
@@ -86,13 +88,14 @@ sudo apt install python3-requests python3-xmltodict
 
 ## Recent Changes
 
-- Dropped BeautifulSoup and lxml, replaced with xmltodict.
-- The RAC sections have been updated for 2023
-- You can now install via `pip install wfdcurses`
-- Added CW macros
-- Support for cwdaemon and PyWinkeyer
-- Cleaned up directory structure.
-- Updated for 2023 WFD rules.
+- [23.1.14] CAT, fixing flrig.
+- [23.1.14] Snazzy new app icon.
+- [22.12.28] Dropped BeautifulSoup and lxml, replaced with xmltodict.
+- [22.12.27] Digital modes are now DG not DI.
+- [22.12.18] You can now install via `pip install wfdcurses`
+- [22.12.16] The RAC sections have been updated for 2023
+- [22.11.12] Updated for 2023 WFD rules.
+- [22.6.29] Added CW macros
 
 ## Caveats
 
