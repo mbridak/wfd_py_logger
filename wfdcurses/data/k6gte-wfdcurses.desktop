@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=WFDCurses
+StartupWMClass=wfdcurses
+GenericName=K6GTE Winter Field Day Curses
+Comment=Winter Field Day logger
+Keywords=console;commandline;amateur radio;ham;logger;
+Exec=wfdcurses
+Icon=k6gte-wfdcurses
+Terminal=true
+Type=Application
+Categories=HamRadio;
+StartupNotify=true
+X-GNOME-SingleWindow=true
