@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wfdcurses" 
-version = "23.1.13"
+version = "23.1.14"
 description = "Winter Field Day logger"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -34,7 +34,7 @@ classifiers = [
 where = ["."]
 
 [tool.setuptools.package-data]
-"wfdcurses.data" = ["*.json", "*.txt", "*.SCP",]
+"wfdcurses.data" = ["*.json", "*.txt", "*.SCP","*.desktop", "*.svg", "*.png",]
 
 [project.scripts]
 wfdcurses = "wfdcurses.__main__:run"
