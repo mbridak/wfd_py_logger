@@ -25,8 +25,6 @@ I decided to write this after the 2018 Winter Field Day when I couldn't find a s
 - [K6GTE Winter Field Day logger (Curses)](#k6gte-winter-field-day-logger-curses)
   - [TOC](#toc)
   - [Installation and running](#installation-and-running)
-  - [Running from the source tree](#running-from-the-source-tree)
-  - [Requirements](#requirements)
   - [Recent Changes](#recent-changes)
   - [Caveats](#caveats)
   - [Initial Setup](#initial-setup)
@@ -59,31 +57,6 @@ pip install --upgrade wfdcurses
 
 #run it with
 wfdcurses
-```
-
-## Running from the source tree
-
-If you check out the code from github, you would call Python against the directory.
-
-```bash
-python wfdcurses
-```
-
-## Requirements
-
-If running from source, you can install the needed Python libraries.
-It requires Python3, requests and xmltodict.
-
-If you're using pip for dependencies you can:
-
-```bash
-pip install -r requirements.txt
-```
-
-If you use Debian/Ubuntu you can:
-
-```bash
-sudo apt install python3-requests python3-xmltodict
 ```
 
 ## Recent Changes
