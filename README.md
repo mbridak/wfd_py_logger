@@ -61,6 +61,7 @@ wfdcurses
 
 ## Recent Changes
 
+- [24.1.27] Removed some deprecations.
 - [23.1.14] CAT, fixing flrig.
 - [23.1.14] Snazzy new app icon.
 - [22.12.28] Dropped BeautifulSoup and lxml, replaced with xmltodict.
