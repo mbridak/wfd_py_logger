@@ -27,6 +27,7 @@ import curses
 import time
 import re
 import sys
+
 import pkgutil
 
 from math import degrees, radians, sin, cos, atan2, sqrt, asin, pi
@@ -519,7 +520,7 @@ def read_cw_macros():
     if not Path("./cwmacros.txt").exists():
         logging.info("copying default macro file.")
         try:
-            path = os.path.dirname(pkgutil.get_loader("wfdcurses").get_filename())
+            path = os.path.dirname(__loader__.get_filename())
             logging.info("the path : %s", path)
             copyfile(path + "/data/cwmacros.txt", "./cwmacros.txt")
         except AttributeError:
@@ -1486,7 +1487,7 @@ def statusline() -> None:
     """displays a status line..."""
     y, x = stdscr.getyx()
     now = datetime.datetime.now().isoformat(" ")[5:19].replace("-", "/")
-    utcnow = datetime.datetime.utcnow().isoformat(" ")[5:19].replace("-", "/")
+    utcnow = datetime.datetime.now(datetime.UTC).isoformat(" ")[5:19].replace("-", "/")
 
     try:
         stdscr.addstr(22, 62, "LOC " + now)
@@ -2187,7 +2188,7 @@ hissection_field = EditTextField(stdscr, y=9, x=27, length=3)
 
 def run():
     """main entry point"""
-    PATH = os.path.dirname(pkgutil.get_loader("wfdcurses").get_filename())
+    PATH = os.path.dirname(__loader__.get_filename())
     os.system(
         "xdg-icon-resource install --size 64 --context apps --mode user "
         f"{PATH}/data/k6gte.wfdcurses-32.png k6gte-wfdcurses"
