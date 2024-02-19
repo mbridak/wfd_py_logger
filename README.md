@@ -61,6 +61,7 @@ wfdcurses
 
 ## Recent Changes
 
+- [24.2.19] Fixed deprecation changes to work on Python 3.9+
 - [24.1.27] Removed some deprecations.
 - [23.1.14] CAT, fixing flrig.
 - [23.1.14] Snazzy new app icon.
