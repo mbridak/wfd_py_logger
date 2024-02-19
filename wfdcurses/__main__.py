@@ -1487,7 +1487,11 @@ def statusline() -> None:
     """displays a status line..."""
     y, x = stdscr.getyx()
     now = datetime.datetime.now().isoformat(" ")[5:19].replace("-", "/")
-    utcnow = datetime.datetime.now(datetime.UTC).isoformat(" ")[5:19].replace("-", "/")
+    utcnow = (
+        datetime.datetime.now(datetime.timezone.utc)
+        .isoformat(" ")[5:19]
+        .replace("-", "/")
+    )
 
     try:
         stdscr.addstr(22, 62, "LOC " + now)
